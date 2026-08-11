@@ -1,0 +1,1 @@
+export { CategoryNotFoundError } from '../../errors';

@@ -1,0 +1,47 @@
+{
+  "name": "cinmax-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CINMAX Global Products - Premium Personal Care & Soap E-Commerce Platform Monorepo",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "turbo dev",
+    "dev:web": "turbo dev --filter=@cinmax/website",
+    "dev:admin": "turbo dev --filter=@cinmax/admin",
+    "dev:mobile": "turbo dev --filter=@cinmax/mobile",
+    "build": "turbo build",
+    "build:web": "turbo build --filter=@cinmax/website",
+    "build:admin": "turbo build --filter=@cinmax/admin",
+    "lint": "turbo lint",
+    "lint:fix": "turbo lint -- --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css,scss}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css,scss}\"",
+    "check-types": "turbo check-types",
+    "clean": "turbo clean && pnpm -r exec rm -rf dist .next .turbo node_modules",
+    "db:push": "supabase db push",
+    "db:generate-types": "supabase gen types typescript --local > packages/types/src/database.types.ts"
+  },
+  "pnpm": {
+    "overrides": {
+      "@supabase/supabase-js": "2.48.1",
+      "@types/react": "~18.3.12"
+    }
+  },
+  "devDependencies": {
+    "@cinmax/eslint-config": "workspace:*",
+    "@cinmax/tsconfig": "workspace:*",
+    "eslint": "^9.18.0",
+    "prettier": "^3.4.2",
+    "prettier-plugin-tailwindcss": "^0.6.11",
+    "turbo": "^2.3.4",
+    "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "@types/pg": "^8.21.0",
+    "pg": "^8.22.0"
+  }
+}

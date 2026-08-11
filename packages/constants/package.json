@@ -1,0 +1,24 @@
+{
+  "name": "@cinmax/constants",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Application constants, routes, product classifications, and storage keys for CINMAX Global Products",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./routes": "./src/routes.ts",
+    "./products": "./src/products.ts",
+    "./storage": "./src/storage.ts",
+    "./config": "./src/config.ts"
+  },
+  "scripts": {
+    "lint": "eslint \"src/**/*.ts*\"",
+    "check-types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cinmax/eslint-config": "workspace:*",
+    "@cinmax/tsconfig": "workspace:*",
+    "typescript": "^5.7.3"
+  }
+}

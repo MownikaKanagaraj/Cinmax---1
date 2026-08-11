@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "CINMAX",
+    "slug": "cinmax-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": "Allow CINMAX to use Face ID for biometric authentication."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

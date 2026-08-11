@@ -1,0 +1,36 @@
+name: CINMAX Monorepo CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  verify:
+    name: Build & Verification Pipeline
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Monorepo Dependencies
+        run: npm ci
+
+      - name: Typecheck Workspace Packages
+        run: |
+          npm run typecheck --workspaces --if-present || npx tsc --noEmit
+
+      - name: Run Engine & Integration Tests
+        run: npm test --if-present
+
+      - name: Build Website & Admin Applications
+        run: |
+          npx turbo run build --filter=@cinmax/website --filter=@cinmax/admin

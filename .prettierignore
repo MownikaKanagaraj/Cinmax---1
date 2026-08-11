@@ -1,0 +1,12 @@
+node_modules
+.next
+.turbo
+dist
+build
+.expo
+.wrangler
+.cloudflare
+coverage
+pnpm-lock.yaml
+package-lock.json
+yarn.lock

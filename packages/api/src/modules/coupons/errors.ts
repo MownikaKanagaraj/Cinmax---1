@@ -1,0 +1,1 @@
+export { InvalidCouponError } from '../../errors';

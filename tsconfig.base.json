@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "checkJs": false,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "declarationMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@cinmax/theme": ["./packages/theme/src/index.ts"],
+      "@cinmax/theme/*": ["./packages/theme/src/*"],
+      "@cinmax/types": ["./packages/types/src/index.ts"],
+      "@cinmax/types/*": ["./packages/types/src/*"],
+      "@cinmax/constants": ["./packages/constants/src/index.ts"],
+      "@cinmax/constants/*": ["./packages/constants/src/*"],
+      "@cinmax/utils": ["./packages/utils/src/index.ts"],
+      "@cinmax/utils/*": ["./packages/utils/src/*"],
+      "@cinmax/api": ["./packages/api/src/index.ts"],
+      "@cinmax/api/*": ["./packages/api/src/*"],
+      "@cinmax/hooks": ["./packages/hooks/src/index.ts"],
+      "@cinmax/hooks/*": ["./packages/hooks/src/*"],
+      "@cinmax/ui": ["./packages/ui/src/index.ts"],
+      "@cinmax/ui/*": ["./packages/ui/src/*"]
+    }
+  },
+  "exclude": ["node_modules", "dist", ".next", ".turbo", "build", ".expo"]
+}

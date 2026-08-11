@@ -1,0 +1,10 @@
+{
+  "extends": "@cinmax/tsconfig/package.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*"]
+}

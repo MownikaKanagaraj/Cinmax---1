@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CINMAX - Home</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary": "#ffffff",
+                        "secondary-fixed-dim": "#aec7f8",
+                        "inverse-surface": "#2d3133",
+                        "tertiary-fixed-dim": "#bec7d7",
+                        "surface-tint": "#365e9b",
+                        "on-tertiary-fixed": "#131c28",
+                        "tertiary": "#1f2834",
+                        "tertiary-container": "#353e4b",
+                        "on-secondary-fixed-variant": "#2e4770",
+                        "error": "#ba1a1a",
+                        "on-surface": "#191c1e",
+                        "surface-dim": "#d8dadc",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-primary-fixed-variant": "#194682",
+                        "surface-variant": "#e0e3e5",
+                        "secondary-fixed": "#d6e3ff",
+                        "background": "#f7f9fb",
+                        "tertiary-fixed": "#dae3f4",
+                        "secondary-container": "#b4cdfe",
+                        "error-container": "#ffdad6",
+                        "on-primary-container": "#84aaeb",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-fixed": "#001b3e",
+                        "on-error-container": "#93000a",
+                        "on-tertiary-fixed-variant": "#3e4755",
+                        "surface": "#f7f9fb",
+                        "primary": "#002754",
+                        "on-background": "#191c1e",
+                        "inverse-primary": "#a9c7ff",
+                        "surface-container-high": "#e6e8ea",
+                        "outline": "#737781",
+                        "primary-container": "#0a3d78",
+                        "surface-container-low": "#f2f4f6",
+                        "surface-bright": "#f7f9fb",
+                        "secondary": "#465f8a",
+                        "on-tertiary-container": "#a0a9b8",
+                        "primary-fixed": "#d6e3ff",
+                        "on-error": "#ffffff",
+                        "outline-variant": "#c3c6d1",
+                        "on-primary-fixed": "#001b3d",
+                        "primary-fixed-dim": "#a9c7ff",
+                        "on-surface-variant": "#434750",
+                        "surface-container": "#eceef0",
+                        "on-secondary-container": "#3e5681",
+                        "surface-container-highest": "#e0e3e5"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1.25rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "section-gap-sm": "40px",
+                        "section-gap-lg": "80px",
+                        "container-padding-mobile": "20px",
+                        "container-padding-desktop": "64px",
+                        "base": "8px",
+                        "gutter": "24px"
+                    },
+                    "fontFamily": {
+                        "headline-lg-mobile": ["Noto Serif"],
+                        "label-lg": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Noto Serif"],
+                        "body-lg": ["Plus Jakarta Sans"],
+                        "label-sm": ["Plus Jakarta Sans"],
+                        "headline-md": ["Noto Serif"],
+                        "display-lg": ["Noto Serif"],
+                        "body-md": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+                        "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "500" }],
+                        "display-lg": ["56px", { "lineHeight": "64px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .signature-btn {
+            background: linear-gradient(135deg, #0a3d78, #002754);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+        .soft-shadow {
+            box-shadow: 0 10px 30px -5px rgba(10, 61, 120, 0.08);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background pb-[100px] antialiased">
+<!-- Header -->
+<header class="fixed top-0 w-full z-50 backdrop-blur-xl bg-surface/80 border-b border-outline-variant/30">
+<div class="flex justify-between items-center w-full px-container-padding-mobile h-16">
+<button class="text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<div class="font-headline-md text-headline-md font-bold tracking-tight text-primary">
+                CINMAX
+            </div>
+<div class="flex gap-4">
+<button class="text-primary">
+<span class="material-symbols-outlined" data-icon="favorite">favorite</span>
+</button>
+<button class="text-primary relative">
+<span class="material-symbols-outlined" data-icon="shopping_cart">shopping_cart</span>
+<span class="absolute -top-1 -right-1 bg-error text-on-error text-[10px] w-4 h-4 flex items-center justify-center rounded-full">2</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="pt-16 flex flex-col gap-8">
+<!-- Search & Announcement -->
+<section class="px-container-padding-mobile pt-4 flex flex-col gap-4">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full bg-surface-container-low text-body-md text-on-surface rounded-full py-3.5 pl-12 pr-4 border border-outline-variant/30 focus:ring-2 focus:ring-primary focus:bg-surface transition-all placeholder:text-outline" placeholder="Search soaps, skincare and body care..." type="text"/>
+</div>
+<div class="flex gap-3 overflow-x-auto hide-scrollbar -mx-container-padding-mobile px-container-padding-mobile">
+<div class="flex-none bg-primary-container/10 text-primary px-4 py-2 rounded-full text-label-sm whitespace-nowrap border border-primary/10">Free Shipping above ₹499</div>
+<div class="flex-none bg-secondary-container/20 text-secondary px-4 py-2 rounded-full text-label-sm whitespace-nowrap border border-secondary/10">Buy 2 Get 1 Free</div>
+<div class="flex-none bg-tertiary-fixed text-on-tertiary-fixed px-4 py-2 rounded-full text-label-sm whitespace-nowrap">New Launch: Charcoal Series</div>
+</div>
+</section>
+<!-- Shop By Category -->
+<section class="px-container-padding-mobile">
+<h3 class="font-headline-md text-headline-md text-primary mb-4">Shop By Category</h3>
+<div class="flex gap-6 overflow-x-auto hide-scrollbar py-2">
+<div class="flex-none flex flex-col items-center gap-2">
+<div class="w-16 h-16 rounded-full bg-white soft-shadow flex items-center justify-center border border-outline-variant/20 overflow-hidden">
+<img alt="Bath Soap" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDpIoHGNt8K2IwZW-F7gzPobXAQUkVIt2KYkxhO1eSWplJXLrQKYGRddfIymkCSroyFXB8-bWWemt7g5oMW-QpG6401-FXIeIHBY5gdDUSwpqyUX9ASwRH9i_EYGp8sS3wtlDGrTKjSkj3P3ZuMLYr191TC1dCtJdFHUe9t5dST4XtFX8ZQtpfJMtLfqCqL4lYC59QY4ctPuIn07bfFJ2AkLFiqAmf5m7wg_Ldo1bT2_Rp9HgNvu7ZA"/>
+</div>
+<span class="text-label-sm font-semibold">Bath Soap</span>
+</div>
+<div class="flex-none flex flex-col items-center gap-2">
+<div class="w-16 h-16 rounded-full bg-white soft-shadow flex items-center justify-center border border-outline-variant/20 overflow-hidden">
+<img alt="Herbal Soap" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAa4yv0gYZBUd0SEVtTlVkMcGNANs-fgctuNM7SEzJYRxMxlkKJaT71DPF-EfhUVwQEzMftaBRYvstM11GaElv3osNZTKJJjEvMhzYBcGPk9efj5Gm-4Wp01Zh5tXW62PxsReysnnieVjiZUVbyRSWHEA2vS72W5wQb8LDdGHq5A79LxgeeDpkDn9c7KZpMl2BQ8MaYGO6KlOxhOgDt6PxHmj5Cug4uIJBKl-9VtVLaYV7vbS2Y8c6a"/>
+</div>
+<span class="text-label-sm font-semibold">Herbal Soap</span>
+</div>
+<div class="flex-none flex flex-col items-center gap-2">
+<div class="w-16 h-16 rounded-full bg-white soft-shadow flex items-center justify-center border border-outline-variant/20 overflow-hidden">
+<img alt="Face Care" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDoRsDMNvc9hgexWVqa6dtEaFl6nN2xCiF5iV-T5gl46JoAnOu5AOcZVfxL9hm_305zBiYjSitTmh6CRwDk51PB-8Df_pnQe40YxDitX72iQeZBpAAO1XnjsIptJ49nlYqnJwTojbIFo8vNtTfc5JczIdvDP2BXDEXZ2bP1Q1F_keOYHZBudHhE6aq_uWSDGEfXUPHwbT-Juuf3giE7gZrvYHwU9KjCJ6nk_A4BEEPadfPeSazwudst"/>
+</div>
+<span class="text-label-sm font-semibold">Face Care</span>
+</div>
+<div class="flex-none flex flex-col items-center gap-2">
+<div class="w-16 h-16 rounded-full bg-white soft-shadow flex items-center justify-center border border-outline-variant/20 overflow-hidden">
+<img alt="Body Care" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB9lubmr39J6fZHpoItlXf_vE7Bt7g6eAd8NLC8ETl92RmQDIJBDBkLOuLbRoUEqrQfaJNP_bii3VO1DgAp9db1R-jRWQZVjvb6fU-1ol1kFRS_x95uIcyFDPiYZcrMCRgekQJwOet1HRiKwlVPeduydGDOAr5-saKjPVmo60e2NpXEdgW-Fx3Dm6cGMkvatrS4e2r_raXj_I_cn-RPyrTVo47B71tY4cqSDuxf0XSWQaT4lsWufVlk"/>
+</div>
+<span class="text-label-sm font-semibold">Body Care</span>
+</div>
+<div class="flex-none flex flex-col items-center gap-2">
+<div class="w-16 h-16 rounded-full bg-white soft-shadow flex items-center justify-center border border-outline-variant/20 overflow-hidden">
+<img alt="Hair Care" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDraVE7daOdNCK2xnaJeAdZY2woblVfcS9rPgNefx3K2TiDXuvlWmiVrSSpeHDAHTMhkvGZ-O-E13eY581zZpfpskz6Pf8dIVqFcwgZlLbNTfoy1MojHODIOgFfB5-T0LGfkprN3RI-vp4y-5onqnuatv5Vnlp2qvHwqcG8wsgcicy24HiQM34fOWXv8H6H70V7fMLoPCK37_O2JIzLgB3Qk4x6vtLBWPuW5zJjBoC-X9ExblUanHfd"/>
+</div>
+<span class="text-label-sm font-semibold">Hair Care</span>
+</div>
+<div class="flex-none flex flex-col items-center gap-2">
+<div class="w-16 h-16 rounded-full bg-white soft-shadow flex items-center justify-center border border-outline-variant/20 overflow-hidden">
+<img alt="Gift Sets" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAcZZWrp5hww_VPAwl39MRLYADlGq40ikgeByV0ShCSdwukE1M-0aSyIT-bPuQjX_4vZD8emKVM2DUnDENsUEfebjJszH3gEzzLdmzCt7al9id7-iq9xrW35wpa2Cef7YAGrttP91IpoTjst02TV7IeWekbi4rPgTdgJBYnT9iFt-B8eQCRor6WUabNr17n5HnRRBbHR3gS6REGi72jNv7evGuHKYi6QeFs9DHcHu40iMzej5u4PtFe"/>
+</div>
+<span class="text-label-sm font-semibold">Gift Sets</span>
+</div>
+</div>
+</section>
+<!-- Hero Carousel -->
+<section class="px-container-padding-mobile">
+<div class="relative rounded-2xl overflow-hidden aspect-[4/5] soft-shadow">
+<img alt="Hero Banner" class="absolute inset-0 w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBpq1QXdZjOUOnWxbJb5DMxUceMhxCjs4eYjQRG8GNvjPaJ84rev3r-VFbCGvdYfEF91OwJxi5ypnY6XGWWPSlWSPzFYGt1x-NPfJhPuIH5KqsWgZZCBjHRL1rBzHxmPAbsSSdxkE5IacaPLmLO53IMlY7atIewKzGBQBKPftXSG-SbR6ySiYZJJX6nAjqamYpbpwN2skQgHjy7dNgnOLJcnt1eim3jRN1s4HJkqupQI-oY2EtgOWqc"/>
+<div class="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/30 to-transparent"></div>
+<div class="absolute bottom-0 left-0 p-8 w-full text-center">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-primary mb-2">Premium Bath Collection</h2>
+<p class="font-body-md text-body-md text-on-primary/90 mb-6">Discover the essence of pure luxury with our meticulously crafted botanical blends.</p>
+<button class="signature-btn text-on-primary font-label-lg text-label-lg px-8 py-3 rounded-full">Shop Now</button>
+<div class="flex justify-center gap-2 mt-6">
+<div class="w-6 h-1.5 rounded-full bg-white"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-white/40"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-white/40"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Watch & Shop -->
+<section class="px-container-padding-mobile">
+<h3 class="font-headline-md text-headline-md text-primary mb-4">Watch &amp; Shop</h3>
+<div class="flex gap-4 overflow-x-auto hide-scrollbar">
+<div class="flex-none w-48 aspect-[9/16] bg-surface-container rounded-2xl relative overflow-hidden group">
+<img alt="Video" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDYWOizEZDuaWyblNqgPfFEOp2E1S7-_r3mCe31-TBndf4pZxCjh2WDz36JQXQQfn9nTUKRwkJQVEpJxhw2BTQPQxMZkK9r6if5X5njBMJSkHpNL2nwiLENqAJSO5xK6NCr0QZXwBEvffOB72Q3ibHuQm_Eqes4JwzBFp69fDYzpDWBnHA5ruI2brQhhUnpla7L_gLVYd9EmdQVK1Yg446y59Vlbvm_Lkh0HlHy4qYTJg15uGouMf4H"/>
+<div class="absolute inset-0 bg-black/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-5xl opacity-80">play_circle</span>
+</div>
+<div class="absolute bottom-2 left-2 right-2 bg-white/90 backdrop-blur-sm rounded-lg p-2 flex items-center gap-2">
+<div class="w-8 h-8 rounded bg-gray-200 overflow-hidden"><img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC85VgeJRlaGssVKe4o5MaUTzkpQWnScMZ6g9JvCSe-AhjElgCk-Yowqs1H5yrvUiFwhlWsilPdz9OOpG1Ws6cEJPX3MqFjZYdw9mFcjU-6d2GmTnneNs0Hv4b0MNq3arAlFZt4a8TD4uN0jtZdcgrqrUYi4dEkRyGZTOfAX4Yp6YgHz-xA0zhXWRpnfIk3FrKENZ9c9b6hfKS6VNogJjs5ByDdGYS0ggxXlRgx8KWscPhk-oThH0B1"/></div>
+<div class="flex-1 min-w-0">
+<p class="text-[10px] font-bold truncate">Aloe Vera Soap</p>
+<p class="text-[10px] text-primary">₹199</p>
+</div>
+</div>
+</div>
+<div class="flex-none w-48 aspect-[9/16] bg-surface-container rounded-2xl relative overflow-hidden group">
+<img alt="Video" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC4hGIPIejk60bEezIYicTQLJpMY5-qQKabcM6coMemOPeELnvU355rNxezfAka_vpZYvzKdAANiQdIfxCyWItJuApZwrQ4SUljqMS3AekmtsH56lTNrV4yW0CQvYPydHykT6-6IKpcE5uGJ20Z56o9G0C2eHNyFnuqZWAh_vJe-QW9MOs5ZoDzdwe8IaVgq9NUeT4Hqus39jZhB8kLV3Ey6_HyCuw8nlP2Tjnl01lROQmU2bmezRlX"/>
+<div class="absolute inset-0 bg-black/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-5xl opacity-80">play_circle</span>
+</div>
+<div class="absolute bottom-2 left-2 right-2 bg-white/90 backdrop-blur-sm rounded-lg p-2 flex items-center gap-2">
+<div class="w-8 h-8 rounded bg-gray-200 overflow-hidden"><img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAHnFfmbzs4odu4hUcNbwNd-OrXTBHOw41GW-tf2Bmna5p-oJmZUFqsC1sBj8txLrKD33VBEvxYtGShx6CF-f1GbvmzwWHQ4eptdfGsDUdizSlp9go6ALz_fF1JyGAq3Lhl3sdIMZmPbM3ZF659XjIsYoQc4giS_ewhlT0DPW6sxfsMs_doKDdM-TgL3MwIfp4o7xpABiKVYy3uWo8XQj5Tk5nxnaDD9NPr7bR3OM_KyUbFqFTRxxzy"/></div>
+<div class="flex-1 min-w-0">
+<p class="text-[10px] font-bold truncate">Herbal Face Wash</p>
+<p class="text-[10px] text-primary">₹349</p>
+</div>
+</div>
+</div>
+<div class="flex-none w-48 aspect-[9/16] bg-surface-container rounded-2xl relative overflow-hidden group">
+<img alt="Video" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAD-2JQ6dXD42VIKrGXpTgMQTarLSKdbwD46cJkLtP_7TKmMwzx660Ighbfe8kVX9geq_iFddOwwXLrmF5IUWRmWPIceuSmb0o_ZkJXyyQI7Qx6azaAPeHi0N1E2POWR1T4ju4EMfbkFPHLRnqRvgeN4mRjqZHMuSFjQNvvKRxs6S6qMQV8oSkCP0Taxihl9ZPeMTHEHAjrc_9Rv2IjLN3zJ7xdBD68AjQX7bu18WyNBhnLFQBdVe83"/>
+<div class="absolute inset-0 bg-black/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-5xl opacity-80">play_circle</span>
+</div>
+<div class="absolute bottom-2 left-2 right-2 bg-white/90 backdrop-blur-sm rounded-lg p-2 flex items-center gap-2">
+<div class="w-8 h-8 rounded bg-gray-200 overflow-hidden"><img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAC4_O-VCsUAlu719m1m0vV3KMOoUtAFzG3dkrQycKtnheA5jOA15zyNCpS17Lh9rLBJtLA7ZvuOKLRPZZhdpXFgDiYWUXF-BZ0-racDb1CIYbqiamFr6ZvwLMEGJtfvd0faHNL1BQ-pt5hzJtC2UmK-QmF8jzuIPJRDOiqvfSoEDMgZgwFiJ69FRJdGuK_ZQwvGAJAcLGKr5eC7_Mq78PJIKrkGLBPDjaE0rPxJk6R9jx6XNoMOK7g"/></div>
+<div class="flex-1 min-w-0">
+<p class="text-[10px] font-bold truncate">Body Butter</p>
+<p class="text-[10px] text-primary">₹599</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Shop By Concern -->
+<section class="px-container-padding-mobile">
+<h3 class="font-headline-md text-headline-md text-primary mb-4">Shop By Concern</h3>
+<div class="flex gap-2 overflow-x-auto hide-scrollbar">
+<button class="bg-primary text-on-primary px-5 py-2 rounded-full text-label-lg whitespace-nowrap">Dry Skin</button>
+<button class="bg-surface-container-high text-on-surface-variant px-5 py-2 rounded-full text-label-lg whitespace-nowrap border border-outline-variant/30">Acne Prone</button>
+<button class="bg-surface-container-high text-on-surface-variant px-5 py-2 rounded-full text-label-lg whitespace-nowrap border border-outline-variant/30">Sensitive Skin</button>
+<button class="bg-surface-container-high text-on-surface-variant px-5 py-2 rounded-full text-label-lg whitespace-nowrap border border-outline-variant/30">Anti-Aging</button>
+<button class="bg-surface-container-high text-on-surface-variant px-5 py-2 rounded-full text-label-lg whitespace-nowrap border border-outline-variant/30">Glowing Skin</button>
+</div>
+</section>
+<!-- Featured Products -->
+<section class="px-container-padding-mobile">
+<div class="flex justify-between items-center mb-4">
+<h3 class="font-headline-md text-headline-md text-primary">Best Sellers</h3>
+<button class="text-primary font-label-lg">View All</button>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<!-- Product Card 1 -->
+<div class="bg-white rounded-2xl soft-shadow overflow-hidden flex flex-col border border-outline-variant/20">
+<div class="relative aspect-square">
+<img alt="Product" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDLi8BEEcvYkRFbiNYee-N9pm2_s6ndTvcNkJ4y4Nrcp5yd-P7eI1QQBskU2funPCvXEqu67VY47-MUpKsVtDOSDpNOtcSymdGz6851J0jCamqe7cCHE_KarRWT7velF1a1hXCvJpateZeGhwW68AjO4cr2BV8XsxpxNrDJovgt79-7g0VTHn0y2ozH8gzP77DK81SpHyx6Z2NI8rKJ48kIuDPZRVt2zkqQ8gkuX8uc2K6EItZnDHcl"/>
+<span class="absolute top-2 left-2 bg-secondary text-on-secondary text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Top Rated</span>
+<button class="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-lg">favorite</span>
+</button>
+</div>
+<div class="p-3 flex-1 flex flex-col gap-1">
+<div class="flex items-center gap-1 text-[10px] text-secondary">
+<span class="material-symbols-outlined text-[12px] fill-current" style="font-variation-settings: 'FILL' 1;">star</span>
+<span>4.8 (1.2k)</span>
+</div>
+<h4 class="text-label-lg font-bold line-clamp-2">Sandalwood &amp; Saffron Luxury Soap</h4>
+<div class="mt-auto">
+<p class="text-primary font-bold">₹249 <span class="text-outline text-xs line-through font-normal ml-1">₹350</span></p>
+<button class="w-full mt-2 border-2 border-primary text-primary py-1.5 rounded-xl font-label-lg hover:bg-primary hover:text-on-primary transition-colors">Add to Cart</button>
+</div>
+</div>
+</div>
+<!-- Product Card 2 -->
+<div class="bg-white rounded-2xl soft-shadow overflow-hidden flex flex-col border border-outline-variant/20">
+<div class="relative aspect-square">
+<img alt="Product" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBxglU_913hJAApUMg2iOhzfjeFzxCh1GLo5bHQgsP-MvaGYLOMIKuLn60dqkfmtrUAbe_k_5pdHGwCC-OnyC9-mSf7K6TFe1y1zdawHjJmKzDHh2IilNAt_Hscs_4LR1g_Sm9KiR_ApGDoMTYgNJNN6as7IIzYXf7BprDVq0Uzru2_swUX01SRJK9seAqyIknGvbUDMuB2agm-0w9fFO2o4CkjtXwS2dxKDbQp2Ln3AGQaLzMAsa8R"/>
+<span class="absolute top-2 left-2 bg-error text-on-error text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Sale</span>
+<button class="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-lg">favorite</span>
+</button>
+</div>
+<div class="p-3 flex-1 flex flex-col gap-1">
+<div class="flex items-center gap-1 text-[10px] text-secondary">
+<span class="material-symbols-outlined text-[12px] fill-current" style="font-variation-settings: 'FILL' 1;">star</span>
+<span>4.9 (850)</span>
+</div>
+<h4 class="text-label-lg font-bold line-clamp-2">Hydrating Face Serum with Vit C</h4>
+<div class="mt-auto">
+<p class="text-primary font-bold">₹499 <span class="text-outline text-xs line-through font-normal ml-1">₹699</span></p>
+<button class="w-full mt-2 border-2 border-primary text-primary py-1.5 rounded-xl font-label-lg hover:bg-primary hover:text-on-primary transition-colors">Add to Cart</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Promotional Banner -->
+<section class="px-container-padding-mobile">
+<div class="relative rounded-2xl overflow-hidden aspect-[16/7] bg-primary soft-shadow">
+<img alt="Seasonal Offer" class="w-full h-full object-cover opacity-60" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDF1LQEjxBq0OtLya_zBSJmrBZGcpIt5GSK2bjVJwv_OH2wEvIFvmkvPBOwrecHsjs_oyNThVL7ZH4AUdRer9JJTMlrFAnb8z4ralUPHUwN9WP4S-39GnkgDrqIEgWZw9RaJtY8iwvffsTZD_Popbvs_HN8VBfLLeWF7GtyAos2D-BFKUhivqRdo3aEuD_KXEEev5cHd6UEVnfdZhhC6iRO1kHJA_rMX0q8Z19vqu_okch2q5g6QKPu"/>
+<div class="absolute inset-0 flex flex-col justify-center items-center text-on-primary p-4 text-center">
+<p class="text-label-sm font-bold tracking-widest uppercase mb-1">Monsoon Magic Sale</p>
+<h3 class="text-headline-md font-bold mb-2">Flat 40% OFF</h3>
+<p class="text-body-md text-white/80 mb-3">On all Gift Hampers &amp; Combo Packs</p>
+<button class="bg-white text-primary px-6 py-2 rounded-full font-label-lg shadow-lg">Grab Now</button>
+</div>
+</div>
+</section>
+<!-- New Launch -->
+<section class="px-container-padding-mobile">
+<div class="flex justify-between items-center mb-4">
+<h3 class="font-headline-md text-headline-md text-primary">New Launches</h3>
+<button class="text-primary font-label-lg">View All</button>
+</div>
+<div class="flex gap-4 overflow-x-auto hide-scrollbar pb-2">
+<div class="flex-none w-40 flex flex-col gap-2">
+<div class="aspect-square rounded-2xl overflow-hidden border border-outline-variant/30">
+<img alt="New Product" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD-dq8XUwj3X1WEGXjtcvThflNa3iMjTvw4FW0ChFnl_gpdcSTLRlH5a_oM0k3Yiwp-Xg9Js9mRUvZx2_FDooaaabSs0SnfJuF_4BrtHbswtMIzSRCkbm6L6gg1kJfX0dnktmNiCZv_pAEaKwJTuyddY-5qa4Z7Wn4-qDSBMaHH7v9XO6Tmid_Sd1BaX8tov31MT2345AEu-Jp4IqjU_GniV0YEPb4OcJ_nnc3v9fSBiUqPtB19s_vX"/>
+</div>
+<p class="text-label-lg font-bold">Charcoal Detox Soap</p>
+<p class="text-primary font-bold text-sm">₹199</p>
+</div>
+<div class="flex-none w-40 flex flex-col gap-2">
+<div class="aspect-square rounded-2xl overflow-hidden border border-outline-variant/30">
+<img alt="New Product" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCIXOwG3JF1cEgy088VwXeQ31OJWXFfbyFL3P80WZiwi7NJFu8gSwlpzuI70DeVru9ZvYJHc61ux3ac6OEvVH9cIV4Q85Z7ppForwR4uHCUdxKqcBs9DlPXUJxYC9s2wISvTgD_wisBGQNPAZkG4j-_CoGmObPoFsNwusaSj_jBvjxw6T2znPVEiXyOdU5oBAR8E0FHK7ikCv_0EkrRJ5DYwJ2B8A0G0Q9utVfNl6Vukh_ZgapEZ7IX"/>
+</div>
+<p class="text-label-lg font-bold">Lavender Body Oil</p>
+<p class="text-primary font-bold text-sm">₹349</p>
+</div>
+<div class="flex-none w-40 flex flex-col gap-2">
+<div class="aspect-square rounded-2xl overflow-hidden border border-outline-variant/30">
+<img alt="New Product" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCsOOk0LhSLMEWdeoeA9MDQXNcQzL3SkQaGFNZcLOi28uBe9AtrmaKkn1v9lT2-g67qOL8oa5TcY1AtbihEq5zzGshc7S00k5yBgFabXvmkCm5NfcmPMKyaeXXuwhG7QXXIPKQp3Bp11IPqTqe-cqXUagUILlujV_2C-0bJjI_jMfRCApIi46UxnpwXFjZdDTIpaaPDmi3l_lR6rEs93rtf1HEWLQxVfF84jlYrP4HvSbkC9J59ZXFN"/>
+</div>
+<p class="text-label-lg font-bold">Vitamin E Cream</p>
+<p class="text-primary font-bold text-sm">₹280</p>
+</div>
+</div>
+</section>
+<!-- Combo Offers -->
+<section class="px-container-padding-mobile">
+<h3 class="font-headline-md text-headline-md text-primary mb-4">Combo Offers</h3>
+<div class="grid grid-cols-1 gap-4">
+<div class="bg-primary-container/20 p-4 rounded-2xl flex gap-4 border border-primary/10 soft-shadow">
+<div class="w-24 h-24 rounded-xl overflow-hidden flex-none">
+<img alt="Combo" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDfLmv-8PIhmABGo3DodM11iE1jbnlcba8OLYEYvLDtfPFpvtgtgYb9fDv3R95xfRWjqulbf_d5LzBLCS5Zyg9LHaRZUVu6W6r0eylmUfK11ybPuURiqx-uqsIQA_cNRlWyGNS71a9PtOaKJ1w-f-qla6hCy_mLiHC8K5HICAUBIS5jz9JDt7XciJsCne58yMImQhdMmnCHsSQ3bRdoSEou7JqLyUkoBmKgO1yCzRIJh78Qxg3Vfj6A"/>
+</div>
+<div class="flex flex-col justify-between py-1">
+<div>
+<h4 class="font-bold text-primary">Ultimate Spa Gift Pack</h4>
+<p class="text-xs text-on-surface-variant">Includes 4 Premium Soaps + Loofah</p>
+</div>
+<div class="flex items-center gap-4">
+<p class="font-bold text-primary">₹899 <span class="text-outline text-xs line-through font-normal">₹1200</span></p>
+<button class="bg-primary text-on-primary text-[10px] px-3 py-1 rounded-full uppercase font-bold">Save 25%</button>
+</div>
+</div>
+</div>
+<div class="bg-secondary-container/20 p-4 rounded-2xl flex gap-4 border border-secondary/10 soft-shadow">
+<div class="w-24 h-24 rounded-xl overflow-hidden flex-none">
+<img alt="Combo" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDRE-BdrdvvX-gKkNKLk2AdESMknnwxISYNAUvYdKV0pPR6emM4ZYz7PR2CWQOL1erXhKEY8dgfxcbiqKLAn8v0z75CluFjK5do19sCwsdo41knnwFXIeQ17tGbq5EWBrjsrx8U98LsT50EVmiHDDoHMnt0elhIYnt4iMJ3P21TSXKFX5ojGeDcV8CjOQn3gYETWI3b38DvREcXL8unyffzPR84ZLZNAvDnAc6YOouF615IKYNC3rrC"/>
+</div>
+<div class="flex flex-col justify-between py-1">
+<div>
+<h4 class="font-bold text-secondary">Family Essentials Bundle</h4>
+<p class="text-xs text-on-surface-variant">Set of 10 Daily Use Soaps</p>
+</div>
+<div class="flex items-center gap-4">
+<p class="font-bold text-secondary">₹1499 <span class="text-outline text-xs line-through font-normal">₹2000</span></p>
+<button class="bg-secondary text-on-secondary text-[10px] px-3 py-1 rounded-full uppercase font-bold">Save 30%</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Before & After -->
+<section class="px-container-padding-mobile">
+<h3 class="font-headline-md text-headline-md text-primary mb-4">Real Results</h3>
+<div class="flex gap-4 overflow-x-auto hide-scrollbar">
+<div class="flex-none w-64 bg-white rounded-2xl soft-shadow p-3 border border-outline-variant/20">
+<div class="flex gap-2 mb-3">
+<div class="flex-1 relative rounded-lg overflow-hidden">
+<img alt="Before" class="w-full h-24 object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD5BOW-AMfn4OYmw2raRZLFjyAXl9_Og2oljlyp6Ey3blAt0F58rE21Yc2kFmrF_m8w0_bszNhtfNPcsATPHO3DTKc5-xaT7Y0ZjBW1_TNzJioa5TZURDMTRt1t9pX3z-tlGfEKQwtCCItGZeCLGFICOAr2rCVYxeE6NlxuyABQQ3_aEL3gjrXGthTSnEDu44eD7saHOsvmf4hq5dtRwLMPjiu3W-zO2yCyhMDJBYPlz9EKgQiy_WhT"/>
+<span class="absolute bottom-1 left-1 bg-black/50 text-white text-[8px] px-1 rounded">Before</span>
+</div>
+<div class="flex-1 relative rounded-lg overflow-hidden">
+<img alt="After" class="w-full h-24 object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDBYYqfLzkyDJCgmUIN62zfpDnVNi80xAnbOwXMzWR_EC665r4W7a8jgxawqehE-NsGCjsao-u0awGHY1IawWevNQcSWP5uOLvmXo8iVoso9HXauK_4wWL6zedipG6xSlBnZ7PvBUQQw8SDi5OQEIzGlroqvATlo8emGKQmNpZkYbPTV5kb74HCXzfWSSdwZ-feAljIXulzIuzrRfkFuPTBDYlbTWpuPRjpYWGCmJD3d7oLoTXmRmLR"/>
+<span class="absolute bottom-1 left-1 bg-primary text-white text-[8px] px-1 rounded">After</span>
+</div>
+</div>
+<p class="text-[10px] font-bold text-primary mb-1 italic">"My acne cleared in just 3 weeks!"</p>
+<p class="text-[10px] text-outline">Ananya V. used Neem &amp; Tea Tree Soap</p>
+</div>
+<div class="flex-none w-64 bg-white rounded-2xl soft-shadow p-3 border border-outline-variant/20">
+<div class="flex gap-2 mb-3">
+<div class="flex-1 relative rounded-lg overflow-hidden">
+<img alt="Before" class="w-full h-24 object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCSmwCmvA7_D8HomTuRM1h4-XIekacntzbTsKXAOZG-yS7i__CLwkYk_ZZ_UOnBrjjU8xOv5kTZV5YSZTE1ASD_krTM85OV_eoo2-OdqxYoW3fFM68y1SFpuzcDcdVOne23KTXLBIjJE2wpjkz-UngniFKww-KJQ-RfOZtIPghQaj9f-nc5GqCXz92BG7S8HGuPprjsgHU5ZXUr3XrOx9B1l-p0YjEDb7TIcTa1rXXxTZZvg6k87pnV"/>
+<span class="absolute bottom-1 left-1 bg-black/50 text-white text-[8px] px-1 rounded">Before</span>
+</div>
+<div class="flex-1 relative rounded-lg overflow-hidden">
+<img alt="After" class="w-full h-24 object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB4Vn-kpObT8hA33krBjhT874sGUANPgaNnCqeLWi4cdTn7XPL8hHvwiWiOJy8s4pA2TeUfQLer9uuetutL-BqlbyfGUwRXlbsDku2FVeRYPqNkvVUfUBU9DOrX137dmO2fuSNWqiEJUGpHxZUarqOK4deyr8MvM26JYCwqdoH2f6nR5-fDNBBjptXUum-NGLugvCOsk6E9eLos1suar0a-SACWpOkirGvowgxOjlO7t7OpaA5tfimw"/>
+<span class="absolute bottom-1 left-1 bg-primary text-white text-[8px] px-1 rounded">After</span>
+</div>
+</div>
+<p class="text-[10px] font-bold text-primary mb-1 italic">"The glow is actually visible now."</p>
+<p class="text-[10px] text-outline">Rahul S. used Sandalwood Serum</p>
+</div>
+</div>
+</section>
+<!-- Why CINMAX? -->
+<section class="px-container-padding-mobile">
+<h3 class="font-headline-md text-headline-md text-primary text-center mb-6">Why Choose CINMAX?</h3>
+<div class="grid grid-cols-3 gap-6">
+<div class="flex flex-col items-center text-center gap-2">
+<div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">eco</span>
+</div>
+<p class="text-[10px] font-bold">100% Natural</p>
+</div>
+<div class="flex flex-col items-center text-center gap-2">
+<div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">health_and_safety</span>
+</div>
+<p class="text-[10px] font-bold">Dermatologist Tested</p>
+</div>
+<div class="flex flex-col items-center text-center gap-2">
+<div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">cruelty_free</span>
+</div>
+<p class="text-[10px] font-bold">Cruelty Free</p>
+</div>
+<div class="flex flex-col items-center text-center gap-2">
+<div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">fluid_med</span>
+</div>
+<p class="text-[10px] font-bold">No Parabens</p>
+</div>
+<div class="flex flex-col items-center text-center gap-2">
+<div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">science</span>
+</div>
+<p class="text-[10px] font-bold">Clinically Proven</p>
+</div>
+<div class="flex flex-col items-center text-center gap-2">
+<div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">workspace_premium</span>
+</div>
+<p class="text-[10px] font-bold">Ayush Certified</p>
+</div>
+</div>
+</section>
+<!-- Manufacturing -->
+<section class="w-full h-64 relative">
+<img alt="Factory" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCGE69IJlast_Ul6rXuCQSS3GH9L16poRY-l4l0iLBhoriu0C4LiZu3f7ZasTL9El20BxRnLTR3yhtY06Qyv2WRC2rkh3JMyHvdbriffqhNy4zqgJbeSfm_sQdZRfhBRJvCHtUEkCDdOoUFSDEUFRamWxTJs7vcGIUEWF00FZywN7h07CqZpCeqT6qRYsAmAO2bk5-APQk-HdqbqLMS5IQmGNzYH5WjPfz9gHlMpUg46Re6GavrK01c"/>
+<div class="absolute inset-0 bg-primary/40 backdrop-blur-[2px] flex flex-col items-center justify-center text-center p-6 text-on-primary">
+<h3 class="font-headline-lg-mobile text-headline-lg-mobile mb-2">Crafted with Quality</h3>
+<p class="text-body-md max-w-xs">Our state-of-the-art facility ensures every bar of soap meets global standards of purity and excellence.</p>
+<button class="mt-4 border border-white text-white px-6 py-2 rounded-full text-label-lg font-bold">Learn More</button>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Shell -->
+<nav class="fixed bottom-0 left-0 w-full z-50 rounded-t-2xl bg-white/95 shadow-[0px_-10px_30px_rgba(10,61,120,0.1)] backdrop-blur-md border-t border-outline-variant/30">
+<div class="flex justify-around items-center px-2 pb-6 pt-2">
+<!-- Home (Active) -->
+<button class="flex flex-col items-center justify-center text-primary transition-all p-2 rounded-2xl bg-primary/5">
+<span class="material-symbols-outlined" data-icon="home" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-label-sm text-[10px] mt-1 font-bold">Home</span>
+</button>
+<!-- Shop -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant p-2">
+<span class="material-symbols-outlined" data-icon="storefront">storefront</span>
+<span class="font-label-sm text-[10px] mt-1">Shop</span>
+</button>
+<!-- Wishlist -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant p-2">
+<span class="material-symbols-outlined" data-icon="favorite">favorite</span>
+<span class="font-label-sm text-[10px] mt-1">Wishlist</span>
+</button>
+<!-- Orders -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant p-2">
+<span class="material-symbols-outlined" data-icon="package_2">package_2</span>
+<span class="font-label-sm text-[10px] mt-1">Orders</span>
+</button>
+<!-- Profile -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant p-2">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-sm text-[10px] mt-1">Profile</span>
+</button>
+</div>
+</nav>
+</body></html>

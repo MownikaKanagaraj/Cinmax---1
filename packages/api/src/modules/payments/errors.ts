@@ -1,0 +1,1 @@
+export { PaymentFailedError } from '../../errors';
