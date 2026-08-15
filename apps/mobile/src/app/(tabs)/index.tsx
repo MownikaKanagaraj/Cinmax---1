@@ -9,10 +9,12 @@ import {
   TextInput,
   Dimensions,
   Platform,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ProductCard } from '../../components/ProductCard';
 import { useCartStore, useWishlistStore, useProductsQuery, useCategoriesQuery, useHomeMarketingQuery } from '@cinmax/hooks';
+import { parseYouTubeEmbedUrl } from '@cinmax/utils';
 import type { Product } from '@cinmax/types';
 import {
   Menu,
@@ -138,6 +140,7 @@ export default function MobileHomeScreen() {
 
   const [activeConcern, setActiveConcern] = useState('Dry Skin');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedVideoUrl, setSelectedVideoUrl] = useState<string | null>(null);
 
   const categoryAvatars = [
     { title: 'Bath Soap', slug: 'bath-soap', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDpIoHGNt8K2IwZW-F7gzPobXAQUkVIt2KYkxhO1eSWplJXLrQKYGRddfIymkCSroyFXB8-bWWemt7g5oMW-QpG6401-FXIeIHBY5gdDUSwpqyUX9ASwRH9i_EYGp8sS3wtlDGrTKjSkj3P3ZuMLYr191TC1dCtJdFHUe9t5dST4XtFX8ZQtpfJMtLfqCqL4lYC59QY4ctPuIn07bfFJ2AkLFiqAmf5m7wg_Ldo1bT2_Rp9HgNvu7ZA' },
@@ -312,7 +315,7 @@ export default function MobileHomeScreen() {
           </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14 }}>
             {watchShopVideos.map((vid) => (
-              <TouchableOpacity key={vid.id} onPress={() => router.push(`/product/${vid.slug}` as any)} style={{ width: 170, height: 300, borderRadius: 18, overflow: 'hidden', backgroundColor: '#ECEEF0', position: 'relative' }}>
+              <TouchableOpacity key={vid.id} onPress={() => setSelectedVideoUrl((vid as any).videoUrl || vid.videoBg)} style={{ width: 170, height: 300, borderRadius: 18, overflow: 'hidden', backgroundColor: '#ECEEF0', position: 'relative' }}>
                 <Image source={{ uri: vid.videoBg }} style={{ width: '100%', height: '100%' }} />
                 <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.2)', justifyContent: 'center', alignItems: 'center' }}>
                   <PlayCircle size={44} color="white" />
@@ -525,6 +528,40 @@ export default function MobileHomeScreen() {
         </View>
 
       </ScrollView>
+
+      {/* YOUTUBE VIDEO PLAYER MODAL */}
+      {selectedVideoUrl && (
+        <Modal
+          animationType="fade"
+          transparent={true}
+          visible={!!selectedVideoUrl}
+          onRequestClose={() => setSelectedVideoUrl(null)}
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 16 }}>
+            <TouchableOpacity
+              onPress={() => setSelectedVideoUrl(null)}
+              style={{ position: 'absolute', top: 50, right: 24, zIndex: 10, backgroundColor: '#002754', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 }}
+            >
+              <Text style={{ color: 'white', fontWeight: '700', fontSize: 13 }}>Close ✕</Text>
+            </TouchableOpacity>
+
+            <View style={{ width: '100%', maxWidth: 540, aspectRatio: 16 / 9, borderRadius: 16, overflow: 'hidden', backgroundColor: 'black', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}>
+              {Platform.OS === 'web' ? (
+                <iframe
+                  src={parseYouTubeEmbedUrl(selectedVideoUrl)}
+                  style={{ width: '100%', height: '100%', border: 'none' }}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              ) : (
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+                  <Text style={{ color: 'white', fontSize: 13, textAlign: 'center' }}>Playing YouTube Video: {selectedVideoUrl}</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }

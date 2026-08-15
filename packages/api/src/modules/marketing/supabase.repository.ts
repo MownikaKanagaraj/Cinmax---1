@@ -10,6 +10,21 @@ export class SupabaseHomeMarketingRepository implements IHomeMarketingRepository
   constructor(private supabase: SupabaseClient<Database>) {}
 
   public async getSettings(): Promise<HomeMarketingSettings> {
+    // Check if we are running in browser context and API endpoint is available
+    if (typeof window !== 'undefined') {
+      try {
+        const res = await fetch('/api/home-marketing', { method: 'GET' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.topOffers) {
+            return data as HomeMarketingSettings;
+          }
+        }
+      } catch (e) {
+        // Fallthrough to Supabase client
+      }
+    }
+
     if (this.hasTableError) {
       return this.fallbackMock.getSettings();
     }
@@ -22,7 +37,6 @@ export class SupabaseHomeMarketingRepository implements IHomeMarketingRepository
         .maybeSingle();
 
       if (error) {
-        // Table not migrated yet or 404
         this.hasTableError = true;
         return this.fallbackMock.getSettings();
       }
@@ -39,18 +53,36 @@ export class SupabaseHomeMarketingRepository implements IHomeMarketingRepository
   }
 
   public async updateSettings(newSettings: Partial<HomeMarketingSettings>): Promise<HomeMarketingSettings> {
+    const current = await this.getSettings();
+    const updated: HomeMarketingSettings = {
+      ...current,
+      ...newSettings,
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (typeof window !== 'undefined') {
+      try {
+        const res = await fetch('/api/home-marketing', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updated),
+        });
+        if (res.ok) {
+          const resData = await res.json();
+          if (resData.success && resData.data) {
+            return resData.data as HomeMarketingSettings;
+          }
+        }
+      } catch (e) {
+        // Fallthrough to Supabase
+      }
+    }
+
     if (this.hasTableError) {
       return this.fallbackMock.updateSettings(newSettings);
     }
 
     try {
-      const current = await this.getSettings();
-      const updated: HomeMarketingSettings = {
-        ...current,
-        ...newSettings,
-        updatedAt: new Date().toISOString(),
-      };
-
       const { error } = await (this.supabase as any)
         .from('home_marketing_settings')
         .upsert({ id: 'default', settings: updated, updated_at: updated.updatedAt });

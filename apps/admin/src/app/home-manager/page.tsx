@@ -4,6 +4,7 @@ import * as React from 'react';
 import { AdminLayout } from '../../components/admin-layout';
 import { Button } from '@cinmax/ui';
 import { useHomeMarketingQuery, useUpdateHomeMarketingMutation } from '@cinmax/hooks';
+import { parseYouTubeEmbedUrl, getYouTubeThumbnailUrl } from '@cinmax/utils';
 import type {
   HomeMarketingSettings,
   HeroBannerItem,
@@ -150,13 +151,16 @@ export default function AdminHomePageManager() {
 
   const handleSaveRealModal = () => {
     if (!realForm.title.trim()) return;
+    const embedUrl = parseYouTubeEmbedUrl(realForm.videoUrl);
+    const thumbUrl = realForm.productImage || getYouTubeThumbnailUrl(realForm.videoUrl);
+
     const newItem: WatchShopVideoItem = {
       id: `v_${Date.now()}`,
       title: realForm.title,
       productName: realForm.productName || realForm.title,
       productPrice: realForm.productPrice,
-      productImage: realForm.productImage || 'https://images.unsplash.com/photo-1607006482140-520e7df6504a?w=400',
-      videoUrl: realForm.videoUrl || 'https://assets.mixkit.co/videos/preview/mixkit-skin-care-product-routine-42901-large.mp4',
+      productImage: thumbUrl,
+      videoUrl: embedUrl || 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&mute=1&loop=1',
       slug: realForm.slug || 'product',
       isActive: realForm.isActive,
     };
@@ -1177,7 +1181,19 @@ export default function AdminHomePageManager() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-400 mb-1">Product Thumbnail Image File Upload</label>
+              <label className="block text-xs font-bold text-slate-400 mb-1">YouTube Video Link (Paste YouTube URL)</label>
+              <input
+                type="text"
+                placeholder="e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ or https://youtu.be/..."
+                value={realForm.videoUrl}
+                onChange={(e) => setRealForm({ ...realForm, videoUrl: e.target.value })}
+                className="w-full px-4 py-2.5 rounded-xl border border-blue-500/30 text-xs bg-blue-50/50 dark:bg-blue-950/20 outline-none font-mono text-blue-600 font-bold"
+              />
+              <p className="text-[10px] text-slate-400 mt-1">Supports standard YouTube video links, Shorts, and embed URLs.</p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-400 mb-1">Product Thumbnail Cover Image (Optional file upload)</label>
               <label className="w-full px-4 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 text-blue-600 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer">
                 <Upload className="w-4 h-4" /> Upload Local Image File
                 <input
