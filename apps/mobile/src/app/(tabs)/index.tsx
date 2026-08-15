@@ -150,6 +150,37 @@ export default function MobileHomeScreen() {
 
   const concerns = ['Dry Skin', 'Acne Prone', 'Sensitive Skin', 'Anti-Aging', 'Glowing Skin'];
 
+  const comboOffers = [
+    {
+      id: 'c1',
+      slug: 'ultimate-spa-gift-pack',
+      title: 'Ultimate Spa Gift Pack',
+      subtitle: 'Includes 4 Premium Soaps + Loofah',
+      price: '₹899',
+      originalPrice: '₹1200',
+      badge: 'Save 25%',
+      bgColor: 'rgba(0, 39, 84, 0.08)',
+      borderColor: 'rgba(0, 39, 84, 0.12)',
+      badgeBg: '#002754',
+      badgeText: 'white',
+      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDfLmv-8PIhmABGo3DodM11iE1jbnlcba8OLYEYvLDtfPFpvtgtgYb9fDv3R95xfRWjqulbf_d5LzBLCS5Zyg9LHaRZUVu6W6r0eylmUfK11ybPuURiqx-uqsIQA_cNRlWyGNS71a9PtOaKJ1w-f-qla6hCy_mLiHC8K5HICAUBIS5jz9JDt7XciJsCne58yMImQhdMmnCHsSQ3bRdoSEou7JqLyUkoBmKgO1yCzRIJh78Qxg3Vfj6A',
+    },
+    {
+      id: 'c2',
+      slug: 'family-essentials-bundle',
+      title: 'Family Essentials Bundle',
+      subtitle: 'Set of 10 Daily Use Soaps',
+      price: '₹1499',
+      originalPrice: '₹2000',
+      badge: 'Save 30%',
+      bgColor: 'rgba(70, 95, 138, 0.08)',
+      borderColor: 'rgba(70, 95, 138, 0.12)',
+      badgeBg: '#465F8A',
+      badgeText: 'white',
+      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDRE-BdrdvvX-gKkNKLk2AdESMknnwxISYNAUvYdKV0pPR6emM4ZYz7PR2CWQOL1erXhKEY8dgfxcbiqKLAn8v0z75CluFjK5do19sCwsdo41knnwFXIeQ17tGbq5EWBrjsrx8U98LsT50EVmiHDDoHMnt0elhIYnt4iMJ3P21TSXKFX5ojGeDcV8CjOQn3gYETWI3b38DvREcXL8unyffzPR84ZLZNAvDnAc6YOouF615IKYNC3rrC',
+    },
+  ];
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F9FB' }}>
       {/* 1. FIXED TOP HEADER BAR */}
