@@ -25,13 +25,21 @@ import {
   Star,
   RefreshCw,
   Eye,
-  Link,
-  Layers,
-  CheckCircle2,
-  Globe,
   Radio,
-  ArrowRight,
+  Upload,
+  X,
+  CheckCircle2,
 } from 'lucide-react';
+
+// Utility helper to convert user uploaded file to base64 Data URL
+const fileToDataUrl = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error);
+    reader.readAsDataURL(file);
+  });
+};
 
 export default function AdminHomePageManager() {
   const { data: marketingData, isLoading } = useHomeMarketingQuery();
@@ -45,7 +53,48 @@ export default function AdminHomePageManager() {
 
   // Local form state
   const [formData, setFormData] = React.useState<Partial<HomeMarketingSettings>>({});
+
+  // Active Modal State
+  const [activeModal, setActiveModal] = React.useState<
+    'none' | 'add_offer' | 'add_hero' | 'add_real' | 'add_story' | 'add_badge'
+  >('none');
+
+  // Form states for modals
   const [newOfferText, setNewOfferText] = React.useState('');
+
+  const [heroForm, setHeroForm] = React.useState({
+    title: '',
+    subtitle: '',
+    badgeText: 'New Release',
+    buttonText: 'Shop Collection',
+    linkUrl: '/shop',
+    imageUrl: '',
+    isActive: true,
+  });
+
+  const [realForm, setRealForm] = React.useState({
+    title: '',
+    productName: '',
+    productPrice: '₹199',
+    productImage: '',
+    videoUrl: '',
+    slug: 'product',
+    isActive: true,
+  });
+
+  const [storyForm, setStoryForm] = React.useState({
+    quote: '',
+    userName: '',
+    beforeUrl: '',
+    afterUrl: '',
+    isActive: true,
+  });
+
+  const [badgeForm, setBadgeForm] = React.useState({
+    label: '',
+    iconName: 'Leaf',
+    isActive: true,
+  });
 
   React.useEffect(() => {
     if (marketingData) {
@@ -70,67 +119,105 @@ export default function AdminHomePageManager() {
     setTimeout(() => setIsSaved(false), 2500);
   };
 
-  // Item Addition Handlers
-  const handleAddHeroBanner = () => {
+  // Submit Handlers for Modals
+  const handleSaveHeroModal = () => {
+    if (!heroForm.title.trim()) return;
     const newItem: HeroBannerItem = {
       id: `hb_${Date.now()}`,
-      title: 'New Executive Promo Campaign',
-      subtitle: 'Artisan hand-crafted soaps & botanical skin wellness.',
-      imageUrl: 'https://images.unsplash.com/photo-1607006314147-759088fd21c2?w=1200&auto=format&fit=crop&q=80',
-      badgeText: 'New Cure Release',
-      buttonText: 'Shop Collection',
-      linkUrl: '/shop',
-      isActive: true,
+      title: heroForm.title,
+      subtitle: heroForm.subtitle,
+      badgeText: heroForm.badgeText,
+      buttonText: heroForm.buttonText,
+      linkUrl: heroForm.linkUrl,
+      imageUrl: heroForm.imageUrl || 'https://images.unsplash.com/photo-1607006314147-759088fd21c2?w=1200',
+      isActive: heroForm.isActive,
     };
     setFormData({
       ...formData,
       heroBanners: [...(formData.heroBanners || []), newItem],
     });
+    setHeroForm({
+      title: '',
+      subtitle: '',
+      badgeText: 'New Release',
+      buttonText: 'Shop Collection',
+      linkUrl: '/shop',
+      imageUrl: '',
+      isActive: true,
+    });
+    setActiveModal('none');
   };
 
-  const handleAddWatchReal = () => {
+  const handleSaveRealModal = () => {
+    if (!realForm.title.trim()) return;
     const newItem: WatchShopVideoItem = {
       id: `v_${Date.now()}`,
-      slug: 'herbal-soap',
-      title: 'Herbal Soap Reel',
-      videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-skin-care-product-routine-42901-large.mp4',
-      productName: 'Organic Herbal Soap',
-      productPrice: '₹249',
-      productImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC85VgeJRlaGssVKe4o5MaUTzkpQWnScMZ6g9JvCSe-AhjElgCk-Yowqs1H5yrvUiFwhlWsilPdz9OOpG1Ws6cEJPX3MqFjZYdw9mFcjU-6d2GmTnneNs0Hv4b0MNq3arAlFZt4a8TD4uN0jtZdcgrqrUYi4dEkRyGZTOfAX4Yp6YgHz-xA0zhXWRpnfIk3FrKENZ9c9b6hfKS6VNogJjs5ByDdGYS0ggxXlRgx8KWscPhk-oThH0B1',
-      isActive: true,
+      title: realForm.title,
+      productName: realForm.productName || realForm.title,
+      productPrice: realForm.productPrice,
+      productImage: realForm.productImage || 'https://images.unsplash.com/photo-1607006482140-520e7df6504a?w=400',
+      videoUrl: realForm.videoUrl || 'https://assets.mixkit.co/videos/preview/mixkit-skin-care-product-routine-42901-large.mp4',
+      slug: realForm.slug || 'product',
+      isActive: realForm.isActive,
     };
     setFormData({
       ...formData,
       watchShopVideos: [...(formData.watchShopVideos || []), newItem],
     });
+    setRealForm({
+      title: '',
+      productName: '',
+      productPrice: '₹199',
+      productImage: '',
+      videoUrl: '',
+      slug: 'product',
+      isActive: true,
+    });
+    setActiveModal('none');
   };
 
-  const handleAddTransformationStory = () => {
+  const handleSaveStoryModal = () => {
+    if (!storyForm.quote.trim()) return;
     const newItem: TransformationStoryItem = {
       id: `r_${Date.now()}`,
-      beforeUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD5BOW-AMfn4OYmw2raRZLFjyAXl9_Og2oljlyp6Ey3blAt0F58rE21Yc2kFmrF_m8w0_bszNhtfNPcsATPHO3DTKc5-xaT7Y0ZjBW1_TNzJioa5TZURDMTRt1t9pX3z-tlGfEKQwtCCItGZeCLGFICOAr2rCVYxeE6NlxuyABQQ3_aEL3gjrXGthTSnEDu44eD7saHOsvmf4hq5dtRwLMPjiu3W-zO2yCyhMDJBYPlz9EKgQiy_WhT',
-      afterUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDBYYqfLzkyDJCgmUIN62zfpDnVNi80xAnbOwXMzWR_EC665r4W7a8jgxawqehE-NsGCjsao-u0awGHY1IawWevNQcSWP5uOLvmXo8iVoso9HXauK_4wWL6zedipG6xSlBnZ7PvBUQQw8SDi5OQEIzGlroqvATlo8emGKQmNpZkYbPTV5kb74HCXzfWSSdwZ-feAljIXulzIuzrRfkFuPTBDYlbTWpuPRjpYWGCmJD3d7oLoTXmRmLR',
-      quote: '"Visible glow and clear skin in just 2 weeks!"',
-      userName: 'Satisfied Customer',
-      isActive: true,
+      quote: storyForm.quote,
+      userName: storyForm.userName || 'Verified Buyer',
+      beforeUrl: storyForm.beforeUrl || 'https://lh3.googleusercontent.com/aida-public/AB6AXuD5BOW-AMfn4OYmw2raRZLFjyAXl9_Og2oljlyp6Ey3blAt0F58rE21Yc2kFmrF_m8w0_bszNhtfNPcsATPHO3DTKc5-xaT7Y0ZjBW1_TNzJioa5TZURDMTRt1t9pX3z-tlGfEKQwtCCItGZeCLGFICOAr2rCVYxeE6NlxuyABQQ3_aEL3gjrXGthTSnEDu44eD7saHOsvmf4hq5dtRwLMPjiu3W-zO2yCyhMDJBYPlz9EKgQiy_WhT',
+      afterUrl: storyForm.afterUrl || 'https://lh3.googleusercontent.com/aida-public/AB6AXuDBYYqfLzkyDJCgmUIN62zfpDnVNi80xAnbOwXMzWR_EC665r4W7a8jgxawqehE-NsGCjsao-u0awGHY1IawWevNQcSWP5uOLvmXo8iVoso9HXauK_4wWL6zedipG6xSlBnZ7PvBUQQw8SDi5OQEIzGlroqvATlo8emGKQmNpZkYbPTV5kb74HCXzfWSSdwZ-feAljIXulzIuzrRfkFuPTBDYlbTWpuPRjpYWGCmJD3d7oLoTXmRmLR',
+      isActive: storyForm.isActive,
     };
     setFormData({
       ...formData,
       realResults: [...(formData.realResults || []), newItem],
     });
+    setStoryForm({
+      quote: '',
+      userName: '',
+      beforeUrl: '',
+      afterUrl: '',
+      isActive: true,
+    });
+    setActiveModal('none');
   };
 
-  const handleAddTrustBadge = () => {
+  const handleSaveBadgeModal = () => {
+    if (!badgeForm.label.trim()) return;
     const newItem: TrustBadgeItem = {
       id: `tb_${Date.now()}`,
-      label: '100% Organic',
-      iconName: 'Leaf',
-      isActive: true,
+      label: badgeForm.label,
+      iconName: badgeForm.iconName,
+      isActive: badgeForm.isActive,
     };
     setFormData({
       ...formData,
       trustBadges: [...(formData.trustBadges || []), newItem],
     });
+    setBadgeForm({
+      label: '',
+      iconName: 'Leaf',
+      isActive: true,
+    });
+    setActiveModal('none');
   };
 
   const sectionsList = [
@@ -163,7 +250,7 @@ export default function AdminHomePageManager() {
               Home Page Marketing Command Manager
             </h1>
             <p className="text-xs md:text-sm text-slate-300 mt-1 max-w-2xl">
-              Centralized corporate configuration panel controlling all 7 mobile app &amp; web marketing sections in real time.
+              Centralized corporate configuration panel with direct local image upload &amp; interactive form dialogs.
             </p>
           </div>
 
@@ -189,9 +276,9 @@ export default function AdminHomePageManager() {
         </div>
       </div>
 
-      {/* WORKSPACE LAYOUT (2 COLUMNS: NAV SIDEBAR + MAIN EDITOR FORM) */}
+      {/* WORKSPACE LAYOUT */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* LEFT SUB-NAVIGATION SIDEBAR */}
+        {/* LEFT SIDEBAR */}
         <div className="lg:col-span-4 space-y-3">
           <div className="p-4 rounded-2xl bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
             <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-400 flex justify-between items-center">
@@ -239,37 +326,21 @@ export default function AdminHomePageManager() {
           </div>
         </div>
 
-        {/* RIGHT MAIN CORPORATE EDITOR PANEL */}
+        {/* RIGHT MAIN EDITOR PANEL */}
         <div className="lg:col-span-8 space-y-6">
           {/* SECTION 1: TOP OFFERS */}
           {activeSection === 'marquee' && (
             <div className="p-6 rounded-2xl bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 shadow-md space-y-6">
-              <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
-                <h3 className="text-base font-extrabold text-[#0F172A] dark:text-white flex items-center gap-2">
-                  <Tag className="w-5 h-5 text-blue-500" />
-                  <span>Section 1: Top Offer Announcement Pills</span>
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">Promotional lines rendered in the horizontal top offer marquee bar.</p>
-              </div>
-
-              {/* Creator Form */}
-              <div className="p-4 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/60 flex gap-3 items-center">
-                <input
-                  type="text"
-                  placeholder="Enter new offer line (e.g. Free Express Shipping on orders over ₹499)..."
-                  value={newOfferText}
-                  onChange={(e) => setNewOfferText(e.target.value)}
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold outline-none text-[#0F172A] dark:text-white focus:border-blue-500"
-                />
+              <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-4">
+                <div>
+                  <h3 className="text-base font-extrabold text-[#0F172A] dark:text-white flex items-center gap-2">
+                    <Tag className="w-5 h-5 text-blue-500" />
+                    <span>Section 1: Top Offer Announcement Pills</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">Promotional lines rendered in the horizontal marquee offer bar.</p>
+                </div>
                 <button
-                  onClick={() => {
-                    if (!newOfferText.trim()) return;
-                    setFormData({
-                      ...formData,
-                      topOffers: [...(formData.topOffers || []), newOfferText.trim()],
-                    });
-                    setNewOfferText('');
-                  }}
+                  onClick={() => setActiveModal('add_offer')}
                   className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-blue-600/20"
                 >
                   <Plus className="w-4 h-4" /> Add Offer Pill
@@ -319,7 +390,7 @@ export default function AdminHomePageManager() {
                   <p className="text-xs text-slate-400 mt-1">Main sliding banners displayed at the top of the mobile home screen.</p>
                 </div>
                 <button
-                  onClick={handleAddHeroBanner}
+                  onClick={() => setActiveModal('add_hero')}
                   className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-blue-600/20"
                 >
                   <Plus className="w-4 h-4" /> Add Hero Banner
@@ -366,23 +437,32 @@ export default function AdminHomePageManager() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {/* Image Preview & Input */}
+                      {/* Image Preview & Direct Upload Button */}
                       <div className="space-y-2">
-                        <label className="block text-[11px] font-bold text-slate-400">Banner Image Preview &amp; URL</label>
+                        <label className="block text-[11px] font-bold text-slate-400">Banner Image Upload</label>
                         <div className="h-36 rounded-xl overflow-hidden bg-slate-200 dark:bg-slate-800 relative border border-slate-300 dark:border-slate-700">
-                          <img src={banner.imageUrl} alt={banner.title} className="w-full h-full object-cover" />
+                          {banner.imageUrl ? (
+                            <img src={banner.imageUrl} alt={banner.title} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">No image</div>
+                          )}
                         </div>
-                        <input
-                          type="text"
-                          placeholder="Image URL (https://...)"
-                          value={banner.imageUrl}
-                          onChange={(e) => {
-                            const updated = [...(formData.heroBanners || [])];
-                            updated[idx].imageUrl = e.target.value;
-                            setFormData({ ...formData, heroBanners: updated });
-                          }}
-                          className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 outline-none font-mono text-[#0F172A] dark:text-white"
-                        />
+                        <label className="w-full px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer">
+                          <Upload className="w-4 h-4" /> Change Image File
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={async (e) => {
+                              if (e.target.files?.[0]) {
+                                const dataUrl = await fileToDataUrl(e.target.files[0]);
+                                const updated = [...(formData.heroBanners || [])];
+                                updated[idx].imageUrl = dataUrl;
+                                setFormData({ ...formData, heroBanners: updated });
+                              }
+                            }}
+                          />
+                        </label>
                       </div>
 
                       {/* Text Fields */}
@@ -478,7 +558,7 @@ export default function AdminHomePageManager() {
                   <p className="text-xs text-slate-400 mt-1">Interactive video reels with direct buy product overlays.</p>
                 </div>
                 <button
-                  onClick={handleAddWatchReal}
+                  onClick={() => setActiveModal('add_real')}
                   className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-blue-600/20"
                 >
                   <Plus className="w-4 h-4" /> Add Video Reel
@@ -545,17 +625,23 @@ export default function AdminHomePageManager() {
                         />
                       </div>
                       <div>
-                        <label className="block text-[11px] font-bold text-slate-400 mb-1">Thumbnail Cover Image</label>
-                        <input
-                          type="text"
-                          value={real.productImage}
-                          onChange={(e) => {
-                            const updated = [...(formData.watchShopVideos || [])];
-                            updated[idx].productImage = e.target.value;
-                            setFormData({ ...formData, watchShopVideos: updated });
-                          }}
-                          className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-200 rounded-xl p-2.5 outline-none"
-                        />
+                        <label className="block text-[11px] font-bold text-slate-400 mb-1">Cover Image Upload</label>
+                        <label className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 text-blue-600 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer">
+                          <Upload className="w-3.5 h-3.5" /> Upload File
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={async (e) => {
+                              if (e.target.files?.[0]) {
+                                const dataUrl = await fileToDataUrl(e.target.files[0]);
+                                const updated = [...(formData.watchShopVideos || [])];
+                                updated[idx].productImage = dataUrl;
+                                setFormData({ ...formData, watchShopVideos: updated });
+                              }
+                            }}
+                          />
+                        </label>
                       </div>
                     </div>
                   </div>
@@ -576,6 +662,34 @@ export default function AdminHomePageManager() {
               </div>
 
               <div className="space-y-4 max-w-2xl">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 mb-1">Banner Background Image Upload</label>
+                  <div className="h-36 rounded-xl overflow-hidden bg-slate-200 dark:bg-slate-800 relative border border-slate-300 dark:border-slate-700 mb-2">
+                    {formData.midBanner.imageUrl ? (
+                      <img src={formData.midBanner.imageUrl} alt="Mid Banner" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">No image uploaded</div>
+                    )}
+                  </div>
+                  <label className="w-full px-4 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-600 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer">
+                    <Upload className="w-4 h-4" /> Upload Local Image File
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        if (e.target.files?.[0]) {
+                          const dataUrl = await fileToDataUrl(e.target.files[0]);
+                          setFormData({
+                            ...formData,
+                            midBanner: { ...formData.midBanner!, imageUrl: dataUrl },
+                          });
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+
                 <div>
                   <label className="block text-xs font-bold text-slate-400 mb-1">Banner Title / Headline</label>
                   <input
@@ -650,7 +764,7 @@ export default function AdminHomePageManager() {
                   <p className="text-xs text-slate-400 mt-1">Customer transformation stories with before/after photos and testimonial quotes.</p>
                 </div>
                 <button
-                  onClick={handleAddTransformationStory}
+                  onClick={() => setActiveModal('add_story')}
                   className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-blue-600/20"
                 >
                   <Plus className="w-4 h-4" /> Add Story
@@ -676,14 +790,51 @@ export default function AdminHomePageManager() {
                       </button>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 h-28">
-                      <div className="relative rounded-xl overflow-hidden border border-slate-300">
-                        <img src={story.beforeUrl} alt="Before" className="w-full h-full object-cover" />
-                        <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] px-1.5 py-0.5 rounded">Before</span>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <div className="relative rounded-xl overflow-hidden border border-slate-300 h-28 mb-1">
+                          <img src={story.beforeUrl} alt="Before" className="w-full h-full object-cover" />
+                          <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] px-1.5 py-0.5 rounded">Before</span>
+                        </div>
+                        <label className="w-full py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 text-blue-600 font-bold text-[10px] flex items-center justify-center gap-1 cursor-pointer">
+                          <Upload className="w-3 h-3" /> Change Before Image
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={async (e) => {
+                              if (e.target.files?.[0]) {
+                                const dataUrl = await fileToDataUrl(e.target.files[0]);
+                                const updated = [...(formData.realResults || [])];
+                                updated[idx].beforeUrl = dataUrl;
+                                setFormData({ ...formData, realResults: updated });
+                              }
+                            }}
+                          />
+                        </label>
                       </div>
-                      <div className="relative rounded-xl overflow-hidden border border-slate-300">
-                        <img src={story.afterUrl} alt="After" className="w-full h-full object-cover" />
-                        <span className="absolute bottom-1 left-1 bg-blue-600 text-white text-[9px] px-1.5 py-0.5 rounded">After</span>
+
+                      <div>
+                        <div className="relative rounded-xl overflow-hidden border border-slate-300 h-28 mb-1">
+                          <img src={story.afterUrl} alt="After" className="w-full h-full object-cover" />
+                          <span className="absolute bottom-1 left-1 bg-blue-600 text-white text-[9px] px-1.5 py-0.5 rounded">After</span>
+                        </div>
+                        <label className="w-full py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 text-blue-600 font-bold text-[10px] flex items-center justify-center gap-1 cursor-pointer">
+                          <Upload className="w-3 h-3" /> Change After Image
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={async (e) => {
+                              if (e.target.files?.[0]) {
+                                const dataUrl = await fileToDataUrl(e.target.files[0]);
+                                const updated = [...(formData.realResults || [])];
+                                updated[idx].afterUrl = dataUrl;
+                                setFormData({ ...formData, realResults: updated });
+                              }
+                            }}
+                          />
+                        </label>
                       </div>
                     </div>
 
@@ -732,7 +883,7 @@ export default function AdminHomePageManager() {
                   <p className="text-xs text-slate-400 mt-1">Value proposition badges displayed to build customer trust on the mobile app home page.</p>
                 </div>
                 <button
-                  onClick={handleAddTrustBadge}
+                  onClick={() => setActiveModal('add_badge')}
                   className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-blue-600/20"
                 >
                   <Plus className="w-4 h-4" /> Add Trust Badge
@@ -829,6 +980,354 @@ export default function AdminHomePageManager() {
           )}
         </div>
       </div>
+
+      {/* =================================================================== */}
+      {/* INTERACTIVE ADD ITEM MODAL DIALOGS */}
+      {/* =================================================================== */}
+
+      {/* MODAL 1: ADD OFFER PILL */}
+      {activeModal === 'add_offer' && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 w-full max-w-md space-y-5 shadow-2xl">
+            <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
+              <h3 className="font-bold text-sm text-[#0F172A] dark:text-white flex items-center gap-2">
+                <Tag className="w-4 h-4 text-blue-500" />
+                Add Top Offer Announcement Pill
+              </h3>
+              <button onClick={() => setActiveModal('none')} className="text-slate-400 hover:text-slate-200">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-400 mb-1">Offer Text</label>
+              <input
+                type="text"
+                placeholder="e.g. Flat 25% OFF on Ayurvedic Soaps"
+                value={newOfferText}
+                onChange={(e) => setNewOfferText(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs bg-slate-50 dark:bg-slate-900 outline-none font-bold text-[#0F172A] dark:text-white"
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <button onClick={() => setActiveModal('none')} className="px-4 py-2 rounded-xl border text-xs font-bold text-slate-500">
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (!newOfferText.trim()) return;
+                  setFormData({ ...formData, topOffers: [...(formData.topOffers || []), newOfferText.trim()] });
+                  setNewOfferText('');
+                  setActiveModal('none');
+                }}
+                className="px-5 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs"
+              >
+                Add Offer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: ADD HERO BANNER */}
+      {activeModal === 'add_hero' && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 w-full max-w-lg space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
+              <h3 className="font-bold text-sm text-[#0F172A] dark:text-white flex items-center gap-2">
+                <Sliders className="w-4 h-4 text-blue-500" />
+                Add Hero Carousel Banner
+              </h3>
+              <button onClick={() => setActiveModal('none')} className="text-slate-400 hover:text-slate-200">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Direct Local Image Upload */}
+            <div>
+              <label className="block text-xs font-bold text-slate-400 mb-1">Banner Image File Upload</label>
+              <div className="h-32 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 mb-2 relative flex items-center justify-center">
+                {heroForm.imageUrl ? (
+                  <img src={heroForm.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="text-center p-4">
+                    <Upload className="w-6 h-6 text-slate-400 mx-auto mb-1" />
+                    <span className="text-[11px] text-slate-400">Click below to upload image file from your device</span>
+                  </div>
+                )}
+              </div>
+              <label className="w-full px-4 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-600 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer">
+                <Upload className="w-4 h-4" /> Select Local Image File
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    if (e.target.files?.[0]) {
+                      const dataUrl = await fileToDataUrl(e.target.files[0]);
+                      setHeroForm({ ...heroForm, imageUrl: dataUrl });
+                    }
+                  }}
+                />
+              </label>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-400 mb-1">Banner Title</label>
+              <input
+                type="text"
+                placeholder="e.g. French Green Clay & Eucalyptus Bar"
+                value={heroForm.title}
+                onChange={(e) => setHeroForm({ ...heroForm, title: e.target.value })}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs bg-slate-50 dark:bg-slate-900 font-bold"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-400 mb-1">Subtitle / Description</label>
+              <input
+                type="text"
+                placeholder="e.g. Artisan cold-processed saponification, slow cured for 40 days"
+                value={heroForm.subtitle}
+                onChange={(e) => setHeroForm({ ...heroForm, subtitle: e.target.value })}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs bg-slate-50 dark:bg-slate-900"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1">Badge Tag</label>
+                <input
+                  type="text"
+                  placeholder="e.g. New Cure Release"
+                  value={heroForm.badgeText}
+                  onChange={(e) => setHeroForm({ ...heroForm, badgeText: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50 dark:bg-slate-900 font-bold"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1">Button CTA Text</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Shop Collection"
+                  value={heroForm.buttonText}
+                  onChange={(e) => setHeroForm({ ...heroForm, buttonText: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50 dark:bg-slate-900 font-bold text-blue-600"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <button onClick={() => setActiveModal('none')} className="px-4 py-2 rounded-xl border text-xs font-bold text-slate-500">
+                Cancel
+              </button>
+              <button onClick={handleSaveHeroModal} className="px-5 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs shadow-md shadow-blue-600/20">
+                Save Hero Banner
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: ADD WATCH & SHOP REAL */}
+      {activeModal === 'add_real' && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 w-full max-w-lg space-y-4 shadow-2xl">
+            <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
+              <h3 className="font-bold text-sm text-[#0F172A] dark:text-white flex items-center gap-2">
+                <Video className="w-4 h-4 text-blue-500" />
+                Add Watch &amp; Shop Video Reel
+              </h3>
+              <button onClick={() => setActiveModal('none')} className="text-slate-400 hover:text-slate-200">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-400 mb-1">Reel Title</label>
+              <input
+                type="text"
+                placeholder="e.g. Aloe Vera Hydrating Bar Reel"
+                value={realForm.title}
+                onChange={(e) => setRealForm({ ...realForm, title: e.target.value })}
+                className="w-full px-4 py-2.5 rounded-xl border text-xs font-bold bg-slate-50 dark:bg-slate-900"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1">Product Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Aloe Vera Soap"
+                  value={realForm.productName}
+                  onChange={(e) => setRealForm({ ...realForm, productName: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl border text-xs bg-slate-50 dark:bg-slate-900"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1">Price Tag</label>
+                <input
+                  type="text"
+                  placeholder="e.g. ₹199"
+                  value={realForm.productPrice}
+                  onChange={(e) => setRealForm({ ...realForm, productPrice: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl border text-xs bg-slate-50 dark:bg-slate-900 font-bold text-blue-600"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-400 mb-1">Product Thumbnail Image File Upload</label>
+              <label className="w-full px-4 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 text-blue-600 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer">
+                <Upload className="w-4 h-4" /> Upload Local Image File
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    if (e.target.files?.[0]) {
+                      const dataUrl = await fileToDataUrl(e.target.files[0]);
+                      setRealForm({ ...realForm, productImage: dataUrl });
+                    }
+                  }}
+                />
+              </label>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <button onClick={() => setActiveModal('none')} className="px-4 py-2 rounded-xl border text-xs font-bold text-slate-500">
+                Cancel
+              </button>
+              <button onClick={handleSaveRealModal} className="px-5 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs shadow-md shadow-blue-600/20">
+                Save Video Reel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: ADD BEFORE & AFTER STORY */}
+      {activeModal === 'add_story' && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 w-full max-w-lg space-y-4 shadow-2xl">
+            <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
+              <h3 className="font-bold text-sm text-[#0F172A] dark:text-white flex items-center gap-2">
+                <Star className="w-4 h-4 text-blue-500" />
+                Add Before &amp; After Transformation Story
+              </h3>
+              <button onClick={() => setActiveModal('none')} className="text-slate-400 hover:text-slate-200">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-400 mb-1">Customer Quote / Testimonial</label>
+              <input
+                type="text"
+                placeholder='e.g. "My acne cleared in 3 weeks!"'
+                value={storyForm.quote}
+                onChange={(e) => setStoryForm({ ...storyForm, quote: e.target.value })}
+                className="w-full px-4 py-2.5 rounded-xl border text-xs font-bold bg-slate-50 dark:bg-slate-900"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-400 mb-1">Customer Name &amp; Product Used</label>
+              <input
+                type="text"
+                placeholder="e.g. Ananya V. used Neem & Tea Tree Soap"
+                value={storyForm.userName}
+                onChange={(e) => setStoryForm({ ...storyForm, userName: e.target.value })}
+                className="w-full px-4 py-2.5 rounded-xl border text-xs bg-slate-50 dark:bg-slate-900"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1">Before Image Upload</label>
+                <label className="w-full px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 font-bold text-xs flex items-center justify-center gap-1 cursor-pointer">
+                  <Upload className="w-3.5 h-3.5" /> Upload File
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      if (e.target.files?.[0]) {
+                        const dataUrl = await fileToDataUrl(e.target.files[0]);
+                        setStoryForm({ ...storyForm, beforeUrl: dataUrl });
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1">After Image Upload</label>
+                <label className="w-full px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 font-bold text-xs flex items-center justify-center gap-1 cursor-pointer">
+                  <Upload className="w-3.5 h-3.5" /> Upload File
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      if (e.target.files?.[0]) {
+                        const dataUrl = await fileToDataUrl(e.target.files[0]);
+                        setStoryForm({ ...storyForm, afterUrl: dataUrl });
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <button onClick={() => setActiveModal('none')} className="px-4 py-2 rounded-xl border text-xs font-bold text-slate-500">
+                Cancel
+              </button>
+              <button onClick={handleSaveStoryModal} className="px-5 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs shadow-md shadow-blue-600/20">
+                Save Story
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 5: ADD TRUST BADGE */}
+      {activeModal === 'add_badge' && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 w-full max-w-md space-y-4 shadow-2xl">
+            <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
+              <h3 className="font-bold text-sm text-[#0F172A] dark:text-white flex items-center gap-2">
+                <Award className="w-4 h-4 text-blue-500" />
+                Add Trust Badge
+              </h3>
+              <button onClick={() => setActiveModal('none')} className="text-slate-400 hover:text-slate-200">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-400 mb-1">Badge Label</label>
+              <input
+                type="text"
+                placeholder="e.g. Dermatologist Approved"
+                value={badgeForm.label}
+                onChange={(e) => setBadgeForm({ ...badgeForm, label: e.target.value })}
+                className="w-full px-4 py-2.5 rounded-xl border text-xs font-bold bg-slate-50 dark:bg-slate-900"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <button onClick={() => setActiveModal('none')} className="px-4 py-2 rounded-xl border text-xs font-bold text-slate-500">
+                Cancel
+              </button>
+              <button onClick={handleSaveBadgeModal} className="px-5 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs shadow-md shadow-blue-600/20">
+                Save Badge
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }
