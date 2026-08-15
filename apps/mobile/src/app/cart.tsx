@@ -128,7 +128,7 @@ export default function MobileCartScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F9FB' }}>
       {/* 1. Header Bar */}
       <View style={{ paddingHorizontal: CONTAINER_PADDING, paddingTop: 14, paddingBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(247, 249, 251, 0.9)', borderBottomWidth: 1, borderBottomColor: 'rgba(195, 198, 209, 0.3)' }}>
-        <TouchableOpacity onPress={() => router.back()} style={{ padding: 4 }}>
+        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)' as any))} style={{ padding: 4 }}>
           <ArrowLeft size={22} color="#002754" />
         </TouchableOpacity>
         <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 22, fontWeight: '700', color: '#002754', letterSpacing: -0.5 }}>

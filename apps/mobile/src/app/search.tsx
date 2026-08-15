@@ -78,7 +78,7 @@ export default function MobileSearchScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F9FB' }}>
       {/* Header & Search Input */}
       <View style={{ paddingHorizontal: CONTAINER_PADDING, paddingTop: 14, paddingBottom: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: 'rgba(195, 198, 209, 0.3)', gap: 14 }}>
-        <TouchableOpacity onPress={() => router.back()} style={{ padding: 4 }}>
+        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)' as any))} style={{ padding: 4 }}>
           <ArrowLeft size={22} color="#002754" />
         </TouchableOpacity>
 
