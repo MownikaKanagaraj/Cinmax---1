@@ -1,11 +1,13 @@
 import type { Metadata } from 'next';
 import { AdminProviders } from './providers';
+import { AdminSidebar } from '../components/admin-sidebar';
+import { AdminHeader } from '../components/admin-header';
 import './globals.css';
 
 export const metadata: Metadata = {
   title: {
-    default: 'CINMAX Admin Portal | Operations & Inventory Management',
-    template: '%s | CINMAX Admin',
+    default: 'CINMAX Corporate Admin | Operations & Inventory Management',
+    template: '%s | CINMAX Corporate Admin',
   },
   description: 'Enterprise inventory, order fulfillment, customer profiles and revenue analytics for CINMAX Global Products.',
   robots: {
@@ -28,13 +30,17 @@ export default function RootAdminLayout({
           href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap"
-          rel="stylesheet"
-        />
       </head>
-      <body className="min-h-screen bg-[#F7F9FB] font-body text-[#191C1E] antialiased selection:bg-[#0A3D78] selection:text-white">
-        <AdminProviders>{children}</AdminProviders>
+      <body className="min-h-screen bg-slate-50 dark:bg-[#070F1E] font-body text-[#0F172A] dark:text-white antialiased selection:bg-blue-600 selection:text-white">
+        <AdminProviders>
+          <div className="min-h-screen flex bg-slate-50 dark:bg-[#070F1E]">
+            <AdminSidebar />
+            <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+              <AdminHeader />
+              <main className="flex-1 p-6 md:p-8 overflow-y-auto">{children}</main>
+            </div>
+          </div>
+        </AdminProviders>
       </body>
     </html>
   );

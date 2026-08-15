@@ -3,10 +3,11 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { AdminLayout } from '../../components/admin-layout';
-import { PageHeader, Badge, SearchBar } from '@cinmax/ui';
+import { PageHeader, SearchBar } from '@cinmax/ui';
 import { formatCurrency } from '@cinmax/utils';
 import { useCustomersQuery } from '@cinmax/hooks';
 import type { CustomerEntity } from '@cinmax/api';
+import { ArrowUpRight } from 'lucide-react';
 
 export default function AdminCustomersPage() {
   const [search, setSearch] = React.useState('');
@@ -16,7 +17,7 @@ export default function AdminCustomersPage() {
     id: c.id,
     name: c.fullName || c.email.split('@')[0],
     email: c.email,
-    tier: `${c.loyaltyTier.toUpperCase()} Tier Patron`,
+    tier: `${c.loyaltyTier.toUpperCase()} Member`,
     ordersCount: c.savedAddresses?.length || 1,
     lifetimeSpend: (c.loyaltyPoints || 5) * 10,
     lastOrder: new Date(c.updatedAt).toLocaleDateString(),
@@ -29,9 +30,9 @@ export default function AdminCustomersPage() {
   return (
     <AdminLayout>
       <PageHeader
-        badge="Patron CRM"
-        title="Customer Directory"
-        subtitle="Manage customer relationships, lifetime botanical spending, and privilege tier assignments."
+        badge="Customer CRM"
+        title="Customer List"
+        subtitle="View registered customers, total purchase history, loyalty levels, and account details."
       />
 
       <div className="my-6 max-w-md">
@@ -39,43 +40,44 @@ export default function AdminCustomersPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onClear={() => setSearch('')}
-          placeholder="Search patron by name or email..."
+          placeholder="Search customer by name or email..."
         />
       </div>
 
-      <div className="p-6 rounded-[24px] bg-white dark:bg-[#071324] border border-[#0A3D78]/10 shadow-sm">
+      <div className="p-6 rounded-2xl bg-white dark:bg-[#0B132B] border border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="border-b border-[#0A3D78]/10 text-muted-foreground uppercase tracking-wider">
+            <thead className="border-b border-slate-200 dark:border-slate-800 text-slate-400 uppercase tracking-wider font-bold">
               <tr>
-                <th className="pb-3 font-semibold">Patron Name</th>
-                <th className="pb-3 font-semibold">Email</th>
-                <th className="pb-3 font-semibold">Privilege Tier</th>
-                <th className="pb-3 font-semibold">Total Orders</th>
-                <th className="pb-3 font-semibold">Lifetime Spend</th>
-                <th className="pb-3 font-semibold">Last Active</th>
-                <th className="pb-3 font-semibold text-right">Action</th>
+                <th className="pb-3">Customer Name</th>
+                <th className="pb-3">Email Address</th>
+                <th className="pb-3">Membership Tier</th>
+                <th className="pb-3">Total Orders</th>
+                <th className="pb-3">Lifetime Spend</th>
+                <th className="pb-3">Last Active</th>
+                <th className="pb-3 text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#0A3D78]/10">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
               {customers.map((cust) => (
-                <tr key={cust.id} className="hover:bg-[#F7F9FB] dark:hover:bg-[#0A192F]/40">
-                  <td className="py-4 font-bold text-[#002754] dark:text-white">
-                    {cust.name}
-                  </td>
-                  <td className="py-4 text-muted-foreground">{cust.email}</td>
+                <tr key={cust.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                  <td className="py-4 font-bold text-[#0F172A] dark:text-white">{cust.name}</td>
+                  <td className="py-4 font-medium text-slate-500 dark:text-slate-300">{cust.email}</td>
                   <td className="py-4">
-                    <Badge variant="gold">{cust.tier}</Badge>
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-600 dark:bg-blue-950/80 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                      {cust.tier}
+                    </span>
                   </td>
-                  <td className="py-4 font-semibold">{cust.ordersCount} orders</td>
-                  <td className="py-4 font-bold">{formatCurrency(cust.lifetimeSpend)}</td>
-                  <td className="py-4 text-muted-foreground">{cust.lastOrder}</td>
+                  <td className="py-4 font-bold text-[#0F172A] dark:text-white">{cust.ordersCount} orders</td>
+                  <td className="py-4 font-bold text-[#0F172A] dark:text-white">{formatCurrency(cust.lifetimeSpend)}</td>
+                  <td className="py-4 text-slate-400 font-medium">{cust.lastOrder}</td>
                   <td className="py-4 text-right">
                     <Link
                       href={`/customers/${cust.id}`}
-                      className="text-[#0A3D78] dark:text-[#C5A880] font-bold hover:underline"
+                      prefetch={true}
+                      className="text-blue-600 dark:text-blue-400 font-bold hover:underline inline-flex items-center gap-0.5"
                     >
-                      View Profile →
+                      View Profile <ArrowUpRight className="w-3.5 h-3.5" />
                     </Link>
                   </td>
                 </tr>

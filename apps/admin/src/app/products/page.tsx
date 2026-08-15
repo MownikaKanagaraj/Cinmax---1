@@ -3,10 +3,11 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { AdminLayout } from '../../components/admin-layout';
-import { PageHeader, Badge, Button, SearchBar } from '@cinmax/ui';
+import { PageHeader, SearchBar } from '@cinmax/ui';
 import { formatCurrency } from '@cinmax/utils';
 import { useProductsQuery } from '@cinmax/hooks';
 import type { Product } from '@cinmax/types';
+import { ArrowUpRight } from 'lucide-react';
 
 export default function AdminProductsPage() {
   const [search, setSearch] = React.useState('');
@@ -19,13 +20,17 @@ export default function AdminProductsPage() {
   return (
     <AdminLayout>
       <PageHeader
-        badge="Catalog Directory"
-        title="Formulations & Products"
-        subtitle="Manage product catalog, variants, cure duration metadata, and inventory thresholds."
+        badge="Product Catalog"
+        title="Products & Inventory"
+        subtitle="Manage store items, set prices, update categories, and monitor stock availability."
         actions={
-          <Button variant="primary" size="sm" className="rounded-full">
-            <Link href="/products/new">+ Create New Formulation</Link>
-          </Button>
+          <Link
+            href="/products/new"
+            prefetch={true}
+            className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all inline-block"
+          >
+            + Add New Product
+          </Link>
         }
       />
 
@@ -34,53 +39,56 @@ export default function AdminProductsPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onClear={() => setSearch('')}
-          placeholder="Search products by title or formulation..."
+          placeholder="Search products by title or category..."
         />
       </div>
 
-      <div className="p-6 rounded-[24px] bg-white dark:bg-[#071324] border border-[#0A3D78]/10 shadow-sm">
+      <div className="p-6 rounded-2xl bg-white dark:bg-[#0B132B] border border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="border-b border-[#0A3D78]/10 text-muted-foreground uppercase tracking-wider">
+            <thead className="border-b border-slate-200 dark:border-slate-800 text-slate-400 uppercase tracking-wider font-bold">
               <tr>
-                <th className="pb-3 font-semibold">Formulation</th>
-                <th className="pb-3 font-semibold">Category</th>
-                <th className="pb-3 font-semibold">Process</th>
-                <th className="pb-3 font-semibold">Base Price</th>
-                <th className="pb-3 font-semibold">Status</th>
-                <th className="pb-3 font-semibold text-right">Action</th>
+                <th className="pb-3">Product Name</th>
+                <th className="pb-3">Category</th>
+                <th className="pb-3">Price</th>
+                <th className="pb-3">Stock Status</th>
+                <th className="pb-3 text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#0A3D78]/10">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
               {products.map((p: Product) => (
-                <tr key={p.id} className="hover:bg-[#F7F9FB] dark:hover:bg-[#0A192F]/40">
-                  <td className="py-4 font-bold text-[#002754] dark:text-white flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-[10px] bg-slate-100 overflow-hidden flex-shrink-0">
+                <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                  <td className="py-4 font-bold text-[#0F172A] dark:text-white flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden flex-shrink-0">
                       <img
-                        src={p.images?.[0]?.url}
+                        src={p.images?.[0]?.url || 'https://images.unsplash.com/photo-1607006482140-520e7df6504a?w=100'}
                         alt={p.title}
                         className="w-full h-full object-cover"
                       />
                     </div>
-                    <span>{p.title}</span>
+                    <div>
+                      <p className="font-bold text-xs text-[#0F172A] dark:text-white">{p.title}</p>
+                      <p className="text-[10px] text-slate-400 font-mono">{p.slug}</p>
+                    </div>
                   </td>
-                  <td className="py-4 text-muted-foreground">{p.category?.name || 'Cold Process'}</td>
-                  <td className="py-4">
-                    <Badge variant="primary">{p.processType?.replace('_', ' ') || 'Artisanal'}</Badge>
+                  <td className="py-4 font-medium text-slate-500 dark:text-slate-300">
+                    {p.category?.name || 'General'}
                   </td>
-                  <td className="py-4 font-bold">{formatCurrency(p.variants?.[0]?.price || p.basePrice || 18.0)}</td>
+                  <td className="py-4 font-bold text-[#0F172A] dark:text-white">
+                    {formatCurrency(p.basePrice)}
+                  </td>
                   <td className="py-4">
-                    <span className="inline-flex items-center gap-1.5 text-emerald-600 font-semibold">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      Active Catalog
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                      In Stock
                     </span>
                   </td>
                   <td className="py-4 text-right">
                     <Link
                       href={`/products/${p.id}`}
-                      className="text-[#0A3D78] dark:text-[#C5A880] font-bold hover:underline"
+                      prefetch={true}
+                      className="text-blue-600 dark:text-blue-400 font-bold hover:underline inline-flex items-center gap-0.5"
                     >
-                      Edit →
+                      Edit <ArrowUpRight className="w-3.5 h-3.5" />
                     </Link>
                   </td>
                 </tr>

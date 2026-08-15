@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { AdminLayout } from '../../components/admin-layout';
-import { PageHeader, Button, Badge } from '@cinmax/ui';
+import { PageHeader, Button } from '@cinmax/ui';
 import { useCategoriesQuery } from '@cinmax/hooks';
 import type { Category } from '@cinmax/types';
 
@@ -12,12 +12,12 @@ export default function AdminCategoriesPage() {
   return (
     <AdminLayout>
       <PageHeader
-        badge="Taxonomy Engine"
-        title="Botanical Categories"
-        subtitle="Organize cold-process collections, skincare rituals, and seasonal cure groupings."
+        badge="Product Organization"
+        title="Product Categories"
+        subtitle="Group store products into clear categories and collections for easy customer browsing."
         actions={
-          <Button variant="primary" size="sm" className="rounded-full">
-            + Create New Category
+          <Button variant="primary" size="sm" className="rounded-xl">
+            + Add New Category
           </Button>
         }
       />
@@ -26,9 +26,9 @@ export default function AdminCategoriesPage() {
         {categories.map((c: Category) => (
           <div
             key={c.id}
-            className="p-6 rounded-[24px] bg-white dark:bg-[#071324] border border-[#0A3D78]/10 shadow-sm space-y-4"
+            className="p-5 rounded-2xl bg-white dark:bg-[#0B132B] border border-slate-200 dark:border-slate-800 shadow-sm space-y-4"
           >
-            <div className="w-full h-32 rounded-[16px] overflow-hidden bg-slate-100 relative">
+            <div className="w-full h-32 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 relative">
               <img
                 src={
                   c.imageUrl ||
@@ -40,16 +40,18 @@ export default function AdminCategoriesPage() {
             </div>
             <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <h3 className="font-serif font-bold text-base text-[#002754] dark:text-white">
+                <h3 className="font-bold text-base text-[#0F172A] dark:text-white">
                   {c.name}
                 </h3>
-                <Badge variant="primary">{c.productCount || 0} Products</Badge>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-300">
+                  {c.productCount || 0} Products
+                </span>
               </div>
-              <p className="text-xs text-muted-foreground line-clamp-2">{c.description}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{c.description}</p>
             </div>
-            <div className="pt-2 border-t border-[#0A3D78]/10 flex justify-between items-center text-xs">
-              <span className="font-mono text-muted-foreground">/{c.slug}</span>
-              <button className="text-[#0A3D78] dark:text-[#C5A880] font-bold hover:underline">
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-xs">
+              <span className="font-mono text-slate-400">/{c.slug}</span>
+              <button className="text-blue-600 dark:text-blue-400 font-bold hover:underline">
                 Edit Category
               </button>
             </div>

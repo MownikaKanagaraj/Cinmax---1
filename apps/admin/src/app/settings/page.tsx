@@ -64,13 +64,13 @@ export default function AdminSettingsPage() {
   return (
     <AdminLayout>
       <PageHeader
-        badge="Platform Configuration"
-        title="Storefront & Mobile Content Settings"
-        subtitle="Manage live announcement bars, skin concern filters, trust certification badges, and general store details."
+        badge="Store Settings"
+        title="Store & App Settings"
+        subtitle="Manage home announcement bars, product tags, trust badges, and store configuration."
         actions={
-          <Button variant="primary" size="sm" onClick={handleSave} className="rounded-full flex items-center gap-2">
+          <Button variant="primary" size="sm" onClick={handleSave} className="rounded-xl flex items-center gap-2">
             {isSaved ? <Check className="w-4 h-4 text-emerald-400" /> : <Save className="w-4 h-4" />}
-            {isSaved ? 'Configurations Saved!' : 'Save All Settings'}
+            {isSaved ? 'Settings Saved!' : 'Save All Settings'}
           </Button>
         }
       />

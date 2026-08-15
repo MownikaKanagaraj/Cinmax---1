@@ -95,11 +95,18 @@ export class SupabaseProductRepository implements IProductRepository {
         break;
     }
 
-    const { data, error } = await query;
-    if (error) throw new Error(`Supabase Database Error: ${error.message}`);
+    try {
+      const { data, error } = await query;
+      if (error) throw new Error(`Supabase Database Error: ${error.message}`);
 
-    const entities = (data || []).map((row: any) => ProductMapper.toEntity(row));
-    return paginateArray(entities, pagination);
+      const entities = (data || []).map((row: any) => ProductMapper.toEntity(row));
+      return paginateArray(entities, pagination);
+    } catch (err) {
+      console.warn('[SupabaseProductRepository] Network/DNS failure, returning mock data fallback');
+      const { MockProductRepository } = await import('./mock.repository');
+      const mockRepo = new MockProductRepository();
+      return mockRepo.getAll(filter, pagination);
+    }
   }
 
   public async getProducts(

@@ -58,9 +58,9 @@ export default function AdminReviewsPage() {
   const reviewsList: ReviewEntity[] = reviewsData?.items || [];
   const reviews = reviewsList.map((r: ReviewEntity) => ({
     id: r.id,
-    author: r.authorName || 'Anonymous Patron',
+    author: r.authorName || 'Verified Customer',
     rating: r.rating,
-    product: r.title || 'Cold Process Artisanal Soap',
+    product: r.title || 'Store Product',
     comment: r.content,
     date: new Date(r.createdAt).toLocaleDateString(),
     status: r.isApproved ? 'published' : 'pending_moderation',
@@ -69,13 +69,13 @@ export default function AdminReviewsPage() {
   return (
     <AdminLayout>
       <PageHeader
-        badge="Patron Feedback & Proof"
-        title="Reviews & Real Results Manager"
-        subtitle="Manage customer ratings, review moderation, and home page Before & After clinical transformation stories."
+        badge="Customer Feedback"
+        title="Customer Reviews & Feedback"
+        subtitle="Manage customer reviews, star ratings, and customer transformation stories."
         actions={
           activeTab === 'results' ? (
-            <Button variant="primary" size="sm" className="rounded-full flex items-center gap-2" onClick={() => setIsModalOpen(true)}>
-              <Plus className="w-4 h-4" /> Add Before &amp; After Transformation
+            <Button variant="primary" size="sm" className="rounded-xl flex items-center gap-2" onClick={() => setIsModalOpen(true)}>
+              <Plus className="w-4 h-4" /> Add Before &amp; After Story
             </Button>
           ) : undefined
         }
