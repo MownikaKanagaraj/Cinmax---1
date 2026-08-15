@@ -183,3 +183,5 @@ export type { ISettingsRepository } from './settings/repository.interface';
 export { MockSettingsRepository } from './settings/mock.repository';
 export { SupabaseSettingsRepository } from './settings/supabase.repository';
 export { GetSettingsUseCase, UpdateSettingsUseCase } from './settings/useCases';
+
+export * from './marketing';

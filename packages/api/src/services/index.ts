@@ -11,3 +11,4 @@ export * from './content.service';
 export * from './auth.service';
 export * from './admin.service';
 export * from './operations.service';
+export * from './marketing.service';

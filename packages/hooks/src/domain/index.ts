@@ -13,3 +13,4 @@ export * from './useAuthDomain';
 export * from './useCheckoutDomain';
 export * from './useAdminOperations';
 export * from './useOperationsDomain';
+export * from '../useHomeMarketingQuery';

@@ -169,6 +169,10 @@ export class Container implements IContainer {
     this.auth = new AuthService(this.authRepo);
     this.admin = new AdminService(this.orderRepo, this.productRepo, this.customerRepo, this.reviewRepo);
     this.operations = new OperationsService();
+    const homeMarketingRepo = this.useMockData || !supabase
+      ? new (require('../modules/marketing').MockHomeMarketingRepository)()
+      : new (require('../modules/marketing').SupabaseHomeMarketingRepository)(supabase);
+    this.homeMarketing = new (require('../services/marketing.service').HomeMarketingService)(homeMarketingRepo);
   }
 }
 

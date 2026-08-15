@@ -70,4 +70,5 @@ export interface IContainer {
   readonly auth: AuthService;
   readonly admin: AdminService;
   readonly operations: OperationsService;
+  readonly homeMarketing: HomeMarketingService;
 }

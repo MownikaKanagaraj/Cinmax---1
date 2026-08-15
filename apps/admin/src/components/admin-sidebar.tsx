@@ -46,15 +46,12 @@ export function AdminSidebar() {
       items: [
         { label: 'Home Page Manager', href: '/home-manager', icon: Sliders },
         { label: 'Customers', href: '/customers', icon: Users },
-        { label: 'Promotional Banners', href: '/banners', icon: Sliders },
         { label: 'Discount Coupons', href: '/coupons', icon: Ticket },
-        { label: 'Customer Reviews', href: '/reviews', icon: Star },
       ],
     },
     {
       groupTitle: 'Store Settings',
       items: [
-        { label: 'Media & Images', href: '/media', icon: ImageIcon },
         { label: 'Store Settings', href: '/settings', icon: Settings },
       ],
     },

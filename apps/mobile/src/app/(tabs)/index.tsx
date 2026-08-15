@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ProductCard } from '../../components/ProductCard';
-import { useCartStore, useWishlistStore, useProductsQuery, useCategoriesQuery, useBannersQuery } from '@cinmax/hooks';
+import { useCartStore, useWishlistStore, useProductsQuery, useCategoriesQuery, useHomeMarketingQuery } from '@cinmax/hooks';
 import type { Product } from '@cinmax/types';
 import {
   Menu,
@@ -62,38 +62,63 @@ export default function MobileHomeScreen() {
   const { toggleItem, isWishlisted } = useWishlistStore();
   const { data: categories = [] } = useCategoriesQuery();
   const { data: productsData } = useProductsQuery();
-  const { data: heroBannersData = [] } = useBannersQuery(true);
+  const { data: homeMarketingData } = useHomeMarketingQuery();
   const products: Product[] = productsData?.items || [];
 
-  const activeBanners = heroBannersData.length > 0 ? heroBannersData : [
-    {
-      id: 'b1',
-      title: 'French Green Clay & Eucalyptus',
-      subtitle: 'Artisan Cold-Processed Saponification • 40-Day Slow Cured',
-      badgeText: 'New Cure Release',
-      ctaText: 'Discover Blend',
-      ctaLink: '/shop',
-      imageUrl: 'https://images.unsplash.com/photo-1607006314147-759088fd21c2?w=1600&auto=format&fit=crop&q=80',
-    },
-    {
-      id: 'b2',
-      title: 'Azure Marine Botanical Bar',
-      subtitle: 'Wild-harvested Atlantic kelp & organic bergamot peel hydration.',
-      badgeText: 'Atelier Signature',
-      ctaText: 'Shop Collection',
-      ctaLink: '/product/azure-marine-botanical-bar',
-      imageUrl: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=1600&auto=format&fit=crop&q=80',
-    },
-    {
-      id: 'b3',
-      title: 'Hinoki & Organic Shea Curing Set',
-      subtitle: 'Complete botanical body care for deeply nourished, radiant skin.',
-      badgeText: 'Gift Set Pack',
-      ctaText: 'Explore Sets',
-      ctaLink: '/shop',
-      imageUrl: 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=1600&auto=format&fit=crop&q=80',
-    },
+  const topOffers = homeMarketingData?.topOffers || [
+    'Free Shipping above ₹499',
+    'Buy 2 Get 1 Free',
+    'New Launch: Charcoal Series',
   ];
+
+  const activeBanners = (homeMarketingData?.heroBanners || []).filter(b => b.isActive).map(b => ({
+    id: b.id,
+    title: b.title,
+    subtitle: b.subtitle,
+    badgeText: b.badgeText || 'Featured',
+    ctaText: b.buttonText,
+    ctaLink: b.linkUrl,
+    imageUrl: b.imageUrl,
+  }));
+
+  const watchShopVideos = (homeMarketingData?.watchShopVideos || []).map(v => ({
+    id: v.id,
+    slug: v.slug || 'product',
+    title: v.title,
+    price: v.productPrice,
+    thumb: v.productImage,
+    videoBg: v.productImage,
+  }));
+
+  const midBanner = homeMarketingData?.midBanner || {
+    title: 'Monsoon Magic Sale',
+    subtitle: 'On all Gift Hampers & Combo Packs',
+    badgeText: 'LIMITED PERIOD OFFER',
+    buttonText: 'Grab Now',
+    linkUrl: '/shop',
+    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDF1LQEjxBq0OtLya_zBSJmrBZGcpIt5GSK2bjVJwv_OH2wEvIFvmkvPBOwrecHsjs_oyNThVL7ZH4AUdRer9JJTMlrFAnb8z4ralUPHUwN9WP4S-39GnkgDrqIEgWZw9RaJtY8iwvffsTZD_Popbvs_HN8VBfLLeWF7GtyAos2D-BFKUhivqRdo3aEuD_KXEEev5cHd6UEVnfdZhhC6iRO1kHJA_rMX0q8Z19vqu_okch2q5g6QKPu',
+  };
+
+  const realResults = (homeMarketingData?.realResults || []).map(r => ({
+    id: r.id,
+    before: r.beforeUrl,
+    after: r.afterUrl,
+    quote: r.quote,
+    user: r.userName,
+  }));
+
+  const trustBadges = (homeMarketingData?.trustBadges || []).map(tb => ({
+    label: tb.label,
+    icon: Leaf,
+  }));
+
+  const bottomBanner = homeMarketingData?.bottomBanner || {
+    title: 'Crafted with Quality',
+    subtitle: 'Our state-of-the-art facility ensures every bar meets global standards of purity.',
+    buttonText: 'Learn More',
+    linkUrl: '/about',
+    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCGE69IJlast_Ul6rXuCQSS3GH9L16poRY-l4l0iLBhoriu0C4LiZu3f7ZasTL9El20BxRnLTR3yhtY06Qyv2WRC2rkh3JMyHvdbriffqhNy4zqgJbeSfm_sQdZRfhBRJvCHtUEkCDdOoUFSDEUFRamWxTJs7vcGIUEWF00FZywN7h07CqZpCeqT6qRYsAmAO2bk5-APQk-HdqbqLMS5IQmGNzYH5WjPfz9gHlMpUg46Re6GavrK01c',
+  };
 
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
 
