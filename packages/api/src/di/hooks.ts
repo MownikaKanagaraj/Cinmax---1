@@ -13,6 +13,7 @@ import type {
   AuthService,
   AdminService,
   OperationsService,
+  HomeMarketingService,
 } from '../services';
 import type {
   IProductRepository,
@@ -82,6 +83,10 @@ export function useAdminService(): AdminService {
 
 export function useOperationsService(): OperationsService {
   return useContainer().operations;
+}
+
+export function useHomeMarketingService(): HomeMarketingService {
+  return useContainer().homeMarketing;
 }
 
 // Repository hooks (for direct low-level repository access)
