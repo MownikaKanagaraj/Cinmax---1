@@ -91,6 +91,17 @@ export default function MobileProductDetailsScreen() {
   const productPrice = productData?.basePrice ? Number(productData.basePrice) : 18;
   const originalPrice = productData?.compareAtPrice ? Number(productData.compareAtPrice) : 22;
 
+  const relatedProducts = (productsData?.items || [])
+    .filter((p) => p.slug !== slug)
+    .slice(0, 4)
+    .map((p) => ({
+      id: p.id,
+      title: p.title,
+      slug: p.slug,
+      price: `₹${p.basePrice}`,
+      image: typeof p.images?.[0] === 'string' ? p.images[0] : p.images?.[0]?.url || 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=400',
+    }));
+
   const handleShare = async () => {
     const shareUrl = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.href : `https://cinmax.com/product/${slug}`;
     const shareMessage = `Explore ${productTitle} on CINMAX Global Products:\n${shareUrl}`;
@@ -550,7 +561,7 @@ export default function MobileProductDetailsScreen() {
                 key={rel.id}
                 id={rel.id}
                 title={rel.title}
-                slug={rel.id}
+                slug={rel.slug || rel.id}
                 price={rel.price}
                 image={rel.image}
                 width={160}
