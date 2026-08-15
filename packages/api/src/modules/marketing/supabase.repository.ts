@@ -5,10 +5,15 @@ import { MockHomeMarketingRepository } from './mock.repository';
 
 export class SupabaseHomeMarketingRepository implements IHomeMarketingRepository {
   private fallbackMock = new MockHomeMarketingRepository();
+  private hasTableError = false;
 
   constructor(private supabase: SupabaseClient<Database>) {}
 
   public async getSettings(): Promise<HomeMarketingSettings> {
+    if (this.hasTableError) {
+      return this.fallbackMock.getSettings();
+    }
+
     try {
       const { data, error } = await (this.supabase as any)
         .from('home_marketing_settings')
@@ -16,18 +21,28 @@ export class SupabaseHomeMarketingRepository implements IHomeMarketingRepository
         .eq('id', 'default')
         .maybeSingle();
 
-      if (error || !data) {
+      if (error) {
+        // Table not migrated yet or 404
+        this.hasTableError = true;
+        return this.fallbackMock.getSettings();
+      }
+
+      if (!data) {
         return this.fallbackMock.getSettings();
       }
 
       return data.settings as HomeMarketingSettings;
     } catch (err) {
-      console.warn('[SupabaseHomeMarketingRepository] Network error, falling back to mock data');
+      this.hasTableError = true;
       return this.fallbackMock.getSettings();
     }
   }
 
   public async updateSettings(newSettings: Partial<HomeMarketingSettings>): Promise<HomeMarketingSettings> {
+    if (this.hasTableError) {
+      return this.fallbackMock.updateSettings(newSettings);
+    }
+
     try {
       const current = await this.getSettings();
       const updated: HomeMarketingSettings = {
@@ -41,12 +56,13 @@ export class SupabaseHomeMarketingRepository implements IHomeMarketingRepository
         .upsert({ id: 'default', settings: updated, updated_at: updated.updatedAt });
 
       if (error) {
+        this.hasTableError = true;
         return this.fallbackMock.updateSettings(newSettings);
       }
 
       return updated;
     } catch (err) {
-      console.warn('[SupabaseHomeMarketingRepository] Network error on update, falling back to mock');
+      this.hasTableError = true;
       return this.fallbackMock.updateSettings(newSettings);
     }
   }
