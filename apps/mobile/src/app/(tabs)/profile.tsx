@@ -7,6 +7,7 @@ import {
   SafeAreaView,
   Platform,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -17,14 +18,13 @@ import {
   MapPin,
   HelpCircle,
   LogOut,
-  Award,
   ShieldCheck,
   Bell,
   User,
   Sparkles,
-  RefreshCw,
+  KeyRound,
 } from 'lucide-react-native';
-import { useCustomerProfileQuery, useWishlistStore, useOrdersQuery, useCartStore } from '@cinmax/hooks';
+import { useCustomerProfileQuery, useWishlistStore, useOrdersQuery, useCartStore, useUser, useLogoutMutation } from '@cinmax/hooks';
 
 const CONTAINER_PADDING = 20;
 
@@ -50,31 +50,47 @@ const FONT_SANS_BOLD = Platform.select({
 
 export default function MobileProfileScreen() {
   const router = useRouter();
-  const { data: customer, isLoading } = useCustomerProfileQuery('current');
+  const { user, isAuthenticated, isLoading: authLoading } = useUser();
+  const logoutMutation = useLogoutMutation();
+
+  const { data: customer, isLoading: profileLoading } = useCustomerProfileQuery(user?.id || '', { enabled: isAuthenticated && !!user?.id });
+  
   const { items: wishlistItems } = useWishlistStore();
   const { items: cartItems } = useCartStore();
-  const { data: ordersData } = useOrdersQuery();
+  const { data: ordersData } = useOrdersQuery({ enabled: isAuthenticated });
 
   const ordersCount = ordersData?.items?.length || 0;
 
-  const name = customer ? `${customer.firstName} ${customer.lastName}`.trim() : 'Aanya Sharma';
-  const email = customer?.email || 'aanya.sharma@cinmax.com';
-  const initials = customer
-    ? `${customer.firstName?.[0] || ''}${customer.lastName?.[0] || ''}`.toUpperCase() || 'AS'
-    : 'AS';
-  const tier = customer?.loyaltyTier ? `${customer.loyaltyTier.toUpperCase()} VIP Patron` : 'Master Atelier VIP';
+  // Use actual customer data if authenticated, else null
+  const name = isAuthenticated && customer 
+    ? `${customer.firstName} ${customer.lastName}`.trim() 
+    : isAuthenticated && user?.email ? user.email.split('@')[0] : '';
+  const email = isAuthenticated && (customer?.email || user?.email) ? (customer?.email || user?.email) : '';
+  const initials = isAuthenticated && name
+    ? `${name.split(' ')[0]?.[0] || ''}${name.split(' ')[1]?.[0] || ''}`.toUpperCase()
+    : '?';
+  const tier = isAuthenticated && customer?.loyaltyTier ? `${customer.loyaltyTier.toUpperCase()} VIP Patron` : 'Atelier Member';
 
   const scrollViewRef = React.useRef<ScrollView>(null);
 
   React.useEffect(() => {
     scrollViewRef.current?.scrollTo({ y: 0, animated: false });
-  }, []);
+  }, [isAuthenticated]);
+
+  const handleLogout = async () => {
+    try {
+      await logoutMutation.mutateAsync();
+      router.replace('/(auth)/login' as any);
+    } catch (e) {
+      console.error('Logout failed:', e);
+    }
+  };
 
   const menuSections = [
     {
       title: 'Order Telemetry & Purchases',
       items: [
-        { label: 'Order History & Dispatches', subtitle: `${ordersCount} active or past dispatches`, route: '/(tabs)/orders', icon: Package, badge: ordersCount > 0 ? `${ordersCount}` : undefined },
+        { label: 'Order History & Dispatches', subtitle: isAuthenticated ? `${ordersCount} active or past dispatches` : 'Login to view orders', route: '/(tabs)/orders', icon: Package, badge: ordersCount > 0 ? `${ordersCount}` : undefined },
         { label: 'Saved Wishlist Reserve', subtitle: `${wishlistItems.length} handcrafted favorites`, route: '/(tabs)/wishlist', icon: Heart, badge: wishlistItems.length > 0 ? `${wishlistItems.length}` : undefined },
         { label: 'Active Shopping Cart', subtitle: `${cartItems.length} items in cart`, route: '/cart', icon: ShoppingBag, badge: cartItems.length > 0 ? `${cartItems.length}` : undefined },
       ],
@@ -97,63 +113,103 @@ export default function MobileProfileScreen() {
         <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 22, fontWeight: '700', color: '#002754', letterSpacing: -0.5 }}>
           Patron Profile
         </Text>
-        <View style={{ backgroundColor: 'rgba(197, 168, 128, 0.15)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(197, 168, 128, 0.3)' }}>
-          <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#C5A880', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-            Atelier VIP
-          </Text>
-        </View>
+        {isAuthenticated && (
+          <View style={{ backgroundColor: 'rgba(197, 168, 128, 0.15)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(197, 168, 128, 0.3)' }}>
+            <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#C5A880', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              Atelier VIP
+            </Text>
+          </View>
+        )}
       </View>
 
       <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
         <View style={{ paddingHorizontal: CONTAINER_PADDING, paddingTop: 16 }}>
 
           {/* 2. LUXURY PATRON HERO CARD */}
-          <View style={{ backgroundColor: '#002754', borderRadius: 24, padding: 22, shadowColor: '#002754', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.15, shadowRadius: 15, borderWidth: 1, borderColor: 'rgba(197, 168, 128, 0.3)', marginBottom: 20 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-              <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#C5A880', justifyContent: 'center', alignItems: 'center', borderOutset: 'none', borderWidth: 2, borderColor: '#FFFFFF' }}>
-                <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 24, fontWeight: '700', color: '#002754' }}>
-                  {initials}
-                </Text>
+          {authLoading ? (
+            <View style={{ backgroundColor: '#002754', borderRadius: 24, padding: 40, justifyContent: 'center', alignItems: 'center', marginBottom: 20 }}>
+              <ActivityIndicator color="#C5A880" size="large" />
+            </View>
+          ) : isAuthenticated ? (
+            <View style={{ backgroundColor: '#002754', borderRadius: 24, padding: 22, shadowColor: '#002754', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.15, shadowRadius: 15, borderWidth: 1, borderColor: 'rgba(197, 168, 128, 0.3)', marginBottom: 20 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#C5A880', justifyContent: 'center', alignItems: 'center', borderOutset: 'none', borderWidth: 2, borderColor: '#FFFFFF' }}>
+                  <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 24, fontWeight: '700', color: '#002754' }}>
+                    {initials}
+                  </Text>
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 20, fontWeight: '700', color: '#FFFFFF' }}>
+                    {name || 'Atelier Patron'}
+                  </Text>
+                  <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 12, color: 'rgba(255, 255, 255, 0.75)', marginTop: 2 }}>
+                    {email}
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
+                    <Sparkles size={13} color="#C5A880" />
+                    <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 11, color: '#C5A880', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      {tier}
+                    </Text>
+                  </View>
+                </View>
               </View>
 
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 20, fontWeight: '700', color: '#FFFFFF' }}>
-                  {name}
-                </Text>
-                <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 12, color: 'rgba(255, 255, 255, 0.75)', marginTop: 2 }}>
-                  {email}
-                </Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
-                  <Sparkles size={13} color="#C5A880" />
-                  <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 11, color: '#C5A880', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                    {tier}
-                  </Text>
+              {/* Quick Metrics Bar */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: 16, padding: 14, marginTop: 18, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.1)' }}>
+                <View style={{ alignItems: 'center', flex: 1 }}>
+                  <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 16, color: '#FFFFFF' }}>{ordersCount}</Text>
+                  <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 10, color: '#C5A880', textTransform: 'uppercase', marginTop: 2 }}>Dispatches</Text>
+                </View>
+
+                <View style={{ width: 1, backgroundColor: 'rgba(255, 255, 255, 0.15)' }} />
+
+                <View style={{ alignItems: 'center', flex: 1 }}>
+                  <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 16, color: '#FFFFFF' }}>{wishlistItems.length}</Text>
+                  <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 10, color: '#C5A880', textTransform: 'uppercase', marginTop: 2 }}>Wishlist</Text>
+                </View>
+
+                <View style={{ width: 1, backgroundColor: 'rgba(255, 255, 255, 0.15)' }} />
+
+                <View style={{ alignItems: 'center', flex: 1 }}>
+                  <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 16, color: '#FFFFFF' }}>{customer?.loyaltyPoints || user?.loyaltyPoints || 0}</Text>
+                  <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 10, color: '#C5A880', textTransform: 'uppercase', marginTop: 2 }}>Points</Text>
                 </View>
               </View>
             </View>
-
-            {/* Quick Metrics Bar */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: 16, padding: 14, marginTop: 18, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.1)' }}>
-              <View style={{ alignItems: 'center', flex: 1 }}>
-                <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 16, color: '#FFFFFF' }}>{ordersCount}</Text>
-                <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 10, color: '#C5A880', textTransform: 'uppercase', marginTop: 2 }}>Dispatches</Text>
+          ) : (
+            /* Unauthenticated Hero State */
+            <View style={{ backgroundColor: '#002754', borderRadius: 24, padding: 24, shadowColor: '#002754', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.15, shadowRadius: 15, borderWidth: 1, borderColor: 'rgba(197, 168, 128, 0.3)', marginBottom: 20, alignItems: 'center' }}>
+              <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#C5A880', justifyContent: 'center', alignItems: 'center', marginBottom: 12 }}>
+                <KeyRound size={26} color="#002754" />
               </View>
+              <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 20, fontWeight: '700', color: '#FFFFFF', textAlign: 'center' }}>
+                Welcome to CINMAX
+              </Text>
+              <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 13, color: 'rgba(255, 255, 255, 0.85)', textAlign: 'center', marginTop: 6, lineHeight: 18 }}>
+                Sign in to track orders, manage your wishlist, and unlock exclusive VIP benefits.
+              </Text>
 
-              <View style={{ width: 1, backgroundColor: 'rgba(255, 255, 255, 0.15)' }} />
-
-              <View style={{ alignItems: 'center', flex: 1 }}>
-                <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 16, color: '#FFFFFF' }}>{wishlistItems.length}</Text>
-                <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 10, color: '#C5A880', textTransform: 'uppercase', marginTop: 2 }}>Wishlist</Text>
-              </View>
-
-              <View style={{ width: 1, backgroundColor: 'rgba(255, 255, 255, 0.15)' }} />
-
-              <View style={{ alignItems: 'center', flex: 1 }}>
-                <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 16, color: '#FFFFFF' }}>480</Text>
-                <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 10, color: '#C5A880', textTransform: 'uppercase', marginTop: 2 }}>Points</Text>
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
+                <TouchableOpacity
+                  onPress={() => router.push('/(auth)/login' as any)}
+                  style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 14, paddingVertical: 12, alignItems: 'center' }}
+                >
+                  <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#002754', fontSize: 13, fontWeight: '700' }}>
+                    Sign In
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => router.push('/(auth)/signup' as any)}
+                  style={{ flex: 1, backgroundColor: 'transparent', borderWidth: 1, borderColor: '#C5A880', borderRadius: 14, paddingVertical: 12, alignItems: 'center' }}
+                >
+                  <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#C5A880', fontSize: 13, fontWeight: '700' }}>
+                    Register
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
-          </View>
+          )}
 
           {/* 3. MENU SECTIONS */}
           {menuSections.map((section, sIdx) => (
@@ -168,7 +224,13 @@ export default function MobileProfileScreen() {
                   return (
                     <TouchableOpacity
                       key={idx}
-                      onPress={() => router.push(item.route as any)}
+                      onPress={() => {
+                        if (!isAuthenticated && item.route === '/(tabs)/orders') {
+                          router.push('/(auth)/login' as any);
+                        } else {
+                          router.push(item.route as any);
+                        }
+                      }}
                       style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 14, borderBottomWidth: idx !== section.items.length - 1 ? 1 : 0, borderBottomColor: 'rgba(195, 198, 209, 0.2)' }}
                     >
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
@@ -204,25 +266,34 @@ export default function MobileProfileScreen() {
 
           {/* 4. AUTH & SIGN OUT BUTTONS */}
           <View style={{ gap: 10, marginBottom: 24 }}>
-            <TouchableOpacity
-              onPress={() => router.push('/(auth)/login' as any)}
-              style={{ backgroundColor: '#002754', borderRadius: 20, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: '#002754' }}
-            >
-              <User size={18} color="#C5A880" />
-              <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
-                Login with Mobile Number &amp; OTP
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => router.push('/(auth)/login' as any)}
-              style={{ backgroundColor: '#FFFFFF', borderRadius: 20, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(220, 38, 38, 0.3)' }}
-            >
-              <LogOut size={18} color="#DC2626" />
-              <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#DC2626', fontSize: 13, fontWeight: '700' }}>
-                Sign Out from Atelier Session
-              </Text>
-            </TouchableOpacity>
+            {!isAuthenticated ? (
+              <TouchableOpacity
+                onPress={() => router.push('/(auth)/login' as any)}
+                style={{ backgroundColor: '#002754', borderRadius: 20, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: '#002754' }}
+              >
+                <User size={18} color="#C5A880" />
+                <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
+                  Login or Register
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                onPress={handleLogout}
+                disabled={logoutMutation.isPending}
+                style={{ backgroundColor: '#FFFFFF', borderRadius: 20, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(220, 38, 38, 0.3)' }}
+              >
+                {logoutMutation.isPending ? (
+                  <ActivityIndicator color="#DC2626" />
+                ) : (
+                  <>
+                    <LogOut size={18} color="#DC2626" />
+                    <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#DC2626', fontSize: 13, fontWeight: '700' }}>
+                      Sign Out from Atelier Session
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* 5. FOOTER */}

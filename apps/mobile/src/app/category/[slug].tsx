@@ -23,7 +23,7 @@ export default function MobileCategoryScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F9FB' }}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 20 }}>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: 12 }}>
+        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)' as any))} style={{ marginBottom: 12 }}>
           <Text style={{ fontSize: 13, fontWeight: '700', color: '#0A3D78' }}>
             ← Back
           </Text>

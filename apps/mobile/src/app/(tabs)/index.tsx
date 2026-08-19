@@ -259,7 +259,8 @@ export default function MobileHomeScreen() {
               <Image
                 key={currentBanner.id || activeSlideIndex}
                 source={{ uri: currentBanner.imageUrl }}
-                style={{ width: '100%', height: '100%', resizeMode: 'cover' }}
+                style={{ width: '100%', height: '100%' }}
+                resizeMode="cover"
               />
               <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0, 39, 84, 0.45)' }} />
 

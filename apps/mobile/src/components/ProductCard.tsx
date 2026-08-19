@@ -104,7 +104,8 @@ export function ProductCard({
       <View style={{ width: '100%', height: 140, position: 'relative', backgroundColor: '#F2F4F6' }}>
         <Image
           source={{ uri: image || 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=400&auto=format&fit=crop&q=80' }}
-          style={{ width: '100%', height: '100%', resizeMode: 'cover' }}
+          style={{ width: '100%', height: '100%' }}
+          resizeMode="cover"
         />
         {badge && (
           <View style={{ position: 'absolute', top: 6, left: 6, backgroundColor: badgeBg, paddingHorizontal: 7, paddingVertical: 2.5, borderRadius: 10 }}>

@@ -7,7 +7,7 @@ import { PageHeader } from '@cinmax/ui';
 import { formatCurrency } from '@cinmax/utils';
 import { useProductsQuery, useOrdersQuery } from '@cinmax/hooks';
 import type { Product, Order } from '@cinmax/types';
-import { DollarSign, Package, Warehouse, Star, ArrowUpRight, TrendingUp } from 'lucide-react';
+import { DollarSign, Package, Sparkles, Star, ArrowUpRight, TrendingUp } from 'lucide-react';
 
 export default function AdminDashboardPage() {
   const { data: productsData } = useProductsQuery(undefined, { page: 1, pageSize: 4 });
@@ -32,11 +32,11 @@ export default function AdminDashboardPage() {
       icon: Package,
     },
     {
-      title: 'Total Products in Stock',
-      value: '1,450 Items',
-      change: 'All core items available',
+      title: 'Total Catalog Products',
+      value: '18 Active Items',
+      change: 'Catalog managed via admin',
       positive: true,
-      icon: Warehouse,
+      icon: Sparkles,
     },
     {
       title: 'Customer Rating',
@@ -52,7 +52,7 @@ export default function AdminDashboardPage() {
       <PageHeader
         badge="Store Dashboard"
         title="Store Sales & Operations Overview"
-        subtitle="Quick view of total sales revenue, customer orders, product stock levels, and ratings."
+        subtitle="Quick view of total sales revenue, customer orders, catalog items, and ratings."
         actions={
           <div className="flex items-center gap-3">
             <Link
@@ -103,7 +103,7 @@ export default function AdminDashboardPage() {
         })}
       </div>
 
-      {/* Recent Orders & Product Stock */}
+      {/* Recent Orders & Product Catalog */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Orders Table */}
         <div className="lg:col-span-2 p-6 rounded-2xl bg-white dark:bg-[#0B132B] border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
@@ -161,21 +161,21 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Product Stock Status */}
+        {/* Product Catalog Overview */}
         <div className="p-6 rounded-2xl bg-white dark:bg-[#0B132B] border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b pb-3 border-slate-100 dark:border-slate-800">
             <div>
               <h3 className="font-sans text-base font-bold text-[#0F172A] dark:text-white">
-                Product Stock Levels
+                Product Catalog
               </h3>
-              <p className="text-xs text-slate-400">Items available in store</p>
+              <p className="text-xs text-slate-400">Items listed in store</p>
             </div>
             <Link
-              href="/inventory"
+              href="/products"
               prefetch={true}
               className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
             >
-              Manage Stock →
+              View Catalog →
             </Link>
           </div>
 
@@ -187,10 +187,10 @@ export default function AdminDashboardPage() {
               >
                 <div className="min-w-0 pr-2">
                   <p className="font-bold text-xs text-[#0F172A] dark:text-white truncate">{p.title}</p>
-                  <p className="text-[10px] font-medium text-slate-400">₹{p.basePrice} • 180 units in stock</p>
+                  <p className="text-[10px] font-medium text-slate-400">₹{p.basePrice} • {p.category?.name || 'General'}</p>
                 </div>
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                  In Stock
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                  Active
                 </span>
               </div>
             ))}

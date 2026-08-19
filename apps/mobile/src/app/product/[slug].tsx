@@ -165,13 +165,7 @@ export default function MobileProductDetailsScreen() {
       {/* 1. TOP HEADER NAVIGATION BAR */}
       <View style={{ paddingHorizontal: CONTAINER_PADDING, paddingTop: 12, paddingBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(247, 249, 251, 0.95)', borderBottomWidth: 1, borderBottomColor: 'rgba(195, 198, 209, 0.3)', zIndex: 100 }}>
         <TouchableOpacity
-          onPress={() => {
-            if (router.canGoBack()) {
-              router.back();
-            } else {
-              router.replace('/(tabs)' as any);
-            }
-          }}
+          onPress={() => router.replace('/(tabs)' as any)}
           style={{ width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' }}
         >
           <ArrowLeft size={22} color="#002754" />

@@ -12,7 +12,7 @@ import {
   Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useCartStore } from '@cinmax/hooks';
+import { useCartStore, useUser, useAddressesQuery, useAddCustomerAddressMutation, useCheckoutSessionMutation } from '@cinmax/hooks';
 import { calculateDeliveryCharge, ALL_INDIAN_STATES } from '@cinmax/utils';
 import {
   ChevronLeft,
@@ -80,7 +80,6 @@ export default function MobileCheckoutScreen() {
     scrollViewRef.current?.scrollTo({ y: 0, animated: false });
   }, [activeStep]);
 
-  const [selectedAddressId, setSelectedAddressId] = useState('a1');
   const [selectedPayment, setSelectedPayment] = useState('razorpay');
   const [isTermsAccepted, setIsTermsAccepted] = useState(true);
 
@@ -100,77 +99,30 @@ export default function MobileCheckoutScreen() {
     type: 'Home',
   });
 
-  // Saved Profile Addresses (Simulated User Profile Addresses)
-  const [addresses, setAddresses] = useState<CheckoutAddress[]>([
-    {
-      id: 'a1',
-      type: 'Home',
-      isDefault: true,
-      name: 'Aanya Sharma',
-      phone: '+91 98765 43210',
-      addressLine1: 'Villa 42, Lotus Boulevard',
-      addressLine2: 'Sector 100',
-      city: 'Chennai',
-      state: 'Tamil Nadu',
-      pincode: '600001',
-    },
-    {
-      id: 'a2',
-      type: 'Work',
-      isDefault: false,
-      name: 'Aanya Sharma',
-      phone: '+91 98765 43210',
-      addressLine1: 'Tower B, 7th Floor, Cyber City',
-      addressLine2: 'Phase II',
-      city: 'Kochi',
-      state: 'Kerala',
-      pincode: '682001',
-    },
-    {
-      id: 'a3',
-      type: 'Atelier',
-      isDefault: false,
-      name: 'Aanya Sharma',
-      phone: '+91 98765 43210',
-      addressLine1: '45 Lavelle Road',
-      addressLine2: 'Central District',
-      city: 'Bengaluru',
-      state: 'Karnataka',
-      pincode: '560001',
-    },
-  ]);
+  const { user } = useUser();
+  const { data: dbAddresses = [] } = useAddressesQuery(user?.id);
+  const addAddressMutation = useAddCustomerAddressMutation();
+  const createCheckoutSession = useCheckoutSessionMutation();
 
-  // Last time used address (Selected address)
-  const currentAddress = addresses.find((a) => a.id === selectedAddressId) || addresses[0];
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
 
-  // Cart items from store or fallback
-  const checkoutItems = cartStoreItems.length > 0
-    ? cartStoreItems.map((item) => ({
-        id: item.id,
-        title: item.product?.title || 'Artisanal Botanical Soap',
-        variant: 'Qty: ' + item.quantity,
-        unitPrice: item.unitPrice || 450,
-        quantity: item.quantity,
-        image: item.product?.images?.[0]?.url || 'https://lh3.googleusercontent.com/aida-public/AB6AXuBZHbiWzdqlWotKE_R5mRigs-k-s7pi5XBl-YdVnd9UCCnqB8eYNUzrHKUAbCfoOQrCRiBLSqfGkyKsXxcG88nWUMGwKSZBa5UmV_AlSYmElejlbwO6v1gX4RhqHCzY2Zs4ym1DzNFGvWdGwdLPXlzc_tOU2YWVAzu1Hnlpm0qMEiaLkPNtlo2SZLQrqQqmkVd0TSclg_8dWBTMCuQdIKA3T8Jd7W_9oIOrjpcrGPmFsxvw-BP9QHyG',
-      }))
-    : [
-        {
-          id: 'ck1',
-          title: 'Organic Saffron & Honey Soap',
-          variant: 'Qty: 2 • 150g',
-          unitPrice: 425,
-          quantity: 2,
-          image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBZHbiWzdqlWotKE_R5mRigs-k-s7pi5XBl-YdVnd9UCCnqB8eYNUzrHKUAbCfoOQrCRiBLSqfGkyKsXxcG88nWUMGwKSZBa5UmV_AlSYmElejlbwO6v1gX4RhqHCzY2Zs4ym1DzNFGvWdGwdLPXlzc_tOU2YWVAzu1Hnlpm0qMEiaLkPNtlo2SZLQrqQqmkVd0TSclg_8dWBTMCuQdIKA3T8Jd7W_9oIOrjpcrGPmFsxvw-BP9QHyG',
-        },
-        {
-          id: 'ck2',
-          title: 'Revitalizing Botanical Serum',
-          variant: 'Qty: 1 • 30ml',
-          unitPrice: 1450,
-          quantity: 1,
-          image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA37j4IUoXLKnf_1IBqj8M2-R1wao__PeN5LX5HhNTEPPU6hVX8ZsQufqpL9sWbMgMXoDbDIWfnz6oHnGW6rZBGuBF04icPWyFsAEBejwTEEKqU7a8x_-G3jFTXavGBBKD-QcC5_ZISEg9eA67JEUtRdIfjYgyy1HweEzndmIQgz6WQO46RMpcdCYvCEyz0OeM9YJ--aajtAhgcjdn1NQyVE921mCLIVk2oOhYAakMnQHjadCGBDxzT',
-        },
-      ];
+  React.useEffect(() => {
+    if (!selectedAddressId && dbAddresses.length > 0) {
+      setSelectedAddressId(dbAddresses[0].id || null);
+    }
+  }, [dbAddresses, selectedAddressId]);
+
+  const currentAddress = dbAddresses.find((a) => a.id === selectedAddressId) || dbAddresses[0] || { state: 'Tamil Nadu' };
+
+  // Cart items from store
+  const checkoutItems = cartStoreItems.map((item) => ({
+    id: item.id,
+    title: item.product?.title || 'Artisanal Botanical Soap',
+    variant: 'Qty: ' + item.quantity,
+    unitPrice: item.unitPrice || 450,
+    quantity: item.quantity,
+    image: item.product?.images?.[0]?.url || 'https://lh3.googleusercontent.com/aida-public/AB6AXuBZHbiWzdqlWotKE_R5mRigs-k-s7pi5XBl-YdVnd9UCCnqB8eYNUzrHKUAbCfoOQrCRiBLSqfGkyKsXxcG88nWUMGwKSZBa5UmV_AlSYmElejlbwO6v1gX4RhqHCzY2Zs4ym1DzNFGvWdGwdLPXlzc_tOU2YWVAzu1Hnlpm0qMEiaLkPNtlo2SZLQrqQqmkVd0TSclg_8dWBTMCuQdIKA3T8Jd7W_9oIOrjpcrGPmFsxvw-BP9QHyG',
+  }));
 
   // TOTAL PRODUCT QUANTITY = SUM(quantity of every item)
   const totalProducts = checkoutItems.reduce((sum, i) => sum + i.quantity, 0);
@@ -190,23 +142,33 @@ export default function MobileCheckoutScreen() {
       alert('Please fill in all required address fields including State.');
       return;
     }
-    const created: CheckoutAddress = {
-      id: `a_${Date.now()}`,
-      type: newAddress.type || 'Home',
-      isDefault: false,
-      name: newAddress.name,
+    if (!user) {
+      alert('Please log in to add an address.');
+      return;
+    }
+
+    // Mapping checkout form fields to the Database Address format
+    const dbAddressData = {
+      firstName: newAddress.name.split(' ')[0] || newAddress.name,
+      lastName: newAddress.name.split(' ').slice(1).join(' ') || '',
       phone: newAddress.phone,
-      addressLine1: newAddress.addressLine1,
-      addressLine2: newAddress.addressLine2 || '',
+      streetLine1: newAddress.addressLine1,
+      streetLine2: newAddress.addressLine2 || '',
       city: newAddress.city,
       state: newAddress.state,
-      pincode: newAddress.pincode,
+      postalCode: newAddress.pincode,
+      country: 'India',
     };
-    const updated = [created, ...addresses];
-    setAddresses(updated);
-    setSelectedAddressId(created.id); // set newly added address as active/last-used
-    setIsAddingNewAddress(false);
-    setIsManageAddressModalOpen(false);
+
+    addAddressMutation.mutate({
+      userId: user.id,
+      address: dbAddressData,
+    }, {
+      onSuccess: () => {
+        setIsAddingNewAddress(false);
+        setIsManageAddressModalOpen(false);
+      }
+    });
   };
 
   const [isProcessing, setIsProcessing] = useState(false);
@@ -228,36 +190,46 @@ export default function MobileCheckoutScreen() {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       try {
         setIsProcessing(true);
+
+        if (!currentAddress || !currentAddress.id) {
+          alert('Please select or add a delivery address');
+          return;
+        }
+
+        let orderData: any = null;
+
+        // Try using the DB mutation if cart items and user exist
+        if (cartStoreItems.length > 0 && user) {
+          try {
+            const dbAddressData = {
+              firstName: currentAddress.firstName || currentAddress.name?.split(' ')[0] || 'Guest',
+              lastName: currentAddress.lastName || currentAddress.name?.split(' ').slice(1).join(' ') || '',
+              phone: currentAddress.phone,
+              streetLine1: currentAddress.streetLine1 || currentAddress.addressLine1,
+              streetLine2: currentAddress.streetLine2 || currentAddress.addressLine2 || '',
+              city: currentAddress.city,
+              state: currentAddress.state,
+              postalCode: currentAddress.postalCode || currentAddress.pincode,
+              country: 'India',
+            };
+
+            const sessionResult = await createCheckoutSession.mutateAsync({
+              userIdOrAnonId: user.id,
+              cart: { items: cartStoreItems, subtotal: 0, totalItemsCount: 0 }, // Engine recalculates totals
+              shippingAddress: dbAddressData,
+            });
+
+            if (sessionResult.isValid) {
+               orderData = sessionResult.razorpayOrder;
+            }
+          } catch (e) {
+             console.error('Error creating session with DB', e);
+          }
+        }
+
         const isLoaded = await loadRazorpayScript();
 
         if (isLoaded) {
-          let orderData: any = null;
-          try {
-            const apiEndpoint = typeof window !== 'undefined' && window.location.port === '3000'
-              ? '/api/create-order'
-              : 'http://localhost:3000/api/create-order';
-
-            const createRes = await fetch(apiEndpoint, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                amount: grandTotal,
-                currency: 'INR',
-                receipt: `rcpt_${Date.now()}`,
-                notes: {
-                  deliveryState: deliveryCalc.state,
-                  totalProducts: deliveryCalc.totalProducts.toString(),
-                },
-              }),
-            });
-            if (createRes.ok) {
-              orderData = await createRes.json();
-            }
-          } catch (e) {
-            console.log('API route unreachable, defaulting to direct Razorpay Standard Checkout options');
-          }
-
-          // STEP 2: Open Razorpay Standard Checkout Modal
           const options: any = {
             key: orderData?.key_id || process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_TND5mOhcC1aMBW',
             amount: orderData?.amount || Math.round(grandTotal * 100),
@@ -343,7 +315,7 @@ export default function MobileCheckoutScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F9FB' }}>
       {/* 1. Sticky Header */}
       <View style={{ paddingHorizontal: CONTAINER_PADDING, paddingTop: 14, paddingBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(247, 249, 251, 0.95)', borderBottomWidth: 1, borderBottomColor: 'rgba(195, 198, 209, 0.3)', zIndex: 100 }}>
-        <TouchableOpacity onPress={() => router.back()} style={{ padding: 4 }}>
+        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)' as any))} style={{ padding: 4 }}>
           <ChevronLeft size={22} color="#002754" />
         </TouchableOpacity>
         <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 22, fontWeight: '700', color: '#002754', letterSpacing: -0.5 }}>
@@ -436,7 +408,7 @@ export default function MobileCheckoutScreen() {
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 16, fontWeight: '700', color: '#191C1E' }}>{currentAddress.name}</Text>
+                  <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 16, fontWeight: '700', color: '#191C1E' }}>{currentAddress.firstName || currentAddress.name} {currentAddress.lastName}</Text>
                   <View style={{ backgroundColor: '#002754', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 }}>
                     <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', fontSize: 9, fontWeight: '700', textTransform: 'uppercase' }}>
                       {currentAddress.state}
@@ -450,7 +422,7 @@ export default function MobileCheckoutScreen() {
                 </View>
               </View>
               <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 13, color: '#434750', lineHeight: 19, marginBottom: 6 }}>
-                {currentAddress.addressLine1}, {currentAddress.addressLine2 ? currentAddress.addressLine2 + ', ' : ''}{currentAddress.city}, {currentAddress.state} - {currentAddress.pincode}
+                {currentAddress.streetLine1 || currentAddress.addressLine1}, {currentAddress.streetLine2 || currentAddress.addressLine2 ? (currentAddress.streetLine2 || currentAddress.addressLine2) + ', ' : ''}{currentAddress.city}, {currentAddress.state} - {currentAddress.postalCode || currentAddress.pincode}
               </Text>
               <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 13, color: '#002754' }}>
                 Phone: {currentAddress.phone}
@@ -610,13 +582,13 @@ export default function MobileCheckoutScreen() {
 
                 <ScrollView style={{ maxHeight: 380 }}>
                   <View style={{ gap: 12 }}>
-                    {addresses.map((addr) => {
+                    {dbAddresses.map((addr) => {
                       const isSelected = selectedAddressId === addr.id;
                       return (
                         <TouchableOpacity
                           key={addr.id}
                           onPress={() => {
-                            setSelectedAddressId(addr.id); // updates last used address
+                            setSelectedAddressId(addr.id || null); // updates last used address
                             setIsManageAddressModalOpen(false);
                           }}
                           style={{
@@ -636,7 +608,7 @@ export default function MobileCheckoutScreen() {
                           <View style={{ flex: 1 }}>
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 14, color: '#191C1E' }}>{addr.name}</Text>
+                                <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 14, color: '#191C1E' }}>{addr.firstName} {addr.lastName}</Text>
                                 <View style={{ backgroundColor: '#EBF3FF', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 }}>
                                   <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#002754', fontSize: 9 }}>{addr.state}</Text>
                                 </View>
@@ -648,7 +620,7 @@ export default function MobileCheckoutScreen() {
                               )}
                             </View>
                             <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 12, color: '#434750', lineHeight: 16 }}>
-                              {addr.addressLine1}, {addr.addressLine2 ? addr.addressLine2 + ', ' : ''}{addr.city}, {addr.state} - {addr.pincode}
+                              {addr.streetLine1}, {addr.streetLine2 ? addr.streetLine2 + ', ' : ''}{addr.city}, {addr.state} - {addr.postalCode}
                             </Text>
                             <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 12, color: '#002754', marginTop: 4 }}>
                               {addr.phone}

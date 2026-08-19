@@ -7,9 +7,12 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useUser, useAddressesQuery } from '@cinmax/hooks';
 
 export default function MobileAddressesScreen() {
   const router = useRouter();
+  const { user } = useUser();
+  const { data: addresses = [] } = useAddressesQuery(user?.id);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F9FB' }}>
@@ -27,19 +30,35 @@ export default function MobileAddressesScreen() {
           Saved Shipping Addresses
         </Text>
 
-        <View style={{ backgroundColor: 'white', borderRadius: 24, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, gap: 8 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={{ fontSize: 14, fontWeight: '800', color: '#002754' }}>Primary Sanctuary</Text>
-            <View style={{ backgroundColor: '#ECFDF5', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 }}>
-              <Text style={{ color: '#059669', fontSize: 10, fontWeight: '800' }}>DEFAULT</Text>
-            </View>
-          </View>
-          <Text style={{ fontSize: 12, color: '#64748B', lineHeight: 18 }}>
-            Aurora Vance{'\n'}
-            742 Evergreen Botanical Way{'\n'}
-            Portland, OR 97201, United States
+        {addresses.length === 0 ? (
+          <Text style={{ fontSize: 14, color: '#64748B', textAlign: 'center', marginTop: 40 }}>
+            No addresses saved yet.
           </Text>
-        </View>
+        ) : (
+          <View style={{ gap: 16 }}>
+            {addresses.map((address) => (
+              <View key={address.id} style={{ backgroundColor: 'white', borderRadius: 24, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, gap: 8 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: '#002754' }}>
+                    {address.firstName} {address.lastName}
+                  </Text>
+                  {address.isDefault && (
+                    <View style={{ backgroundColor: '#ECFDF5', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 }}>
+                      <Text style={{ color: '#059669', fontSize: 10, fontWeight: '800' }}>DEFAULT</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={{ fontSize: 12, color: '#64748B', lineHeight: 18 }}>
+                  {address.streetLine1}
+                  {address.streetLine2 ? `\n${address.streetLine2}` : ''}
+                  {'\n'}{address.city}, {address.state} {address.postalCode}
+                  {'\n'}{address.country}
+                  {'\n'}Phone: {address.phone}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

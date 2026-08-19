@@ -25,6 +25,7 @@ import {
   ArrowRight,
   ChevronDown,
   Check,
+  ShoppingBag,
 } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -57,6 +58,7 @@ const FONT_SANS_BOLD = Platform.select({
 
 export default function MobileCartScreen() {
   const router = useRouter();
+  const { user } = useUser();
   const { items: storeItems, updateQuantity, removeItem } = useCartStore();
   const { data: cartData } = useCartQuery();
 
@@ -70,48 +72,18 @@ export default function MobileCartScreen() {
   const [isStateModalOpen, setIsStateModalOpen] = useState<boolean>(false);
   const [pincode, setPincode] = useState('600001');
 
-  // Fallback demo cart items if store items are empty
-  const defaultItems = [
-    {
-      id: 'c1',
-      slug: 'organic-saffron-sandalwood-soap',
-      title: 'Organic Saffron & Sandalwood Soap',
-      price: 450,
-      originalPrice: 550,
-      quantity: 2,
-      badge: 'Best Seller',
-      badgeBg: '#B4CDFE',
-      badgeText: '#3E5681',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCHJtwU_VkoyZsRFnF5WTufmKktM2SD5ZZS0SU91mA3NidN9ufXptrblEOQ_t1a0OK88E1Fq4AacCoiBCNbC3MtBwDWmbhlcAUJypJ0w9O8qXN6PII_2CmwTolGtt8PmtSSNnQejn58fajyz9KW9YLXEk1q9lc4EeFONAq1Sd50ExyIpr0-fBqVUYwroHS4c8j1mjJWi10wMDbYkkp8ACqwdH9XP8Gxja_Y2aC9xRN-JLeFj-f9s0BX',
-    },
-    {
-      id: 'c2',
-      slug: 'charcoal-detox-soap',
-      title: 'Charcoal Detox Soap',
-      price: 380,
-      originalPrice: 450,
-      quantity: 1,
-      badge: 'Organic',
-      badgeBg: '#EBF3FF',
-      badgeText: '#002754',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCf9JoWSF3-S5LwBKgj6E_ydizODwyBL7ZB5CrYxX0UOlEtz-rYpHe362m1-U4IFKlAvZb0jKnVsAzC_JsBOQIDlzd0KF7g4GGAg4oua71dPHrK_NNA16JlU8csEvzHJTrnADDK0BWoSUnjksVcQ-IprWSbjZFZOT95Gigw5zNrT_BDl1UrbJcPNpFlElNbK5oGoeeQw4rT9hWvOTX82EEaMHU3PXWFyujUGfgP_zZO_oE2z3krND0l',
-    },
-  ];
-
-  const cartList = storeItems.length > 0
-    ? storeItems.map((item) => ({
-        id: item.id,
-        slug: item.product?.slug || 'organic-saffron-sandalwood-soap',
-        title: item.product?.title || 'Organic Saffron Soap',
-        price: item.unitPrice || 450,
-        originalPrice: item.unitPrice + 100,
-        quantity: item.quantity,
-        badge: 'Handcrafted',
-        badgeBg: '#EBF3FF',
-        badgeText: '#002754',
-        image: item.product?.images?.[0]?.url || defaultItems[0].image,
-      }))
-    : defaultItems;
+  const cartList = storeItems.map((item) => ({
+    id: item.id,
+    slug: item.product?.slug || 'organic-saffron-sandalwood-soap',
+    title: item.product?.title || 'Organic Saffron Soap',
+    price: item.unitPrice || 450,
+    originalPrice: item.unitPrice + 100,
+    quantity: item.quantity,
+    badge: 'Handcrafted',
+    badgeBg: '#EBF3FF',
+    badgeText: '#002754',
+    image: item.product?.images?.[0]?.url || 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=400&auto=format&fit=crop&q=80',
+  }));
 
   // Formula: SUM(quantity of every item in cart)
   const totalItemsCount = cartList.reduce((acc, curr) => acc + curr.quantity, 0);
@@ -145,6 +117,21 @@ export default function MobileCartScreen() {
         </View>
       </View>
 
+      {cartList.length === 0 ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: '#EBF3FF', justifyContent: 'center', alignItems: 'center', marginBottom: 20 }}>
+            <ShoppingBag size={32} color="#002754" />
+          </View>
+          <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 24, color: '#002754', marginBottom: 12 }}>Your Cart is Empty</Text>
+          <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#434750', textAlign: 'center', marginBottom: 30, lineHeight: 22 }}>
+            Looks like you haven't added any artisanal botanicals to your cart yet.
+          </Text>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/shop' as any)} style={{ backgroundColor: '#002754', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 30 }}>
+            <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', fontSize: 14 }}>Explore Collection</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+      <>
       <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
 
         {/* 2. Cart Summary Header Card */}
@@ -165,7 +152,7 @@ export default function MobileCartScreen() {
               Saved: ₹{discount}
             </Text>
             <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 13, color: '#194682', fontWeight: '700' }}>
-              Reward Points: 124
+              Reward Points: {user?.loyaltyPoints || 0}
             </Text>
           </View>
         </View>
@@ -397,13 +384,21 @@ export default function MobileCartScreen() {
           <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 24, fontWeight: '700', color: '#002754' }}>₹{grandTotal}</Text>
         </View>
         <TouchableOpacity
-          onPress={() => router.push('/checkout' as any)}
+          onPress={() => {
+            if (user) {
+              router.push('/checkout' as any);
+            } else {
+              router.push('/(auth)/login' as any);
+            }
+          }}
           style={{ backgroundColor: '#002754', paddingHorizontal: 28, paddingVertical: 14, borderRadius: 30, flexDirection: 'row', alignItems: 'center', gap: 8, shadowColor: '#002754', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8 }}
         >
           <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', fontSize: 14, fontWeight: '700' }}>Proceed to Checkout</Text>
           <ArrowRight size={18} color="white" />
         </TouchableOpacity>
       </View>
+      </>
+      )}
     </SafeAreaView>
   );
 }

@@ -21,8 +21,8 @@ export default function AdminProductsPage() {
     <AdminLayout>
       <PageHeader
         badge="Product Catalog"
-        title="Products & Inventory"
-        subtitle="Manage store items, set prices, update categories, and monitor stock availability."
+        title="Product Catalog"
+        subtitle="Manage store products, prices, categories, and descriptions."
         actions={
           <Link
             href="/products/new"
@@ -51,7 +51,7 @@ export default function AdminProductsPage() {
                 <th className="pb-3">Product Name</th>
                 <th className="pb-3">Category</th>
                 <th className="pb-3">Price</th>
-                <th className="pb-3">Stock Status</th>
+                <th className="pb-3">Status</th>
                 <th className="pb-3 text-right">Action</th>
               </tr>
             </thead>
@@ -78,8 +78,8 @@ export default function AdminProductsPage() {
                     {formatCurrency(p.basePrice)}
                   </td>
                   <td className="py-4">
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                      In Stock
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/80 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                      Active
                     </span>
                   </td>
                   <td className="py-4 text-right">

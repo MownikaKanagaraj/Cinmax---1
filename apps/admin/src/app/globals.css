@@ -1,1 +1,23 @@
 @import '@cinmax/theme/globals.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Smooth admin page transitions */
+@layer utilities {
+  @keyframes admin-fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .admin-page-enter {
+    animation: admin-fade-in 150ms ease-out both;
+  }
+}

@@ -38,7 +38,6 @@ export function AdminSidebar() {
         { label: 'Orders', href: '/orders', icon: Package },
         { label: 'Products', href: '/products', icon: Sparkles },
         { label: 'Categories', href: '/categories', icon: Tag },
-        { label: 'Stock & Inventory', href: '/inventory', icon: Warehouse },
       ],
     },
     {

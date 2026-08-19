@@ -10,8 +10,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Phone, ArrowLeft, ShieldCheck, CheckCircle2, Sparkles, RefreshCw, KeyRound } from 'lucide-react-native';
-import { usePhoneLoginMutation, useVerifyOTPMutation } from '@cinmax/hooks';
+import { Phone, ArrowLeft, ShieldCheck, CheckCircle2, Sparkles, RefreshCw, KeyRound, Mail, Lock } from 'lucide-react-native';
+import { usePhoneLoginMutation, useVerifyOTPMutation, useLoginMutation } from '@cinmax/hooks';
 
 const CONTAINER_PADDING = 20;
 
@@ -39,16 +39,44 @@ export default function MobileAuthScreen() {
   const router = useRouter();
   const phoneLogin = usePhoneLoginMutation();
   const verifyOTP = useVerifyOTPMutation();
+  const emailLogin = useLoginMutation();
 
+  const [loginMode, setLoginMode] = useState<'email' | 'phone'>('email');
+  
+  // Phone State
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [phoneNumber, setPhoneNumber] = useState('9876543210');
-  const [otpDigits, setOtpDigits] = useState(['1', '2', '3', '4', '5', '6']);
+  const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
   const [resendTimer, setResendTimer] = useState(30);
+
+  // Email State
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
   const otpInputsRef = useRef<Array<TextInput | null>>([]);
 
+  // --- Email Logic ---
+  const handleEmailLogin = async () => {
+    setErrorMessage('');
+    if (!email || !password) {
+      setErrorMessage('Please enter both email and password');
+      return;
+    }
+    try {
+      await emailLogin.mutateAsync({ email, password });
+      setSuccessMessage('Login successful! Syncing customer profile...');
+      setTimeout(() => {
+        router.replace('/(tabs)/profile' as any);
+      }, 500);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Invalid email or password.');
+    }
+  };
+
+  // --- Phone Logic ---
   const handleSendOTP = async () => {
     setErrorMessage('');
     const cleanPhone = phoneNumber.replace(/[^0-9]/g, '');
@@ -124,14 +152,14 @@ export default function MobileAuthScreen() {
       });
       setSuccessMessage('Verification successful! Syncing customer profile...');
       setTimeout(() => {
-        router.push('/(tabs)/profile' as any);
+        router.replace('/(tabs)/profile' as any);
       }, 500);
     } catch (err: any) {
       // Allow test OTP 123456
       if (code === '123456') {
         setSuccessMessage('Test OTP 123456 verified! Session activated.');
         setTimeout(() => {
-          router.push('/(tabs)/profile' as any);
+          router.replace('/(tabs)/profile' as any);
         }, 500);
       } else {
         setErrorMessage(err.message || 'Invalid 6-digit OTP code. Try 123456 for testing.');
@@ -143,7 +171,7 @@ export default function MobileAuthScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F9FB' }}>
       {/* Top Bar */}
       <View style={{ paddingHorizontal: CONTAINER_PADDING, paddingTop: 14, paddingBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: 'rgba(195, 198, 209, 0.3)' }}>
-        <TouchableOpacity onPress={() => router.back()} style={{ padding: 4 }}>
+        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)' as any))} style={{ padding: 4 }}>
           <ArrowLeft size={22} color="#002754" />
         </TouchableOpacity>
         <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 22, fontWeight: '700', color: '#002754' }}>
@@ -162,7 +190,7 @@ export default function MobileAuthScreen() {
             CINMAX Atelier Authenticator
           </Text>
           <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 13, color: 'rgba(255, 255, 255, 0.85)', textAlign: 'center', marginTop: 4, lineHeight: 18 }}>
-            Authenticate securely using your registered mobile number &amp; 6-digit SMS OTP code.
+            Authenticate securely to access your VIP benefits, tracking, and curated selections.
           </Text>
         </View>
 
@@ -183,126 +211,199 @@ export default function MobileAuthScreen() {
           </View>
         ) : null}
 
-        {/* Step 1: Phone Number Input */}
-        {step === 'phone' ? (
+        {/* Auth Mode Toggle */}
+        <View style={{ flexDirection: 'row', backgroundColor: 'rgba(195, 198, 209, 0.2)', borderRadius: 12, padding: 4, marginBottom: 24 }}>
+          <TouchableOpacity
+            onPress={() => { setLoginMode('email'); setErrorMessage(''); }}
+            style={{ flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10, backgroundColor: loginMode === 'email' ? '#FFFFFF' : 'transparent', shadowColor: loginMode === 'email' ? '#000' : 'transparent', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } }}
+          >
+            <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 13, color: loginMode === 'email' ? '#002754' : '#64748B' }}>Email & Password</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => { setLoginMode('phone'); setErrorMessage(''); }}
+            style={{ flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10, backgroundColor: loginMode === 'phone' ? '#FFFFFF' : 'transparent', shadowColor: loginMode === 'phone' ? '#000' : 'transparent', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } }}
+          >
+            <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 13, color: loginMode === 'phone' ? '#002754' : '#64748B' }}>Mobile OTP</Text>
+          </TouchableOpacity>
+        </View>
+
+        {loginMode === 'email' ? (
+          /* Email Login Form */
           <View style={{ backgroundColor: '#FFFFFF', borderRadius: 24, padding: 22, borderWidth: 1, borderColor: 'rgba(195, 198, 209, 0.35)', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.04, shadowRadius: 8 }}>
             <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#002754', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
-              Mobile Phone Number
+              Email Address
             </Text>
-
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: 'rgba(195, 198, 209, 0.4)', borderRadius: 16, paddingHorizontal: 14, height: 50, backgroundColor: '#F8FAFC' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, borderRightWidth: 1, borderRightColor: '#CBD5E1', paddingRight: 10 }}>
-                <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 14, color: '#002754' }}>🇮🇳 +91</Text>
-              </View>
-
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: 'rgba(195, 198, 209, 0.4)', borderRadius: 16, paddingHorizontal: 14, height: 50, backgroundColor: '#F8FAFC', marginBottom: 18 }}>
+              <Mail size={18} color="#94A3B8" />
               <TextInput
-                value={phoneNumber}
-                onChangeText={setPhoneNumber}
-                keyboardType="phone-pad"
-                maxLength={10}
-                placeholder="98765 43210"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                placeholder="patron@cinmax.com"
                 placeholderTextColor="#94A3B8"
-                style={{ fontFamily: FONT_SANS_BOLD, fontSize: 16, color: '#002754', flex: 1 }}
+                style={{ fontFamily: FONT_SANS_BOLD, fontSize: 15, color: '#002754', flex: 1 }}
               />
             </View>
 
-            {/* Test Credentials Box */}
-            <View style={{ marginTop: 14, backgroundColor: 'rgba(197, 168, 128, 0.12)', borderRadius: 12, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Sparkles size={16} color="#C5A880" />
-              <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 11, color: '#002754', flex: 1 }}>
-                Test Mode Ready: Enter any 10-digit number. Use OTP <Text style={{ fontFamily: FONT_SANS_BOLD }}>123456</Text> for instant testing.
-              </Text>
+            <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#002754', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
+              Password
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: 'rgba(195, 198, 209, 0.4)', borderRadius: 16, paddingHorizontal: 14, height: 50, backgroundColor: '#F8FAFC' }}>
+              <Lock size={18} color="#94A3B8" />
+              <TextInput
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                placeholder="Enter your password"
+                placeholderTextColor="#94A3B8"
+                style={{ fontFamily: FONT_SANS_BOLD, fontSize: 15, color: '#002754', flex: 1 }}
+              />
             </View>
 
             <TouchableOpacity
-              onPress={handleSendOTP}
-              disabled={phoneLogin.isPending}
-              style={{ backgroundColor: '#002754', borderRadius: 18, paddingVertical: 14, alignItems: 'center', marginTop: 20 }}
+              onPress={handleEmailLogin}
+              disabled={emailLogin.isPending}
+              style={{ backgroundColor: '#002754', borderRadius: 18, paddingVertical: 14, alignItems: 'center', marginTop: 24 }}
             >
-              {phoneLogin.isPending ? (
+              {emailLogin.isPending ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
                 <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#FFFFFF', fontSize: 14 }}>
-                  Send 6-Digit OTP →
+                  Sign In to Atelier →
                 </Text>
               )}
             </TouchableOpacity>
-          </View>
-        ) : (
-          /* Step 2: 6-Digit OTP Verification */
-          <View style={{ backgroundColor: '#FFFFFF', borderRadius: 24, padding: 22, borderWidth: 1, borderColor: 'rgba(195, 198, 209, 0.35)', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.04, shadowRadius: 8 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#002754', textTransform: 'uppercase', letterSpacing: 1 }}>
-                Enter 6-Digit OTP
+
+            <View style={{ marginTop: 24, flexDirection: 'row', justifyContent: 'center', gap: 4 }}>
+              <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 13, color: '#64748B' }}>
+                New to CINMAX?
               </Text>
-              <TouchableOpacity onPress={() => setStep('phone')}>
-                <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 11, color: '#C5A880' }}>
-                  Change Number
+              <TouchableOpacity onPress={() => router.push('/(auth)/signup' as any)}>
+                <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 13, color: '#C5A880' }}>
+                  Register now
                 </Text>
               </TouchableOpacity>
             </View>
+          </View>
+        ) : (
+          /* Phone OTP Login Form */
+          step === 'phone' ? (
+            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 24, padding: 22, borderWidth: 1, borderColor: 'rgba(195, 198, 209, 0.35)', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.04, shadowRadius: 8 }}>
+              <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#002754', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
+                Mobile Phone Number
+              </Text>
 
-            {/* 6 Digit Input Boxes */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginVertical: 16 }}>
-              {otpDigits.map((digit, idx) => (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: 'rgba(195, 198, 209, 0.4)', borderRadius: 16, paddingHorizontal: 14, height: 50, backgroundColor: '#F8FAFC' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, borderRightWidth: 1, borderRightColor: '#CBD5E1', paddingRight: 10 }}>
+                  <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 14, color: '#002754' }}>🇮🇳 +91</Text>
+                </View>
+
                 <TextInput
-                  key={idx}
-                  ref={(ref) => (otpInputsRef.current[idx] = ref)}
-                  value={digit}
-                  onChangeText={(text) => handleDigitChange(text, idx)}
-                  onKeyPress={(e) => handleKeyPress(e, idx)}
-                  keyboardType="number-pad"
-                  maxLength={1}
-                  selectTextOnFocus
-                  style={{
-                    width: 44,
-                    height: 52,
-                    borderRadius: 12,
-                    borderWidth: 1.5,
-                    borderColor: digit ? '#002754' : 'rgba(195, 198, 209, 0.4)',
-                    backgroundColor: digit ? 'rgba(0, 39, 84, 0.04)' : '#F8FAFC',
-                    textAlign: 'center',
-                    fontFamily: FONT_SANS_BOLD,
-                    fontSize: 20,
-                    color: '#002754',
-                  }}
+                  value={phoneNumber}
+                  onChangeText={setPhoneNumber}
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                  placeholder="98765 43210"
+                  placeholderTextColor="#94A3B8"
+                  style={{ fontFamily: FONT_SANS_BOLD, fontSize: 16, color: '#002754', flex: 1 }}
                 />
-              ))}
-            </View>
+              </View>
 
-            {/* Countdown / Resend Option */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-              {resendTimer > 0 ? (
-                <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 11, color: '#64748B' }}>
-                  Resend code in <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#002754' }}>{resendTimer}s</Text>
+              <View style={{ marginTop: 14, backgroundColor: 'rgba(197, 168, 128, 0.12)', borderRadius: 12, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Sparkles size={16} color="#C5A880" />
+                <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 11, color: '#002754', flex: 1 }}>
+                  Test Mode Ready: Enter any 10-digit number. Use OTP <Text style={{ fontFamily: FONT_SANS_BOLD }}>123456</Text> for instant testing.
                 </Text>
-              ) : (
-                <TouchableOpacity onPress={handleSendOTP} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <RefreshCw size={12} color="#002754" />
-                  <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 11, color: '#002754' }}>
-                    Resend 6-Digit OTP Code
+              </View>
+
+              <TouchableOpacity
+                onPress={handleSendOTP}
+                disabled={phoneLogin.isPending}
+                style={{ backgroundColor: '#002754', borderRadius: 18, paddingVertical: 14, alignItems: 'center', marginTop: 20 }}
+              >
+                {phoneLogin.isPending ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#FFFFFF', fontSize: 14 }}>
+                    Send 6-Digit OTP →
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 24, padding: 22, borderWidth: 1, borderColor: 'rgba(195, 198, 209, 0.35)', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.04, shadowRadius: 8 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#002754', textTransform: 'uppercase', letterSpacing: 1 }}>
+                  Enter 6-Digit OTP
+                </Text>
+                <TouchableOpacity onPress={() => setStep('phone')}>
+                  <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 11, color: '#C5A880' }}>
+                    Change Number
                   </Text>
                 </TouchableOpacity>
-              )}
-              <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 11, color: '#C5A880' }}>
-                Test OTP: 123456
-              </Text>
-            </View>
+              </View>
 
-            <TouchableOpacity
-              onPress={() => handleVerifyOTP()}
-              disabled={verifyOTP.isPending}
-              style={{ backgroundColor: '#002754', borderRadius: 18, paddingVertical: 14, alignItems: 'center', marginTop: 22 }}
-            >
-              {verifyOTP.isPending ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#FFFFFF', fontSize: 14 }}>
-                  Verify &amp; Enter Atelier →
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginVertical: 16 }}>
+                {otpDigits.map((digit, idx) => (
+                  <TextInput
+                    key={idx}
+                    ref={(ref) => (otpInputsRef.current[idx] = ref)}
+                    value={digit}
+                    onChangeText={(text) => handleDigitChange(text, idx)}
+                    onKeyPress={(e) => handleKeyPress(e, idx)}
+                    keyboardType="number-pad"
+                    maxLength={1}
+                    selectTextOnFocus
+                    style={{
+                      width: 44,
+                      height: 52,
+                      borderRadius: 12,
+                      borderWidth: 1.5,
+                      borderColor: digit ? '#002754' : 'rgba(195, 198, 209, 0.4)',
+                      backgroundColor: digit ? 'rgba(0, 39, 84, 0.04)' : '#F8FAFC',
+                      textAlign: 'center',
+                      fontFamily: FONT_SANS_BOLD,
+                      fontSize: 20,
+                      color: '#002754',
+                    }}
+                  />
+                ))}
+              </View>
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                {resendTimer > 0 ? (
+                  <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 11, color: '#64748B' }}>
+                    Resend code in <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#002754' }}>{resendTimer}s</Text>
+                  </Text>
+                ) : (
+                  <TouchableOpacity onPress={handleSendOTP} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <RefreshCw size={12} color="#002754" />
+                    <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 11, color: '#002754' }}>
+                      Resend OTP Code
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 11, color: '#C5A880' }}>
+                  Test OTP: 123456
                 </Text>
-              )}
-            </TouchableOpacity>
-          </View>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => handleVerifyOTP()}
+                disabled={verifyOTP.isPending}
+                style={{ backgroundColor: '#002754', borderRadius: 18, paddingVertical: 14, alignItems: 'center', marginTop: 22 }}
+              >
+                {verifyOTP.isPending ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#FFFFFF', fontSize: 14 }}>
+                    Verify &amp; Enter Atelier →
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )
         )}
       </ScrollView>
     </SafeAreaView>
