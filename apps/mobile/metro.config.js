@@ -6,7 +6,14 @@ const projectRoot = __dirname;
 const monorepoRoot = path.resolve(projectRoot, '../..');
 const emptyModulePath = path.resolve(projectRoot, 'src/empty-module.js');
 
+const fs = require('fs');
+
 const config = getDefaultConfig(projectRoot);
+
+// Enable pnpm symlink resolution in Metro and fallback doesFileExist for .pnpm store
+config.resolver.unstable_enableSymlinks = true;
+config.resolver.unstable_enablePackageExports = true;
+config.resolver.doesFileExist = (filePath) => fs.existsSync(filePath);
 
 // 1. Exclude non-mobile build artifacts from file-map crawling
 config.resolver.blockList = [
@@ -41,16 +48,9 @@ nodeBuiltins.forEach((builtin) => {
   config.resolver.extraNodeModules[builtin] = emptyModulePath;
 });
 
-const reactNativeFabricShim = require.resolve('react-native/Libraries/Renderer/shims/ReactFabric', { paths: [projectRoot, monorepoRoot] });
-
-config.resolver.resolveRequest = (context, moduleName, platform) => {
-  if (moduleName === 'react-native/Libraries/Renderer/shims/ReactNative') {
-    return {
-      filePath: reactNativeFabricShim,
-      type: 'sourceFile',
-    };
-  }
-  return context.resolveRequest(context, moduleName, platform);
-};
+config.resolver.extraNodeModules['react-native/Libraries/Renderer/shims/ReactNative'] = require.resolve(
+  'react-native/Libraries/Renderer/shims/ReactFabric',
+  { paths: [projectRoot, monorepoRoot] }
+);
 
 module.exports = withNativeWind(config, { input: './global.css' });
