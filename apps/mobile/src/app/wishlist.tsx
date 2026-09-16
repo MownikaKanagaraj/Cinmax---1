@@ -5,11 +5,11 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
-  SafeAreaView,
   TextInput,
   Dimensions,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useCartStore, useWishlistStore } from '@cinmax/hooks';
 import {
@@ -73,10 +73,16 @@ export default function MobileWishlistScreen() {
           backgroundColor: 'rgba(255, 255, 255, 0.95)',
           borderBottomWidth: 1,
           borderBottomColor: 'rgba(195, 198, 209, 0.3)',
-          zIndex: 10,
+          zIndex: 100,
+          elevation: 10,
         }}
       >
-        <TouchableOpacity onPress={() => router.back()} style={{ padding: 4 }}>
+        <TouchableOpacity
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)' as any))}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          activeOpacity={0.7}
+          style={{ minWidth: 40, minHeight: 40, justifyContent: 'center', alignItems: 'center' }}
+        >
           <ArrowLeft size={22} color="#002754" />
         </TouchableOpacity>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -93,14 +99,20 @@ export default function MobileWishlistScreen() {
             My Wishlist
           </Text>
         </View>
-        <TouchableOpacity onPress={() => router.push('/cart' as any)} style={{ padding: 4, position: 'relative' }}>
+        <TouchableOpacity
+          onPress={() => router.push('/cart' as any)}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          activeOpacity={0.7}
+          style={{ minWidth: 40, minHeight: 40, justifyContent: 'center', alignItems: 'center', position: 'relative' }}
+        >
           <ShoppingBag size={22} color="#002754" />
           {cartItems.length > 0 && (
             <View
+              pointerEvents="none"
               style={{
                 position: 'absolute',
                 top: 0,
-                right: 0,
+                right: -2,
                 backgroundColor: '#002754',
                 width: 16,
                 height: 16,

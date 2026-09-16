@@ -4,14 +4,18 @@ import {
   Text,
   ScrollView,
   Image,
+  View,
+  Text,
+  ScrollView,
+  Image,
   TouchableOpacity,
-  SafeAreaView,
   TextInput,
   Dimensions,
   Platform,
   Share,
   Modal,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ProductCard } from '../../components/ProductCard';
 import { useProductsQuery, useWishlistStore, useCartStore, usePlaylistsQuery, useUser } from '@cinmax/hooks';
@@ -206,10 +210,11 @@ export default function MobileProductDetailsScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF7F2' }}>
       {/* 1. TOP HEADER NAVIGATION BAR */}
-      <View style={{ paddingHorizontal: CONTAINER_PADDING, paddingTop: 12, paddingBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(247, 249, 251, 0.95)', borderBottomWidth: 1, borderBottomColor: 'rgba(195, 198, 209, 0.3)', zIndex: 100 }}>
+      <View style={{ paddingHorizontal: CONTAINER_PADDING, paddingTop: 12, paddingBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(247, 249, 251, 0.95)', borderBottomWidth: 1, borderBottomColor: 'rgba(195, 198, 209, 0.3)', zIndex: 100, elevation: 10 }}>
         <TouchableOpacity
           onPress={() => router.replace('/(tabs)' as any)}
-          style={{ width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' }}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          style={{ width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' }}
         >
           <ArrowLeft size={22} color="#002754" />
         </TouchableOpacity>
@@ -217,15 +222,15 @@ export default function MobileProductDetailsScreen() {
           CINMAX
         </Text>
         <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-          <TouchableOpacity onPress={handleShare} style={{ width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' }}>
+          <TouchableOpacity onPress={handleShare} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={{ width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' }}>
             <Share2 size={20} color="#434750" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => toggleItem(productData?.id || 'p_saffron')} style={{ width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' }}>
+          <TouchableOpacity onPress={() => toggleItem(productData?.id || 'p_saffron')} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={{ width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' }}>
             <Heart size={20} color="#002754" fill={isWishlisted(productData?.id || 'p_saffron') ? '#002754' : 'none'} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/cart' as any)} style={{ width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
+          <TouchableOpacity onPress={() => router.push('/cart' as any)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={{ width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
             <ShoppingBag size={20} color="#002754" />
-            <View style={{ position: 'absolute', top: 6, right: 6, width: 8, height: 8, borderRadius: 4, backgroundColor: '#BA1A1A' }} />
+            <View pointerEvents="none" style={{ position: 'absolute', top: 6, right: 6, width: 8, height: 8, borderRadius: 4, backgroundColor: '#BA1A1A' }} />
           </TouchableOpacity>
         </View>
       </View>

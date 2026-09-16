@@ -5,10 +5,15 @@ import {
   TextInput,
   ScrollView,
   Image,
+  View,
+  Text,
+  TextInput,
+  ScrollView,
+  Image,
   TouchableOpacity,
-  SafeAreaView,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ProductCard } from '../components/ProductCard';
 import { useProductsQuery } from '@cinmax/hooks';
@@ -65,8 +70,12 @@ export default function MobileSearchScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F9FB' }}>
       {/* Header & Search Input */}
-      <View style={{ paddingHorizontal: CONTAINER_PADDING, paddingTop: 14, paddingBottom: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: 'rgba(195, 198, 209, 0.3)', gap: 14 }}>
-        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)' as any))} style={{ padding: 4 }}>
+      <View style={{ paddingHorizontal: CONTAINER_PADDING, paddingTop: 14, paddingBottom: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: 'rgba(195, 198, 209, 0.3)', gap: 14, zIndex: 100, elevation: 10 }}>
+        <TouchableOpacity
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)' as any))}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          style={{ width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' }}
+        >
           <ArrowLeft size={22} color="#002754" />
         </TouchableOpacity>
 

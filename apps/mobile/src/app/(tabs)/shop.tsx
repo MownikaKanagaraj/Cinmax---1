@@ -5,11 +5,11 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
-  SafeAreaView,
   TextInput,
   Dimensions,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ProductCard } from '../../components/ProductCard';
 import { useCartStore, useWishlistStore, useProductsQuery, useCategoriesQuery } from '@cinmax/hooks';
@@ -110,8 +110,13 @@ export default function MobileShopScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF7F2' }}>
       {/* 1. TOP HEADER BAR */}
-      <View style={{ zIndex: 100, paddingHorizontal: CONTAINER_PADDING, paddingTop: 14, paddingBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: 'rgba(197, 168, 128, 0.25)', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6 }}>
-        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)' as any))} style={{ padding: 4 }}>
+      <View style={{ zIndex: 100, elevation: 10, paddingHorizontal: CONTAINER_PADDING, paddingTop: 14, paddingBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: 'rgba(197, 168, 128, 0.25)', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6 }}>
+        <TouchableOpacity
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)' as any))}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          activeOpacity={0.7}
+          style={{ minWidth: 40, minHeight: 40, justifyContent: 'center', alignItems: 'center' }}
+        >
           <ArrowLeft size={22} color="#002754" />
         </TouchableOpacity>
 
@@ -119,20 +124,30 @@ export default function MobileShopScreen() {
           Shop Cosmetics
         </Text>
 
-        <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => router.push('/wishlist' as any)} style={{ padding: 4, position: 'relative' }}>
+        <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+          <TouchableOpacity
+            onPress={() => router.push('/wishlist' as any)}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.7}
+            style={{ minWidth: 40, minHeight: 40, justifyContent: 'center', alignItems: 'center', position: 'relative' }}
+          >
             <Heart size={22} color={wishlistItems.length > 0 ? '#DC2626' : '#002754'} fill={wishlistItems.length > 0 ? '#DC2626' : 'none'} />
             {wishlistItems.length > 0 && (
-              <View style={{ position: 'absolute', top: -2, right: -6, backgroundColor: '#DC2626', borderRadius: 8, width: 16, height: 16, justifyContent: 'center', alignItems: 'center' }}>
+              <View pointerEvents="none" style={{ position: 'absolute', top: 0, right: -4, backgroundColor: '#DC2626', borderRadius: 8, width: 16, height: 16, justifyContent: 'center', alignItems: 'center' }}>
                 <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', fontSize: 10, fontWeight: '700' }}>{wishlistItems.length}</Text>
               </View>
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => router.push('/cart' as any)} style={{ padding: 4, position: 'relative' }}>
+          <TouchableOpacity
+            onPress={() => router.push('/cart' as any)}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.7}
+            style={{ minWidth: 40, minHeight: 40, justifyContent: 'center', alignItems: 'center', position: 'relative' }}
+          >
             <ShoppingBag size={22} color="#002754" />
             {totalCartCount > 0 && (
-              <View style={{ position: 'absolute', top: -2, right: -6, backgroundColor: '#BA1A1A', borderRadius: 8, width: 16, height: 16, justifyContent: 'center', alignItems: 'center' }}>
+              <View pointerEvents="none" style={{ position: 'absolute', top: 0, right: -4, backgroundColor: '#BA1A1A', borderRadius: 8, width: 16, height: 16, justifyContent: 'center', alignItems: 'center' }}>
                 <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', fontSize: 10, fontWeight: '700' }}>{totalCartCount}</Text>
               </View>
             )}
@@ -197,18 +212,50 @@ export default function MobileShopScreen() {
                   style={{
                     paddingHorizontal: 18,
                     paddingVertical: 8,
-                    borderRadius: 22,
+                    borderRadius: 20,
                     backgroundColor: active ? '#002754' : '#FFFFFF',
                     borderWidth: 1,
-                    borderColor: active ? '#002754' : 'rgba(197, 168, 128, 0.35)',
-                    shadowColor: active ? '#002754' : 'transparent',
+                    borderColor: active ? '#002754' : 'rgba(195, 198, 209, 0.4)',
+                    shadowColor: '#0A3D78',
                     shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: active ? 0.15 : 0,
+                    shadowOpacity: active ? 0.1 : 0.02,
                     shadowRadius: 4,
                   }}
                 >
-                  <Text style={{ fontFamily: active ? FONT_SANS_BOLD : FONT_SANS_SEMIBOLD, fontSize: 12, color: active ? '#FFFFFF' : '#002754' }}>
-                    {cat}
+                  <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 12, fontWeight: '600', color: active ? 'white' : '#434750' }}>{cat}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* 5. SORT BAR */}
+        <View style={{ paddingHorizontal: CONTAINER_PADDING, marginTop: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 12, color: '#737781' }}>
+            Showing <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#002754' }}>{filteredProducts.length}</Text> items
+          </Text>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+            {[
+              { label: 'Featured', value: 'featured' },
+              { label: 'Price: Low-High', value: 'price_low' },
+              { label: 'Price: High-Low', value: 'price_high' },
+              { label: 'Top Rated', value: 'rating' },
+            ].map((opt) => {
+              const selected = sortBy === opt.value;
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  onPress={() => setSortBy(opt.value as any)}
+                  style={{
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    borderRadius: 12,
+                    backgroundColor: selected ? 'rgba(0, 39, 84, 0.1)' : 'transparent',
+                  }}
+                >
+                  <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 11, fontWeight: '700', color: selected ? '#002754' : '#737781' }}>
+                    {opt.label}
                   </Text>
                 </TouchableOpacity>
               );
@@ -216,70 +263,23 @@ export default function MobileShopScreen() {
           </ScrollView>
         </View>
 
-        {/* 5. TOOLBAR COUNT & SORT CONTROL */}
-        <View style={{ marginHorizontal: CONTAINER_PADDING, marginTop: 18, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 13, color: '#002754' }}>
-            Showing <Text style={{ fontFamily: FONT_SANS_BOLD }}>{filteredProducts.length}</Text> Luxury Formulations
-          </Text>
-
-          <TouchableOpacity
-            onPress={() => {
-              if (sortBy === 'featured') setSortBy('price_low');
-              else if (sortBy === 'price_low') setSortBy('price_high');
-              else if (sortBy === 'price_high') setSortBy('rating');
-              else setSortBy('featured');
-            }}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFFFFF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(195, 198, 209, 0.35)' }}
-          >
-            <SlidersHorizontal size={14} color="#002754" />
-            <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 11, color: '#002754', textTransform: 'capitalize' }}>
-              Sort: {sortBy.replace('_', ' ')}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* 6. PRODUCT CATALOG GRID */}
-        <View style={{ paddingHorizontal: CONTAINER_PADDING, marginTop: 14 }}>
-          {isLoading ? (
-            <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-              <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 13, color: '#737781' }}>
-                Loading live cosmetics catalog...
-              </Text>
-            </View>
-          ) : filteredProducts.length === 0 ? (
-            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 24, padding: 32, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(197, 168, 128, 0.3)', marginTop: 10 }}>
-              <Sparkles size={40} color="#C5A880" style={{ marginBottom: 12 }} />
-              <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 18, color: '#002754', marginBottom: 6 }}>
-                No Formulations Found
-              </Text>
-              <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 13, color: '#737781', textAlign: 'center', marginBottom: 16 }}>
-                Try adjusting your search terms or category selection.
-              </Text>
-              <TouchableOpacity onPress={() => { setActiveCategory('All'); setSearchQuery(''); setSortBy('featured'); }} style={{ backgroundColor: '#002754', paddingHorizontal: 22, paddingVertical: 10, borderRadius: 20 }}>
-                <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#FFFFFF' }}>
-                  Reset All Filters
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-              {filteredProducts.map((prod) => (
-                <ProductCard
-                  key={prod.id}
-                  id={prod.id}
-                  title={prod.title}
-                  slug={prod.slug}
-                  price={prod.price}
-                  originalPrice={prod.originalPrice}
-                  image={prod.image}
-                  rating={prod.rating}
-                  reviewCount={prod.reviewCount}
-                  badge={prod.badge}
-                  badgeBg={prod.badgeBg}
-                />
-              ))}
-            </View>
-          )}
+        {/* 6. PRODUCT GRID */}
+        <View style={{ paddingHorizontal: CONTAINER_PADDING, marginTop: 16, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+          {filteredProducts.map((prod) => (
+            <ProductCard
+              key={prod.id}
+              id={prod.id}
+              title={prod.title}
+              slug={prod.slug}
+              price={prod.numericPrice}
+              originalPrice={prod.originalPrice ? parseFloat(prod.originalPrice.replace('₹', '')) : undefined}
+              image={prod.image}
+              rating={prod.rating}
+              reviewCount={prod.reviewCount}
+              badge={prod.badge}
+              badgeBg={prod.badgeBg}
+            />
+          ))}
         </View>
 
       </ScrollView>

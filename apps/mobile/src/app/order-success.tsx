@@ -5,10 +5,12 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
-  SafeAreaView,
+  TextInput,
+  Dimensions,
   Platform,
   Modal,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   CheckCircle,

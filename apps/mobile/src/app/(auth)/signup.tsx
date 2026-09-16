@@ -4,12 +4,12 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  SafeAreaView,
   ScrollView,
   Platform,
   ActivityIndicator,
   Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Sparkles, Mail, Lock, Eye, EyeOff, User, Phone, CheckCircle2, AlertCircle, Heart, ShieldCheck } from 'lucide-react-native';
 import { useRegisterMutation, useWishlistStore } from '@cinmax/hooks';

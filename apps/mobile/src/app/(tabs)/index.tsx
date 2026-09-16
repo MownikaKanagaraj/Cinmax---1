@@ -5,12 +5,12 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
-  SafeAreaView,
   TextInput,
   Dimensions,
   Platform,
   Modal,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ProductCard } from '../../components/ProductCard';
 import { useCartStore, useWishlistStore, useProductsQuery, useCategoriesQuery, useHomeMarketingQuery, useUser } from '@cinmax/hooks';
@@ -295,25 +295,35 @@ export default function MobileHomeScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F9FB' }}>
       {/* 1. FIXED TOP HEADER BAR */}
-      <View style={{ zIndex: 100, paddingHorizontal: CONTAINER_PADDING, paddingTop: 14, paddingBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(247, 249, 251, 0.95)', borderBottomWidth: 1, borderBottomColor: 'rgba(195, 198, 209, 0.3)', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6 }}>
+      <View style={{ zIndex: 100, elevation: 10, paddingHorizontal: CONTAINER_PADDING, paddingTop: 14, paddingBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(247, 249, 251, 0.95)', borderBottomWidth: 1, borderBottomColor: 'rgba(195, 198, 209, 0.3)', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6 }}>
         <View style={{ width: 22 }} />
         <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 24, fontWeight: '700', color: '#002754', letterSpacing: -0.5 }}>
           CINMAX
         </Text>
-        <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => router.push('/wishlist' as any)} style={{ padding: 4, position: 'relative' }}>
+        <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+          <TouchableOpacity
+            onPress={() => router.push('/wishlist' as any)}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.7}
+            style={{ minWidth: 40, minHeight: 40, justifyContent: 'center', alignItems: 'center', position: 'relative' }}
+          >
             <Heart size={22} color={wishlistItems.length > 0 ? '#DC2626' : '#002754'} fill={wishlistItems.length > 0 ? '#DC2626' : 'none'} />
             {wishlistItems.length > 0 && (
-              <View style={{ position: 'absolute', top: -2, right: -6, backgroundColor: '#DC2626', borderRadius: 8, width: 16, height: 16, justifyContent: 'center', alignItems: 'center' }}>
+              <View pointerEvents="none" style={{ position: 'absolute', top: 0, right: -4, backgroundColor: '#DC2626', borderRadius: 8, width: 16, height: 16, justifyContent: 'center', alignItems: 'center' }}>
                 <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', fontSize: 10, fontWeight: '700' }}>{wishlistItems.length}</Text>
               </View>
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => router.push('/cart' as any)} style={{ padding: 4, position: 'relative' }}>
+          <TouchableOpacity
+            onPress={() => router.push('/cart' as any)}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.7}
+            style={{ minWidth: 40, minHeight: 40, justifyContent: 'center', alignItems: 'center', position: 'relative' }}
+          >
             <ShoppingBag size={22} color="#002754" />
             {totalCartCount > 0 && (
-              <View style={{ position: 'absolute', top: -2, right: -6, backgroundColor: '#BA1A1A', borderRadius: 8, width: 16, height: 16, justifyContent: 'center', alignItems: 'center' }}>
+              <View pointerEvents="none" style={{ position: 'absolute', top: 0, right: -4, backgroundColor: '#BA1A1A', borderRadius: 8, width: 16, height: 16, justifyContent: 'center', alignItems: 'center' }}>
                 <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', fontSize: 10, fontWeight: '700' }}>{totalCartCount}</Text>
               </View>
             )}
@@ -322,13 +332,17 @@ export default function MobileHomeScreen() {
           {!isAuthenticated ? (
             <TouchableOpacity
               onPress={() => router.push('/(auth)/login' as any)}
+              hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+              activeOpacity={0.7}
               style={{
                 backgroundColor: '#002754',
-                paddingHorizontal: 10,
-                paddingVertical: 5,
+                paddingHorizontal: 12,
+                paddingVertical: 7,
+                minHeight: 36,
                 borderRadius: 12,
                 flexDirection: 'row',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: 4,
               }}
             >
@@ -340,7 +354,9 @@ export default function MobileHomeScreen() {
           ) : (
             <TouchableOpacity
               onPress={() => router.push('/(tabs)/profile' as any)}
-              style={{ padding: 4 }}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              activeOpacity={0.7}
+              style={{ minWidth: 40, minHeight: 40, justifyContent: 'center', alignItems: 'center' }}
             >
               <User size={22} color="#002754" />
             </TouchableOpacity>

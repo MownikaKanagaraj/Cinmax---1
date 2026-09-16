@@ -4,9 +4,13 @@ import {
   Text,
   ScrollView,
   Image,
+  View,
+  Text,
+  ScrollView,
+  Image,
   TouchableOpacity,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCategoryBySlugQuery, useProductsByCategoryQuery } from '@cinmax/hooks';
 import type { Product } from '@cinmax/types';
@@ -23,7 +27,11 @@ export default function MobileCategoryScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F9FB' }}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 20 }}>
-        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)' as any))} style={{ marginBottom: 12 }}>
+        <TouchableOpacity
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)' as any))}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          style={{ marginBottom: 12, minHeight: 40, justifyContent: 'center' }}
+        >
           <Text style={{ fontSize: 13, fontWeight: '700', color: '#0A3D78' }}>
             ← Back
           </Text>

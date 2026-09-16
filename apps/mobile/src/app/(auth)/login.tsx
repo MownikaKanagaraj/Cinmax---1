@@ -4,13 +4,13 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  SafeAreaView,
   ScrollView,
   Platform,
   ActivityIndicator,
   Image,
   Dimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Sparkles, RefreshCw, Mail, Lock, Eye, EyeOff, Heart, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react-native';
 import { usePhoneLoginMutation, useVerifyOTPMutation, useLoginMutation, useWishlistStore, useAuthStore } from '@cinmax/hooks';

@@ -5,12 +5,12 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
-  SafeAreaView,
   Platform,
   Modal,
   ActivityIndicator,
   TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
   usePlaylistsQuery,
@@ -278,7 +278,8 @@ export default function MobileClassesScreen() {
           backgroundColor: 'rgba(247, 249, 251, 0.95)',
           borderBottomWidth: 1,
           borderBottomColor: 'rgba(195, 198, 209, 0.3)',
-          zIndex: 10,
+          zIndex: 100,
+          elevation: 10,
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -312,16 +313,26 @@ export default function MobileClassesScreen() {
           </View>
         </View>
 
-        <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => router.push('/wishlist' as any)} style={{ padding: 4, position: 'relative' }}>
+        <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+          <TouchableOpacity
+            onPress={() => router.push('/wishlist' as any)}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.7}
+            style={{ minWidth: 40, minHeight: 40, justifyContent: 'center', alignItems: 'center', position: 'relative' }}
+          >
             <Heart size={22} color={wishlistItems.length > 0 ? '#DC2626' : '#002754'} fill={wishlistItems.length > 0 ? '#DC2626' : 'none'} />
             {wishlistItems.length > 0 && (
-              <View style={{ position: 'absolute', top: -2, right: -6, backgroundColor: '#DC2626', borderRadius: 8, width: 16, height: 16, justifyContent: 'center', alignItems: 'center' }}>
+              <View pointerEvents="none" style={{ position: 'absolute', top: 0, right: -4, backgroundColor: '#DC2626', borderRadius: 8, width: 16, height: 16, justifyContent: 'center', alignItems: 'center' }}>
                 <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', fontSize: 10, fontWeight: '700' }}>{wishlistItems.length}</Text>
               </View>
             )}
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/cart' as any)} style={{ padding: 4 }}>
+          <TouchableOpacity
+            onPress={() => router.push('/cart' as any)}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.7}
+            style={{ minWidth: 40, minHeight: 40, justifyContent: 'center', alignItems: 'center' }}
+          >
             <ShoppingBag size={22} color="#002754" />
           </TouchableOpacity>
         </View>
