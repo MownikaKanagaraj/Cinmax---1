@@ -67,7 +67,7 @@ export class CouponEngine {
         isValid: false,
         discountAmount: 0,
         code: coupon.code,
-        message: `Minimum order purchase of $${minAmount.toFixed(2)} required for this coupon`,
+        message: `Minimum order purchase of ₹${minAmount.toFixed(0)} required for this coupon`,
       };
     }
 
@@ -101,7 +101,7 @@ export class CouponEngine {
     } else if (coupon.discountType === 'fixed_amount') {
       discountAmount = Math.min(coupon.discountValue, eligibleSubtotal);
     } else if (coupon.discountType === 'free_shipping') {
-      discountAmount = 5.99; // Standard flat shipping cost value
+      discountAmount = 60; // Standard flat shipping cost ₹60
     }
 
     return {

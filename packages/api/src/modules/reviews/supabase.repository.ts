@@ -64,6 +64,8 @@ export class SupabaseReviewRepository implements IReviewRepository {
     return ReviewMapper.toEntity(data as any);
   }
 
+  public static REVIEW_REWARD_POINTS = 4;
+
   public async updateStatus(id: string, status: ReviewStatus): Promise<ReviewEntity> {
     const isApproved = status === 'approved';
     const { data, error } = await this.supabase
@@ -74,6 +76,57 @@ export class SupabaseReviewRepository implements IReviewRepository {
       .single();
 
     if (error) throw error;
+
+    // Award loyalty points for approved review (duplicate proof)
+    if (isApproved && data?.user_id) {
+      try {
+        const reviewUserId = data.user_id;
+        const reviewPoints = SupabaseReviewRepository.REVIEW_REWARD_POINTS;
+        const desc = `Approved product review bonus (Review #${id})`;
+
+        const { data: rpcRes, error: rpcErr } = await this.supabase.rpc('process_loyalty_transaction', {
+          p_user_id: reviewUserId,
+          p_order_id: null,
+          p_transaction_type: 'REVIEW',
+          p_points: reviewPoints,
+          p_description: desc,
+        });
+
+        if (rpcErr) {
+          // Fallback duplicate check if RPC unavailable
+          const { data: existingTx } = await this.supabase
+            .from('loyalty_transactions' as any)
+            .select('id')
+            .eq('user_id', reviewUserId)
+            .eq('transaction_type', 'REVIEW')
+            .ilike('description', `%${id}%`)
+            .maybeSingle();
+
+          if (!existingTx) {
+            const { data: profile } = await this.supabase
+              .from('profiles' as any)
+              .select('loyalty_points')
+              .eq('id', reviewUserId)
+              .maybeSingle();
+
+            const currentPoints = Math.max(0, Number(profile?.loyalty_points) || 0);
+            const newBal = currentPoints + reviewPoints;
+
+            await this.supabase.from('loyalty_transactions' as any).insert({
+              user_id: reviewUserId,
+              transaction_type: 'REVIEW',
+              points: reviewPoints,
+              balance_after: newBal,
+              description: desc,
+            });
+            await this.supabase.from('profiles' as any).update({ loyalty_points: newBal }).eq('id', reviewUserId);
+          }
+        }
+      } catch (err) {
+        console.error('Error awarding review loyalty points:', err);
+      }
+    }
+
     return ReviewMapper.toEntity(data as any);
   }
 }

@@ -47,8 +47,22 @@ export function useUpdateOrderStatusMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, status, reason, trackingNumber }: { id: string; status: OrderStatus; reason?: string; trackingNumber?: string }) =>
-      orderService.updateStatus(id, status, reason || trackingNumber),
+    mutationFn: ({
+      id,
+      status,
+      reason,
+      trackingNumber,
+      carrier,
+      estimatedDeliveryDate,
+    }: {
+      id: string;
+      status: OrderStatus;
+      reason?: string;
+      trackingNumber?: string;
+      carrier?: string;
+      estimatedDeliveryDate?: string;
+    }) =>
+      orderService.updateStatus(id, status, reason, undefined, trackingNumber, carrier, estimatedDeliveryDate),
     onSuccess: (updatedOrder) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.orders.all });
       queryClient.setQueryData(queryKeys.orders.detail(updatedOrder.id), updatedOrder);

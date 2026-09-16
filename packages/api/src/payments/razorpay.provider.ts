@@ -18,12 +18,12 @@ export class RazorpayProvider implements IPaymentProvider {
       process.env.RAZORPAY_KEY_ID ||
       process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
       process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID ||
-      'rzp_test_TND5mOhcC1aMBW';
+      'rzp_test_TX6kmNNGbn83QI';
 
     this.keySecret =
       keySecret ||
       process.env.RAZORPAY_KEY_SECRET ||
-      'ni1vkGweXVk04HHsWcJTQrLx';
+      'tcp9HIn70PSx5JzNm611UHmw';
 
     try {
       this.razorpayInstance = new Razorpay({
@@ -36,40 +36,33 @@ export class RazorpayProvider implements IPaymentProvider {
   }
 
   public async createOrder(payload: CreatePaymentOrderPayload): Promise<PaymentOrderResult> {
-    // Amount in paise (minimum 100 paise = ₹1)
-    const rawAmount = payload.amount || 0;
-    const amountInPaise = Math.max(100, Math.round(rawAmount < 100 ? rawAmount * 100 : rawAmount));
+    const rawAmount = Number(payload.amount) || 0;
+    // Amount in payload is expected in INR; convert to paise (minimum ₹1 = 100 paise)
+    const amountInPaise = Math.max(100, Math.round(rawAmount * 100));
 
-    try {
-      if (this.razorpayInstance) {
-        const order = await this.razorpayInstance.orders.create({
-          amount: amountInPaise,
-          currency: payload.currency || 'INR',
-          receipt: payload.receipt || `rcpt_${Date.now()}`,
-          notes: payload.notes,
-        });
-
-        return {
-          providerOrderId: order.id,
-          amount: Number(order.amount),
-          currency: order.currency || 'INR',
-          keyId: this.keyId,
-          notes: payload.notes,
-        };
-      }
-    } catch (error: any) {
-      console.error('Razorpay API createOrder error:', error);
-      throw new Error(`Razorpay Order Creation Failed: ${error?.message || error}`);
+    if (!this.razorpayInstance) {
+      throw new Error('Razorpay SDK instance is not initialized. Please verify RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.');
     }
 
-    const fallbackId = `order_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-    return {
-      providerOrderId: fallbackId,
-      amount: amountInPaise,
-      currency: payload.currency || 'INR',
-      keyId: this.keyId,
-      notes: payload.notes,
-    };
+    try {
+      const order = await this.razorpayInstance.orders.create({
+        amount: amountInPaise,
+        currency: payload.currency || 'INR',
+        receipt: payload.receipt || `rcpt_${Date.now()}`,
+        notes: payload.notes,
+      });
+
+      return {
+        providerOrderId: order.id,
+        amount: Number(order.amount),
+        currency: order.currency || 'INR',
+        keyId: this.keyId,
+        notes: payload.notes,
+      };
+    } catch (error: any) {
+      console.error('Razorpay API orders.create error:', error?.message || error);
+      throw new Error(`Razorpay Order Creation Failed: ${error?.message || 'Gateway error'}`);
+    }
   }
 
   public async verifyPayment(payload: VerifyPaymentPayload): Promise<boolean> {
@@ -79,7 +72,7 @@ export class RazorpayProvider implements IPaymentProvider {
     }
 
     try {
-      // Step 3 HMAC-SHA256(order_id + "|" + payment_id, KEY_SECRET)
+      // HMAC-SHA256(order_id + "|" + payment_id, KEY_SECRET)
       const text = `${razorpayOrderId}|${razorpayPaymentId}`;
       const generatedSignature = crypto
         .createHmac('sha256', this.keySecret)
@@ -90,6 +83,17 @@ export class RazorpayProvider implements IPaymentProvider {
     } catch (error) {
       console.error('Razorpay signature verification error:', error);
       return false;
+    }
+  }
+
+  public async fetchPaymentDetails(paymentId: string): Promise<any> {
+    if (!this.razorpayInstance || !paymentId) return null;
+    try {
+      const payment = await this.razorpayInstance.payments.fetch(paymentId);
+      return payment;
+    } catch (err) {
+      console.warn('Razorpay fetchPaymentDetails warning:', err);
+      return null;
     }
   }
 

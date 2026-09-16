@@ -32,8 +32,12 @@ export class CouponEntity implements Coupon {
   }
 
   public get isExpired(): boolean {
-    return new Date() > new Date(this.endDate);
+    if (!this.endDate) return false;
+    const end = new Date(this.endDate);
+    if (isNaN(end.getTime())) return false;
+    return new Date() > end;
   }
+
 
   public isValidForOrderAmount(amount: number): boolean {
     if (!this.isActive || this.isExpired) return false;

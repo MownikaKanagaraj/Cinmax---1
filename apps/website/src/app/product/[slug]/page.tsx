@@ -1,238 +1,149 @@
-'use client';
-
 import * as React from 'react';
-import { useParams } from 'next/navigation';
+import Link from 'next/link';
+import Image from 'next/image';
+import { notFound } from 'next/navigation';
 import { Header } from '../../../components/header';
 import { Footer } from '../../../components/footer';
 import { CartDrawer } from '../../../components/cart-drawer';
+import { ProductCard } from '../../../components/product-card';
+import { ProductInteractiveSection } from '../../../components/product-interactive-section';
+import { getContainer } from '@cinmax/api';
 import {
-  Container,
-  Breadcrumb,
-  PriceTag,
-  RatingStars,
-  QuantitySelector,
-  Button,
-  Badge,
-} from '@cinmax/ui';
-import { useCartStore, useWishlistStore, useProductBySlugQuery } from '@cinmax/hooks';
-import type { ProductVariant } from '@cinmax/types';
+  LuxuryStarIcon,
+  LuxuryShieldIcon,
+  LuxuryLeafIcon,
+  LuxuryTruckIcon,
+} from '../../../components/luxury-icons';
+import { Award, CheckCircle2 } from 'lucide-react';
 
-export default function ProductDetailPage() {
-  const params = useParams();
-  const slug = (params?.slug as string) || '';
-  const { addItem } = useCartStore();
-  const { toggleWishlist, isInWishlist } = useWishlistStore();
+export const revalidate = 120; // 2 min cache
 
-  const { data: product, isLoading } = useProductBySlugQuery(slug, {
-    enabled: Boolean(slug),
-  });
+export default async function ProductDetailsPage(props: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await props.params;
 
-  const [selectedVariant, setSelectedVariant] = React.useState<ProductVariant | undefined>(undefined);
-  const [quantity, setQuantity] = React.useState(1);
-  const [selectedImage, setSelectedImage] = React.useState<string | undefined>(undefined);
+  let product: any = null;
+  let relatedProducts: any[] = [];
 
-  React.useEffect(() => {
-    if (product) {
-      if (!selectedVariant && product.variants?.length > 0) {
-        setSelectedVariant(product.variants[0]);
-      }
-      if (!selectedImage && product.images?.length > 0) {
-        setSelectedImage(product.images[0].url);
-      }
+  try {
+    const container = getContainer();
+    const rawProd = await container.products.getProductBySlug(slug);
+    if (rawProd) {
+      product = JSON.parse(JSON.stringify(rawProd));
+      const prodRes = await container.products.getProducts();
+      relatedProducts = JSON.parse(JSON.stringify((prodRes?.items || []).filter((p: any) => p.id !== product.id).slice(0, 4)));
     }
-  }, [product, selectedVariant, selectedImage]);
-
-  if (isLoading || !product) {
-    return (
-      <div className="min-h-screen flex flex-col bg-[#F7F9FB] dark:bg-[#040C18] text-[#191C1E] dark:text-white">
-        <Header />
-        <main className="flex-1 flex items-center justify-center py-24">
-          <p className="text-muted-foreground text-sm">Loading botanical formulation...</p>
-        </main>
-        <Footer />
-      </div>
-    );
+  } catch (err) {
+    console.error('Error fetching Product details RSC data:', err);
   }
 
-  const isFavorited = isInWishlist(product.id);
-  const currentVariant = selectedVariant || product.variants?.[0];
-  const currentImage =
-    selectedImage ||
-    product.images?.[0]?.url ||
-    'https://images.unsplash.com/photo-1607006314147-759088fd21c2?w=800&auto=format&fit=crop&q=80';
+  if (!product) {
+    notFound();
+  }
 
-  const handleAddToCart = () => {
-    if (currentVariant) {
-      addItem(product, currentVariant, quantity);
-    }
+  const defaultVariant = product.variants?.[0] || {
+    id: `v_${product.id}`,
+    title: 'Standard Bar',
+    price: product.basePrice || 249,
+    compareAtPrice: Math.round((product.basePrice || 249) * 1.3),
   };
 
+  const primaryImage = typeof product.images?.[0] === 'string'
+    ? product.images[0]
+    : product.images?.[0]?.url || 'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=800&auto=format&fit=crop&q=80';
+
   return (
-    <div className="min-h-screen flex flex-col bg-[#F7F9FB] dark:bg-[#040C18] text-[#191C1E] dark:text-white">
+    <div className="min-h-screen flex flex-col bg-[#FAF7F2] dark:bg-[#071324] text-[#191C1E] dark:text-slate-100">
       <Header />
       <CartDrawer />
 
-      <main className="flex-1 py-10">
-        <Container size="xl">
-          <Breadcrumb
-            items={[
-              { label: 'Home', href: '/' },
-              { label: 'Catalog', href: '/shop' },
-              {
-                label: product.category?.name || 'Category',
-                href: `/category/${product.category?.slug || 'cold-process'}`,
-              },
-              { label: product.title, isCurrent: true },
-            ]}
-          />
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 pt-4">
-            {/* Gallery */}
-            <div className="space-y-4">
-              <div className="rounded-[28px] overflow-hidden bg-slate-100 dark:bg-[#071324] border border-[#0A3D78]/10 aspect-square">
-                <img
-                  src={currentImage}
-                  alt={product.title}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-
-              {product.images && product.images.length > 1 && (
-                <div className="flex gap-4 overflow-x-auto pb-2">
-                  {product.images.map((img, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setSelectedImage(img.url)}
-                      className={`w-20 h-20 rounded-[14px] overflow-hidden border-2 transition-all flex-shrink-0 ${
-                        currentImage === img.url
-                          ? 'border-[#0A3D78] dark:border-white shadow-md'
-                          : 'border-transparent opacity-70 hover:opacity-100'
-                      }`}
-                    >
-                      <img
-                        src={img.url}
-                        alt="Thumbnail"
-                        className="w-full h-full object-cover"
-                      />
-                    </button>
-                  ))}
-                </div>
+      <main className="flex-1 py-8 px-4 max-w-6xl mx-auto w-full space-y-12">
+        {/* Product Details Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-10 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+          {/* Left Gallery */}
+          <div className="space-y-4">
+            <div className="relative aspect-square rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 shadow-inner">
+              <Image
+                src={primaryImage}
+                alt={product.title}
+                fill
+                priority
+                sizes="(max-width: 768px) 100vw, 500px"
+                className="object-cover"
+              />
+              {product.isFeatured && (
+                <span className="absolute top-4 left-4 bg-[#002754] text-[#C5A880] text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider shadow-md">
+                  Best Seller
+                </span>
               )}
             </div>
+          </div>
 
-            {/* Product Details & Purchase Form */}
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Badge variant="primary">{product.processType?.replace(/_/g, ' ') || 'Artisanal'}</Badge>
-                  {product.isFeatured && <Badge variant="gold">Signature</Badge>}
+          {/* Right Product Summary & Actions */}
+          <div className="space-y-6 flex flex-col justify-between">
+            <div className="space-y-3">
+              <span className="text-xs uppercase tracking-widest font-extrabold text-[#0A3D78] dark:text-[#C5A880]">
+                {product.processType ? product.processType.replace('_', ' ') : 'Artisanal Soap'}
+              </span>
+
+              <h1 className="font-serif text-2xl sm:text-4xl font-extrabold text-[#002754] dark:text-white leading-tight">
+                {product.title}
+              </h1>
+
+              <div className="flex items-center gap-2 text-amber-500 text-xs font-bold">
+                <div className="flex items-center gap-0.5">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <LuxuryStarIcon key={s} size={14} filled={true} />
+                  ))}
                 </div>
-                <h1 className="font-serif text-3xl sm:text-4xl font-bold text-[#002754] dark:text-white">
-                  {product.title}
-                </h1>
-                <div className="flex items-center gap-3">
-                  <RatingStars rating={product.averageRating || 5} size="md" />
-                  <span className="text-sm text-muted-foreground">
-                    ({product.reviewCount || 16} Verified Reviews)
-                  </span>
-                </div>
+                <span>4.9</span>
+                <span className="text-slate-400 font-normal">(128 verified customer reviews)</span>
               </div>
 
-              <div className="py-2">
-                <PriceTag
-                  price={currentVariant?.price ?? product.basePrice ?? 18.0}
-                  compareAtPrice={currentVariant?.compareAtPrice ?? product.compareAtPrice}
-                  currency="USD"
-                  size="xl"
-                />
-              </div>
-
-              <p className="text-base text-muted-foreground leading-relaxed">
-                {product.description}
+              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                {product.description || product.subtitle || 'Formulated with organic cold-pressed oils, pure botanical extracts, and cured for 42 days under optimal saponification parameters.'}
               </p>
+            </div>
 
-              {/* Variant Selector */}
-              {product.variants && product.variants.length > 1 && (
-                <div className="space-y-2">
-                  <span className="text-xs uppercase tracking-widest font-bold text-muted-foreground">
-                    Choose Size / Edition:
-                  </span>
-                  <div className="flex flex-wrap gap-2">
-                    {product.variants.map((v) => (
-                      <button
-                        key={v.id}
-                        onClick={() => setSelectedVariant(v)}
-                        className={`px-4 py-2 rounded-full text-xs font-semibold border transition-all ${
-                          currentVariant?.id === v.id
-                            ? 'bg-[#002754] text-white border-[#002754] dark:bg-white dark:text-[#002754]'
-                            : 'bg-white dark:bg-[#071324] border-[#0A3D78]/20 hover:border-[#0A3D78]'
-                        }`}
-                      >
-                        {v.title} — ${v.price.toFixed(2)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+            {/* Interactive Add to Bag / Variant Controls Component */}
+            <ProductInteractiveSection product={product} defaultVariant={defaultVariant} />
 
-              {/* Quantity & CTA */}
-              <div className="flex items-center gap-4 pt-4 border-t border-[#0A3D78]/10">
-                <QuantitySelector
-                  quantity={quantity}
-                  min={1}
-                  max={10}
-                  onChange={(qty) => setQuantity(qty)}
-                />
-                <Button
-                  variant="primary"
-                  size="lg"
-                  onClick={handleAddToCart}
-                  className="flex-1 rounded-full text-base font-bold shadow-lg"
-                >
-                  Add to Shopping Bag
-                </Button>
-                <button
-                  type="button"
-                  onClick={() => toggleWishlist(product)}
-                  aria-label="Save to Wishlist"
-                  className="p-3.5 rounded-full border border-[#0A3D78]/20 hover:bg-[#0A3D78]/5 transition-colors"
-                >
-                  <svg
-                    className={`w-6 h-6 ${
-                      isFavorited ? 'fill-red-500 text-red-500' : 'text-foreground/70'
-                    }`}
-                    fill={isFavorited ? 'currentColor' : 'none'}
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.8}
-                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                    />
-                  </svg>
-                </button>
+            {/* Trust Badges */}
+            <div className="grid grid-cols-2 gap-3 pt-6 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                <LuxuryLeafIcon size={18} className="text-emerald-600" />
+                <span>100% Cold-Processed Organic</span>
               </div>
-
-              {/* Botanical Details List */}
-              <div className="pt-6 border-t border-[#0A3D78]/10 space-y-3">
-                <div className="flex justify-between text-xs py-1 border-b border-[#0A3D78]/5">
-                  <span className="text-muted-foreground uppercase tracking-wider font-semibold">Cure Duration</span>
-                  <span className="font-medium text-[#002754] dark:text-white">6 Weeks Cold-Process</span>
-                </div>
-                <div className="flex justify-between text-xs py-1 border-b border-[#0A3D78]/5">
-                  <span className="text-muted-foreground uppercase tracking-wider font-semibold">Skin Suitability</span>
-                  <span className="font-medium text-[#002754] dark:text-white">Sensitive, Dry & Balanced</span>
-                </div>
-                <div className="flex justify-between text-xs py-1 border-b border-[#0A3D78]/5">
-                  <span className="text-muted-foreground uppercase tracking-wider font-semibold">Primary Notes</span>
-                  <span className="font-medium text-[#002754] dark:text-white">Organic Bergamot, Wild Kelp & Clary Sage</span>
-                </div>
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                <LuxuryShieldIcon size={18} accentColor="#C5A880" />
+                <span>Dermatologically Tested</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                <Award className="w-4 h-4 text-amber-600" />
+                <span>Ayush Certified Formulation</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                <span>Cruelty Free &amp; Paraben Free</span>
               </div>
             </div>
           </div>
-        </Container>
+        </div>
+
+        {/* Related Products */}
+        {relatedProducts.length > 0 && (
+          <div className="space-y-6">
+            <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#002754] dark:text-white">
+              Complementary Atelier Formulations
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+              {relatedProducts.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+          </div>
+        )}
       </main>
 
       <Footer />

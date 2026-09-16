@@ -29,6 +29,10 @@ import {
   SupabaseSettingsRepository,
   MockAuthRepository,
   SupabaseAuthRepository,
+  MockVideoRepository,
+  SupabaseVideoRepository,
+  MockPlaylistRepository,
+  SupabasePlaylistRepository,
   type IProductRepository,
   type ICategoryRepository,
   type IOrderRepository,
@@ -43,6 +47,8 @@ import {
   type IBlogRepository,
   type ISettingsRepository,
   type IAuthRepository,
+  type IVideoRepository,
+  type IPlaylistRepository,
 } from '../modules';
 import {
   ProductService,
@@ -58,6 +64,7 @@ import {
   AuthService,
   AdminService,
   OperationsService,
+  HomeMarketingService,
 } from '../services';
 import type { ContainerConfig, IContainer } from './types';
 
@@ -79,6 +86,8 @@ export class Container implements IContainer {
   public readonly blogRepo: IBlogRepository;
   public readonly settingsRepo: ISettingsRepository;
   public readonly authRepo: IAuthRepository;
+  public readonly videoRepo: IVideoRepository;
+  public readonly playlistRepo: IPlaylistRepository;
 
   // Services
   public readonly products: ProductService;
@@ -94,6 +103,7 @@ export class Container implements IContainer {
   public readonly auth: AuthService;
   public readonly admin: AdminService;
   public readonly operations: OperationsService;
+  public readonly homeMarketing: HomeMarketingService;
 
   constructor(config: ContainerConfig = {}) {
     // Determine whether to use mock data
@@ -107,15 +117,20 @@ export class Container implements IContainer {
 
     this.useMockData = config.useMockData ?? envUseMock;
 
+    const defaultUrl = 'https://nthyavlzdgucrldtgjeo.supabase.co';
+    const defaultAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50aHlhdmx6ZGd1Y3JsZHRnamVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3NTU2MDAsImV4cCI6MjEwMTMzMTYwMH0.XzL0nuUOnksJLgsT9tGlsi4-adHtosCjV4fk9-MXClc';
+
+    const isClean = (v?: string | null) => Boolean(v && !v.includes('your-project') && !v.includes('your-supabase') && !v.includes('sb_publishable'));
+
     const supabaseUrl =
-      process.env.NEXT_PUBLIC_SUPABASE_URL ||
-      process.env.EXPO_PUBLIC_SUPABASE_URL ||
-      'https://nthyavlzdgucrldtgjeo.supabase.co';
+      (isClean(process.env.NEXT_PUBLIC_SUPABASE_URL) ? process.env.NEXT_PUBLIC_SUPABASE_URL! : null) ||
+      (isClean(process.env.EXPO_PUBLIC_SUPABASE_URL) ? process.env.EXPO_PUBLIC_SUPABASE_URL! : null) ||
+      defaultUrl;
+
     const supabaseKey =
-      process.env.SUPABASE_SERVICE_ROLE_KEY ||
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-      process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
-      '';
+      (isClean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! : null) ||
+      (isClean(process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY) ? process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY! : null) ||
+      defaultAnonKey;
 
     const supabase =
       config.supabaseClient ||
@@ -138,6 +153,8 @@ export class Container implements IContainer {
       this.blogRepo = new MockBlogRepository();
       this.settingsRepo = new MockSettingsRepository();
       this.authRepo = new MockAuthRepository();
+      this.videoRepo = new MockVideoRepository();
+      this.playlistRepo = new MockPlaylistRepository();
     } else {
       this.productRepo = new SupabaseProductRepository(supabase);
       this.categoryRepo = new SupabaseCategoryRepository(supabase);
@@ -153,6 +170,8 @@ export class Container implements IContainer {
       this.blogRepo = new SupabaseBlogRepository(supabase);
       this.settingsRepo = new SupabaseSettingsRepository(supabase);
       this.authRepo = new SupabaseAuthRepository(supabase);
+      this.videoRepo = new SupabaseVideoRepository(supabase);
+      this.playlistRepo = new SupabasePlaylistRepository(supabase);
     }
 
     // Initialize Services

@@ -72,13 +72,52 @@ export class ProductService {
       .select(`
         *,
         category:categories(*),
-        variants:product_variants(*)
+        variants:product_variants(*),
+        images:product_images(*),
+        ingredients:ingredients(*)
       `)
       .eq('slug', slug)
       .single();
 
     if (error || !data) return null;
     return this.mapDbProductToDomain(data);
+  }
+
+  async getProductById(id: string): Promise<Product | null> {
+    const { data, error } = await this.supabase
+      .from('products')
+      .select(`
+        *,
+        category:categories(*),
+        variants:product_variants(*),
+        images:product_images(*),
+        ingredients:ingredients(*)
+      `)
+      .eq('id', id)
+      .single();
+
+    if (error || !data) return null;
+    return this.mapDbProductToDomain(data);
+  }
+
+  async createProduct(payload: import('../modules/products/types').CreateProductPayload): Promise<Product> {
+    const { SupabaseProductRepository } = await import('../modules/products/supabase.repository');
+    const repo = new SupabaseProductRepository(this.supabase as any);
+    const entity = await repo.createProduct(payload);
+    return entity.toJSON();
+  }
+
+  async updateProduct(id: string, payload: import('../modules/products/types').UpdateProductPayload): Promise<Product> {
+    const { SupabaseProductRepository } = await import('../modules/products/supabase.repository');
+    const repo = new SupabaseProductRepository(this.supabase as any);
+    const entity = await repo.updateProduct(id, payload);
+    return entity.toJSON();
+  }
+
+  async deleteProduct(id: string): Promise<void> {
+    const { SupabaseProductRepository } = await import('../modules/products/supabase.repository');
+    const repo = new SupabaseProductRepository(this.supabase as any);
+    await repo.deleteProduct(id);
   }
 
   private mapDbProductToDomain(row: any): Product {
@@ -105,8 +144,15 @@ export class ProductService {
         : undefined,
       basePrice: Number(row.base_price),
       compareAtPrice: row.compare_at_price ? Number(row.compare_at_price) : null,
-      currency: row.currency || 'USD',
-      images: [],
+      currency: row.currency || 'INR',
+      images: (row.images || []).map((img: any) => ({
+        id: img.id,
+        productId: img.product_id,
+        url: img.url,
+        alt: img.alt || row.title,
+        sortOrder: img.sort_order || 0,
+        isPrimary: Boolean(img.is_primary),
+      })),
       variants: (row.variants || []).map((v: any) => ({
         id: v.id,
         productId: v.product_id,
@@ -121,7 +167,16 @@ export class ProductService {
         isAvailable: v.is_available,
         options: v.options || {},
       })),
-      ingredients: [],
+      ingredients: (row.ingredients || []).map((ing: any) => ({
+        id: ing.id,
+        productId: ing.product_id,
+        name: ing.name,
+        inciName: ing.inci_name,
+        purpose: ing.purpose,
+        isOrganic: Boolean(ing.is_organic),
+        isKeyBotanical: Boolean(ing.is_key_botanical),
+        sortOrder: ing.sort_order || 0,
+      })),
       skinTypes: (row.skin_types || []) as any,
       fragranceFamily: row.fragrance_family as any,
       certifications: (row.certifications || []) as any,

@@ -1,4 +1,4 @@
-import { mockCouponsData } from '../../mockData';
+import { CENTRAL_COUPON_CONFIGS, getCentralCouponByCode } from '../../config/coupons.config';
 import { CouponEntity } from './entity';
 import type { ICouponRepository } from './repository.interface';
 
@@ -6,16 +6,21 @@ export class MockCouponRepository implements ICouponRepository {
   private coupons: CouponEntity[];
 
   constructor(initialData?: CouponEntity[]) {
-    this.coupons = initialData || mockCouponsData.map((c) => new CouponEntity(c));
+    this.coupons = initialData || CENTRAL_COUPON_CONFIGS.map((c) => new CouponEntity(c as any));
   }
 
   public async getAll(): Promise<CouponEntity[]> {
-    return this.coupons;
+    return this.coupons.filter((c) => c.isActive);
   }
 
   public async getByCode(code: string): Promise<CouponEntity | null> {
-    const found = this.coupons.find((c) => c.code.toLowerCase() === code.trim().toLowerCase());
-    return found || null;
+    const found = this.coupons.find((c) => c.code.trim().toUpperCase() === code.trim().toUpperCase());
+    if (found) return found;
+
+    const central = getCentralCouponByCode(code);
+    if (central) return new CouponEntity(central as any);
+
+    return null;
   }
 
   public async validate(
@@ -39,9 +44,10 @@ export class MockCouponRepository implements ICouponRepository {
       return {
         isValid: false,
         coupon,
-        message: `Minimum order amount of $${coupon.minOrderAmount} required for this coupon.`,
+        message: `Minimum order amount of ₹${coupon.minOrderAmount} required for this coupon.`,
       };
     }
+
 
     if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) {
       return { isValid: false, message: 'Coupon usage limit reached.' };

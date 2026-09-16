@@ -111,16 +111,42 @@ export class SupabaseOrderRepository implements IOrderRepository {
     id: string,
     status: OrderStatus,
     reason?: string,
-    actorId?: string
+    actorId?: string,
+    trackingNumber?: string,
+    carrier?: string,
+    estimatedDeliveryDate?: string
   ): Promise<OrderEntity> {
     const currentOrder = await this.getById(id);
     if (currentOrder) {
       OrderStateMachine.validateTransition(currentOrder.status, status);
     }
 
+    const { data: existingRow } = await this.supabase
+      .from('orders')
+      .select('metadata')
+      .eq('id', id)
+      .maybeSingle();
+
+    const existingMeta = (existingRow as any)?.metadata || {};
+    const updatedMeta = {
+      ...existingMeta,
+      ...(trackingNumber ? { tracking_number: trackingNumber, trackingNumber } : {}),
+      ...(carrier ? { carrier, courierName: carrier } : {}),
+      ...(estimatedDeliveryDate ? { estimated_delivery_date: estimatedDeliveryDate, estimatedDeliveryDate } : {}),
+    };
+
+    const updatePayload: any = {
+      status,
+      ...(trackingNumber ? { tracking_number: trackingNumber } : {}),
+      ...(carrier ? { carrier } : {}),
+      ...(estimatedDeliveryDate ? { estimated_delivery_date: estimatedDeliveryDate } : {}),
+      metadata: updatedMeta,
+      updated_at: new Date().toISOString(),
+    };
+
     const { data, error } = await this.supabase
       .from('orders')
-      .update({ status, updated_at: new Date().toISOString() } as any)
+      .update(updatePayload)
       .eq('id', id)
       .select('*, items:order_items(*)')
       .single();
@@ -134,6 +160,50 @@ export class SupabaseOrderRepository implements IOrderRepository {
       changed_by: actorId,
       reason: reason || 'Status updated',
     } as any);
+
+    // Process Loyalty Points Reversal & Restoration if order is cancelled or refunded
+    if ((status === 'cancelled' || status === 'refunded') && (data as any)?.user_id) {
+      try {
+        const userId = (data as any).user_id;
+        const orderNumber = (data as any).order_number || id;
+
+        // Fetch historical loyalty transactions for this order
+        const { data: orderTxs } = await this.supabase
+          .from('loyalty_transactions' as any)
+          .select('*')
+          .eq('order_id', id);
+
+        const earnTx = (orderTxs || []).find((t: any) => t.transaction_type?.toUpperCase() === 'EARN');
+        const redeemTx = (orderTxs || []).find((t: any) => t.transaction_type?.toUpperCase() === 'REDEEM');
+        const alreadyReversed = (orderTxs || []).some((t: any) => t.transaction_type?.toUpperCase() === 'REFUND_REVERSAL');
+        const alreadyRestored = (orderTxs || []).some((t: any) => t.transaction_type?.toUpperCase() === 'REFUND_RESTORE');
+
+        // 1. Reverse Earned Points
+        if (earnTx && earnTx.points > 0 && !alreadyReversed) {
+          await this.supabase.rpc('process_loyalty_transaction', {
+            p_user_id: userId,
+            p_order_id: id,
+            p_transaction_type: 'REFUND_REVERSAL',
+            p_points: earnTx.points,
+            p_description: `Reversal of ${earnTx.points} earned points for ${status} order ${orderNumber}`,
+          });
+        }
+
+        // 2. Restore Redeemed Points
+        if (redeemTx && Math.abs(redeemTx.points) > 0 && !alreadyRestored) {
+          const restoredPoints = Math.abs(redeemTx.points);
+          await this.supabase.rpc('process_loyalty_transaction', {
+            p_user_id: userId,
+            p_order_id: id,
+            p_transaction_type: 'REFUND_RESTORE',
+            p_points: restoredPoints,
+            p_description: `Restoration of ${restoredPoints} redeemed points for ${status} order ${orderNumber}`,
+          });
+        }
+      } catch (loyaltyErr) {
+        console.error('Error executing cancellation/refund loyalty reversal:', loyaltyErr);
+      }
+    }
 
     return OrderMapper.toEntity(data as any);
   }

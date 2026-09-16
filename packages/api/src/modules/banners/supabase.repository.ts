@@ -40,7 +40,7 @@ export class SupabaseBannerRepository implements IBannerRepository {
       subtitle: banner.subtitle || '',
       cta_text: banner.ctaText || 'Shop Collection',
       cta_link: banner.ctaLink || '/shop',
-      image_url: banner.imageUrl || 'https://images.unsplash.com/photo-1607006314147-759088fd21c2?w=1600&auto=format&fit=crop&q=80',
+      image_url: banner.imageUrl || 'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=1600&auto=format&fit=crop&q=80',
       badge_text: banner.badgeText || 'Special Release',
       background_color: banner.backgroundColor || '#002754',
       is_active: banner.isActive ?? true,

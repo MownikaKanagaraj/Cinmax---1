@@ -18,6 +18,14 @@ export { LoginSchema, RegisterSchema } from './auth/validation';
 // Product Module
 export { ProductEntity } from './products/entity';
 export type { ProductDTO } from './products/dto';
+export type {
+  CreateProductPayload,
+  UpdateProductPayload,
+  ProductImageInput,
+  ProductVariantInput,
+  ProductIngredientInput,
+} from './products/types';
+export { CreateProductSchema, UpdateProductSchema, ProductFilterSchema } from './products/validation';
 export { ProductMapper } from './products/mapper';
 export type { IProductRepository, ProductFilter as ProductRepoFilter } from './products/repository.interface';
 export { MockProductRepository } from './products/mock.repository';
@@ -29,6 +37,9 @@ export {
   GetFeaturedProductsUseCase,
   GetProductsByCategoryUseCase,
   SearchProductsUseCase,
+  CreateProductUseCase,
+  UpdateProductUseCase,
+  DeleteProductUseCase,
 } from './products/useCases';
 
 // Category Module
@@ -185,3 +196,7 @@ export { SupabaseSettingsRepository } from './settings/supabase.repository';
 export { GetSettingsUseCase, UpdateSettingsUseCase } from './settings/useCases';
 
 export * from './marketing';
+export * from './videos';
+export * from './playlists';
+
+

@@ -59,6 +59,7 @@ export class CheckoutEngine {
     // 2. Pricing, Tax, Shipping & Coupon Validation
     const orderPreview = PricingEngine.calculate({
       items: cart.items,
+      shippingState: shippingAddress.state,
       coupon: cart.appliedDiscount
         ? {
             code: cart.appliedDiscount.code,

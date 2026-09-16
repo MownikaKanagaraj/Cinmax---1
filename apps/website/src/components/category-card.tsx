@@ -1,5 +1,6 @@
 import * as React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import type { Category } from '@cinmax/types';
 
 export interface CategoryCardProps {
@@ -12,12 +13,15 @@ export function CategoryCard({ category }: CategoryCardProps) {
       href={`/category/${category.slug}`}
       className="group relative overflow-hidden rounded-[24px] aspect-[4/5] block bg-slate-900 shadow-md hover:shadow-2xl transition-all duration-500"
     >
-      <img
+      <Image
         src={
           category.imageUrl ||
           'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=800&auto=format&fit=crop&q=80'
         }
         alt={category.name}
+        fill
+        loading="lazy"
+        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
         className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-700 opacity-80 group-hover:opacity-90"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-[#002754]/90 via-[#002754]/30 to-transparent" />

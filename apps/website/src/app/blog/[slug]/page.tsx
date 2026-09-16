@@ -38,7 +38,7 @@ export default function BlogPostPage() {
 
             <div className="rounded-[28px] overflow-hidden aspect-[16/9] bg-slate-200">
               <img
-                src="https://images.unsplash.com/photo-1607006314147-759088fd21c2?w=1200&auto=format&fit=crop&q=80"
+                src="https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=1200&auto=format&fit=crop&q=80"
                 alt="Soap curing racks"
                 className="w-full h-full object-cover"
               />

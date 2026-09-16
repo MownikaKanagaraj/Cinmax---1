@@ -9,7 +9,7 @@ import {
   useUpdateBannerMutation,
   useDeleteBannerMutation,
 } from '@cinmax/hooks';
-import { Sliders, Plus, Edit2, Trash2, Eye, EyeOff, Check, X, ArrowUp, ArrowDown } from 'lucide-react';
+import { Sliders, Plus, Edit2, Trash2, Eye, EyeOff, Check, X, ArrowUp, ArrowDown, Smartphone } from 'lucide-react';
 
 export default function AdminBannersPage() {
   const { data: banners = [], isLoading } = useBannersQuery(false);
@@ -24,7 +24,7 @@ export default function AdminBannersPage() {
     title: '',
     subtitle: '',
     badgeText: 'Special Release',
-    imageUrl: 'https://images.unsplash.com/photo-1607006314147-759088fd21c2?w=1600&auto=format&fit=crop&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=1600&auto=format&fit=crop&q=80',
     ctaText: 'Shop Collection',
     ctaLink: '/shop',
     backgroundColor: '#002754',
@@ -38,7 +38,7 @@ export default function AdminBannersPage() {
       title: '',
       subtitle: '',
       badgeText: 'New Cure Release',
-      imageUrl: 'https://images.unsplash.com/photo-1607006314147-759088fd21c2?w=1600&auto=format&fit=crop&q=80',
+      imageUrl: 'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=1600&auto=format&fit=crop&q=80',
       ctaText: 'Explore Saponified Bars',
       ctaLink: '/shop',
       backgroundColor: '#002754',
@@ -199,14 +199,15 @@ export default function AdminBannersPage() {
 
         {/* Right Col: Live Banner Mobile/Web Mock Preview */}
         <div className="space-y-4">
-          <h3 className="font-serif text-lg font-bold text-[#002754] dark:text-white">
-            📱 Live Slider Preview
+          <h3 className="font-serif text-lg font-bold text-[#002754] dark:text-white flex items-center gap-2">
+            <Smartphone className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <span>Live Slider Preview</span>
           </h3>
           
           <div className="p-4 rounded-3xl bg-[#002754] border border-[#C5A880]/40 text-white shadow-xl space-y-4 relative overflow-hidden">
             <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-slate-900">
               <img
-                src={banners[0]?.imageUrl || 'https://images.unsplash.com/photo-1607006314147-759088fd21c2?w=1600&auto=format&fit=crop&q=80'}
+                src={banners[0]?.imageUrl || 'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=1600&auto=format&fit=crop&q=80'}
                 alt="Preview"
                 className="w-full h-full object-cover"
               />

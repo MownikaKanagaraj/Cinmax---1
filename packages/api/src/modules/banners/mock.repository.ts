@@ -26,7 +26,7 @@ export class MockBannerRepository implements IBannerRepository {
       subtitle: bannerData.subtitle || 'Handcrafted Cured Blend',
       ctaText: bannerData.ctaText || 'Shop Collection',
       ctaLink: bannerData.ctaLink || '/shop',
-      imageUrl: bannerData.imageUrl || 'https://images.unsplash.com/photo-1607006314147-759088fd21c2?w=1600&auto=format&fit=crop&q=80',
+      imageUrl: bannerData.imageUrl || 'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=1600&auto=format&fit=crop&q=80',
       badgeText: bannerData.badgeText || 'Special Release',
       backgroundColor: bannerData.backgroundColor || '#002754',
       isActive: bannerData.isActive ?? true,

@@ -2,9 +2,11 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import type { Product } from '@cinmax/types';
 import { useCartStore, useWishlistStore } from '@cinmax/hooks';
 import { Badge, PriceTag, RatingStars, Button } from '@cinmax/ui';
+import { LuxuryWishlistIcon, LuxuryBagIcon } from './luxury-icons';
 
 export interface ProductCardProps {
   product: Product;
@@ -13,19 +15,32 @@ export interface ProductCardProps {
 export function ProductCard({ product }: ProductCardProps) {
   const { addItem } = useCartStore();
   const { toggleWishlist, isInWishlist } = useWishlistStore();
+  const [added, setAdded] = React.useState(false);
 
   const isFavorited = isInWishlist(product.id);
-  const defaultVariant = product.variants?.[0];
+  const defaultVariant = product.variants?.[0] || {
+    id: `var_${product.id}`,
+    productId: product.id,
+    sku: `SKU-${product.slug || product.id}`,
+    title: 'Standard Single Bar (150g)',
+    price: Number(product.basePrice) || 18.0,
+    weightGrams: 150,
+    inventoryQuantity: 50,
+    isAvailable: true,
+    options: { Size: '150g' },
+  };
   const primaryImage =
     product.images?.[0]?.url ||
-    'https://images.unsplash.com/photo-1607006314147-759088fd21c2?w=600&auto=format&fit=crop&q=80';
+    'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=600&auto=format&fit=crop&q=80';
 
   const handleQuickAdd = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (defaultVariant) {
-      addItem(product, defaultVariant, 1);
-    }
+    e.stopPropagation();
+    addItem(product, defaultVariant, 1);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 2000);
   };
+
 
   const handleWishlistToggle = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -36,9 +51,12 @@ export function ProductCard({ product }: ProductCardProps) {
     <div className="group relative flex flex-col rounded-[20px] bg-white dark:bg-[#071324] border border-[#0A3D78]/10 overflow-hidden hover:shadow-xl transition-all duration-300">
       {/* Top Image Frame */}
       <Link href={`/product/${product.slug}`} className="relative aspect-[4/5] overflow-hidden bg-slate-100 dark:bg-slate-900 block">
-        <img
+        <Image
           src={primaryImage}
           alt={product.title}
+          fill
+          loading="lazy"
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
 
@@ -54,23 +72,9 @@ export function ProductCard({ product }: ProductCardProps) {
           type="button"
           onClick={handleWishlistToggle}
           aria-label="Toggle Wishlist"
-          className="absolute top-3 right-3 p-2.5 rounded-full bg-white/80 dark:bg-[#002754]/80 backdrop-blur-md text-[#002754] dark:text-white hover:bg-white transition-colors z-10 shadow-sm"
+          className="absolute top-3 right-3 p-2.5 rounded-full bg-white/90 dark:bg-[#002754]/90 backdrop-blur-md text-[#002754] dark:text-white hover:bg-white hover:scale-110 transition-all z-10 shadow-md border border-[#C5A880]/30"
         >
-          <svg
-            className={`w-4 h-4 transition-colors ${
-              isFavorited ? 'fill-red-500 text-red-500' : 'text-foreground/80'
-            }`}
-            fill={isFavorited ? 'currentColor' : 'none'}
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-            />
-          </svg>
+          <LuxuryWishlistIcon size={18} filled={isFavorited} />
         </button>
       </Link>
 
@@ -93,16 +97,19 @@ export function ProductCard({ product }: ProductCardProps) {
           <PriceTag
             price={defaultVariant?.price ?? 18.0}
             compareAtPrice={defaultVariant?.compareAtPrice}
-            currency="USD"
+            currency="INR"
             size="md"
           />
           <Button
             variant="primary"
             size="sm"
             onClick={handleQuickAdd}
-            className="rounded-full px-4"
+            className={`rounded-full px-4 flex items-center gap-1.5 transition-all ${
+              added ? 'bg-emerald-700 hover:bg-emerald-800' : 'bg-[#002754] hover:bg-[#0A3D78]'
+            }`}
           >
-            Add to Bag
+            <LuxuryBagIcon size={14} className="text-[#C5A880]" />
+            <span>{added ? 'Added ✓' : 'Add to Bag'}</span>
           </Button>
         </div>
       </div>

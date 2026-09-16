@@ -71,7 +71,11 @@ export interface ProductVariant {
   options: {
     scent?: string;
     size?: string;
+    volume?: string;
+    unit?: string;
+    details?: string;
     packSize?: number;
+    [key: string]: any;
   };
 }
 
@@ -87,6 +91,7 @@ export interface Product {
   id: string;
   title: string;
   slug: string;
+  brand?: string;
   subtitle?: string;
   description: string;
   howToUse?: string;
@@ -107,9 +112,11 @@ export interface Product {
     base?: string[];
   };
   certifications: ProductCertification[];
+  trustBadges?: string[];
   isFeatured: boolean;
   isNew: boolean;
   isBestSeller: boolean;
+  isActive?: boolean;
   averageRating: number;
   reviewCount: number;
   createdAt: string;

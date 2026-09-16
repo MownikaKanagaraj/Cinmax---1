@@ -14,7 +14,7 @@ export function Footer() {
                 CINMAX
               </span>
               <span className="text-[10px] uppercase tracking-[0.3em] text-[#C5A880] font-semibold">
-                Global Botanical Atelier
+                Global Botanical Products
               </span>
             </Link>
             <p className="text-sm text-slate-300 max-w-sm leading-relaxed">
@@ -62,7 +62,7 @@ export function Footer() {
           {/* Company & Journal */}
           <div className="space-y-3">
             <h4 className="font-serif text-sm font-semibold tracking-wider uppercase text-white">
-              Atelier
+              Company
             </h4>
             <ul className="space-y-2 text-sm text-slate-300">
               <li>
@@ -77,7 +77,7 @@ export function Footer() {
               </li>
               <li>
                 <Link href="/contact" className="hover:text-white transition-colors">
-                  Concierge Support
+                  Customer Support
                 </Link>
               </li>
               <li>
@@ -91,22 +91,27 @@ export function Footer() {
           {/* Legal & Policies */}
           <div className="space-y-3">
             <h4 className="font-serif text-sm font-semibold tracking-wider uppercase text-white">
-              Assurance
+              Legal &amp; Policies
             </h4>
             <ul className="space-y-2 text-sm text-slate-300">
               <li>
-                <Link href="/privacy" className="hover:text-white transition-colors">
+                <Link href="/terms" className="hover:text-[#C5A880] transition-colors">
+                  Terms &amp; Conditions
+                </Link>
+              </li>
+              <li>
+                <Link href="/refund" className="hover:text-[#C5A880] transition-colors">
+                  Return &amp; Refund Policy
+                </Link>
+              </li>
+              <li>
+                <Link href="/shipping" className="hover:text-[#C5A880] transition-colors">
+                  Shipping Policy
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacy" className="hover:text-[#C5A880] transition-colors">
                   Privacy Policy
-                </Link>
-              </li>
-              <li>
-                <Link href="/terms" className="hover:text-white transition-colors">
-                  Terms of Service
-                </Link>
-              </li>
-              <li>
-                <Link href="/refund" className="hover:text-white transition-colors">
-                  Refund & Guarantee
                 </Link>
               </li>
             </ul>

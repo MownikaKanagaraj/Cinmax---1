@@ -7,16 +7,16 @@ export interface StateTransitionResult {
 
 export class OrderStateMachine {
   private static readonly VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-    pending: ['payment_pending', 'cancelled'],
-    payment_pending: ['paid', 'pending', 'cancelled'],
-    paid: ['confirmed', 'cancelled', 'refunded'],
-    confirmed: ['processing', 'cancelled', 'refunded'],
-    processing: ['packed', 'cancelled'],
-    packed: ['shipped', 'cancelled'],
-    shipped: ['out_for_delivery', 'delivered', 'returned'],
-    out_for_delivery: ['delivered', 'returned'],
-    delivered: ['returned'],
-    cancelled: [],
+    pending: ['payment_pending', 'paid', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'],
+    payment_pending: ['paid', 'pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'],
+    paid: ['confirmed', 'processing', 'packed', 'shipped', 'delivered', 'cancelled', 'refunded'],
+    confirmed: ['processing', 'packed', 'shipped', 'delivered', 'cancelled', 'refunded'],
+    processing: ['packed', 'shipped', 'delivered', 'cancelled', 'refunded'],
+    packed: ['shipped', 'delivered', 'cancelled', 'refunded'],
+    shipped: ['out_for_delivery', 'delivered', 'returned', 'cancelled', 'refunded'],
+    out_for_delivery: ['delivered', 'returned', 'cancelled'],
+    delivered: ['returned', 'refunded', 'shipped', 'processing'],
+    cancelled: ['confirmed', 'processing'],
     returned: ['refunded'],
     refunded: [],
   };

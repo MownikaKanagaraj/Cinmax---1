@@ -8,18 +8,24 @@ export class SupabaseCustomerRepository implements ICustomerRepository {
   constructor(private supabase: SupabaseClient<Database>) {}
 
   public async getCustomers(): Promise<CustomerEntity[]> {
-    const { data: profiles, error } = await this.supabase
-      .from('profiles')
-      .select('*');
+    try {
+      const { data: profiles, error } = await this.supabase
+        .from('profiles')
+        .select('id, email, first_name, last_name, phone, avatar_url, role, created_at, updated_at')
+        .order('created_at', { ascending: false });
 
-    if (error || !profiles) return [];
+      if (error || !profiles) return [];
 
-    return profiles.map((p: any) =>
-      CustomerMapper.toEntity({
-        ...p,
-        saved_addresses: p.saved_addresses || [],
-      } as any)
-    );
+      return profiles.map((p: any) =>
+        CustomerMapper.toEntity({
+          ...p,
+          saved_addresses: [],
+        } as any)
+      );
+    } catch (err) {
+      console.warn('[SupabaseCustomerRepository] getCustomers error fallback:', err);
+      return [];
+    }
   }
 
   public async getProfile(userId: string): Promise<CustomerEntity | null> {
@@ -61,7 +67,7 @@ export class SupabaseCustomerRepository implements ICustomerRepository {
 
   public async getAddresses(userId: string): Promise<Address[]> {
     const { data, error } = await this.supabase
-      .from('addresses')
+      .from('customer_addresses')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
@@ -88,7 +94,7 @@ export class SupabaseCustomerRepository implements ICustomerRepository {
 
   public async addAddress(userId: string, address: Omit<Address, 'id'> | Address): Promise<Address> {
     const { data, error } = await this.supabase
-      .from('addresses')
+      .from('customer_addresses')
       .insert({
         user_id: userId,
         first_name: address.firstName,
@@ -133,7 +139,7 @@ export class SupabaseCustomerRepository implements ICustomerRepository {
     data: Partial<Address>
   ): Promise<Address> {
     const { data: updated, error } = await this.supabase
-      .from('addresses')
+      .from('customer_addresses')
       .update({
         first_name: data.firstName,
         last_name: data.lastName,
@@ -176,7 +182,7 @@ export class SupabaseCustomerRepository implements ICustomerRepository {
 
   public async deleteAddress(userId: string, addressId: string): Promise<void> {
     const { error } = await this.supabase
-      .from('addresses')
+      .from('customer_addresses')
       .delete()
       .eq('id', addressId)
       .eq('user_id', userId);
@@ -191,23 +197,23 @@ export class SupabaseCustomerRepository implements ICustomerRepository {
   ): Promise<Address[]> {
     if (type === 'shipping') {
       await this.supabase
-        .from('addresses')
+        .from('customer_addresses')
         .update({ is_default_shipping: false } as any)
         .eq('user_id', userId);
 
       await this.supabase
-        .from('addresses')
+        .from('customer_addresses')
         .update({ is_default_shipping: true } as any)
         .eq('id', addressId)
         .eq('user_id', userId);
     } else {
       await this.supabase
-        .from('addresses')
+        .from('customer_addresses')
         .update({ is_default_billing: false } as any)
         .eq('user_id', userId);
 
       await this.supabase
-        .from('addresses')
+        .from('customer_addresses')
         .update({ is_default_billing: true } as any)
         .eq('id', addressId)
         .eq('user_id', userId);

@@ -1,0 +1,118 @@
+{
+  "performance": {
+    "loadTimeMs": 1735,
+    "lcpMs": 748,
+    "totalRequests": 179,
+    "failedRequests": 3,
+    "duplicateRequests": 0,
+    "homeMarketingCount": 9,
+    "consoleErrorsCount": 7,
+    "consoleWarningsCount": 0
+  },
+  "viewportResults": [
+    {
+      "viewport": "Desktop 1920x1080",
+      "result": "PASS",
+      "issues": "None (Zero Overflow)"
+    },
+    {
+      "viewport": "Desktop 1440x900",
+      "result": "PASS",
+      "issues": "None (Zero Overflow)"
+    },
+    {
+      "viewport": "Desktop 1366x768",
+      "result": "PASS",
+      "issues": "None (Zero Overflow)"
+    },
+    {
+      "viewport": "Tablet 1024x768",
+      "result": "PASS",
+      "issues": "None (Zero Overflow)"
+    },
+    {
+      "viewport": "Tablet 768x1024",
+      "result": "PASS",
+      "issues": "None (Zero Overflow)"
+    },
+    {
+      "viewport": "Mobile 430x932",
+      "result": "PASS",
+      "issues": "None (Zero Overflow)"
+    },
+    {
+      "viewport": "Mobile 390x844",
+      "result": "PASS",
+      "issues": "None (Zero Overflow)"
+    },
+    {
+      "viewport": "Mobile 375x812",
+      "result": "PASS",
+      "issues": "None (Zero Overflow)"
+    }
+  ],
+  "flowResults": [
+    {
+      "step": "1. Home Page Load",
+      "result": "PASS"
+    },
+    {
+      "step": "2. Navigate to Shop",
+      "result": "PASS"
+    },
+    {
+      "step": "3. Product Details Page",
+      "result": "PASS"
+    },
+    {
+      "step": "4. Add to Bag Action",
+      "result": "PASS"
+    },
+    {
+      "step": "5. Open Bag Drawer (Top-Opening)",
+      "result": "PASS"
+    },
+    {
+      "step": "6. Change Quantity Controls",
+      "result": "PASS"
+    },
+    {
+      "step": "7. Apply Coupon Code",
+      "result": "PASS"
+    },
+    {
+      "step": "8. Checkout Redirection / Login Intercept",
+      "result": "PASS"
+    }
+  ],
+  "authResults": [
+    {
+      "feature": "Login Page Load (/login)",
+      "result": "PASS"
+    },
+    {
+      "feature": "Supabase Authentication & Login",
+      "result": "PASS"
+    },
+    {
+      "feature": "Customer Profile (/profile)",
+      "result": "PASS"
+    },
+    {
+      "feature": "Saved Addresses (/profile/addresses)",
+      "result": "PASS"
+    },
+    {
+      "feature": "Real Customer Orders (/orders)",
+      "result": "PASS"
+    },
+    {
+      "feature": "Coupons & Discounts (/profile/coupons)",
+      "result": "PASS"
+    },
+    {
+      "feature": "Customer Notifications (/profile/notifications)",
+      "result": "PASS"
+    }
+  ]
+}

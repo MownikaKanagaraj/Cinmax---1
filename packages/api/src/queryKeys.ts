@@ -81,4 +81,19 @@ export const queryKeys = {
     all: ['storage'] as const,
     bucket: (bucketName: string) => [...queryKeys.storage.all, 'bucket', bucketName] as const,
   },
+  videos: {
+    all: ['videos'] as const,
+    list: (publishedOnly?: boolean) => [...queryKeys.videos.all, 'list', { publishedOnly }] as const,
+    detail: (id: string) => [...queryKeys.videos.all, 'detail', id] as const,
+    userPurchases: (userId?: string) => [...queryKeys.videos.all, 'purchases', userId] as const,
+  },
+  playlists: {
+    all: ['playlists'] as const,
+    list: (publishedOnly?: boolean) => [...queryKeys.playlists.all, 'list', { publishedOnly }] as const,
+    byProduct: (productId: string) => [...queryKeys.playlists.all, 'product', productId] as const,
+    detail: (id: string) => [...queryKeys.playlists.all, 'detail', id] as const,
+    userPurchases: (userId?: string) => [...queryKeys.playlists.all, 'purchases', userId] as const,
+    access: (userId?: string, playlistId?: string) => [...queryKeys.playlists.all, 'access', userId, playlistId] as const,
+  },
 };
+

@@ -65,4 +65,9 @@ assertEqual(calculateDeliveryCharge('Other States', 11), { state: 'Other States'
 assertEqual(calculateDeliveryCharge('Other States', 12), { state: 'Other States', totalProducts: 12, deliveryCharge: 120, isFreeDelivery: false }, 'Other States 12 prods = 12 x ₹10 = ₹120');
 assertEqual(calculateDeliveryCharge('Other States', 20), { state: 'Other States', totalProducts: 20, deliveryCharge: 200, isFreeDelivery: false }, 'Other States 20 prods = 20 x ₹10 = ₹200');
 
-console.log('--- ALL 33 DELIVERY CHARGE ALGORITHM TESTS PASSED 100% ---');
+// 8. Multi-Item Cart Verification (A x 2, B x 3, C x 4 => sum = 9)
+const multiCartQty = 2 + 3 + 4;
+assertEqual(calculateDeliveryCharge('Kerala', multiCartQty), { state: 'Kerala', totalProducts: 9, deliveryCharge: 0, isFreeDelivery: true }, 'Multi-item Cart (sum=9) Kerala = FREE');
+assertEqual(calculateDeliveryCharge('Other States', multiCartQty), { state: 'Other States', totalProducts: 9, deliveryCharge: 140, isFreeDelivery: false }, 'Multi-item Cart (sum=9) Other States = ₹140');
+
+console.log('--- ALL AUTOMATED DELIVERY CHARGE SUITE TESTS PASSED 100% ---');

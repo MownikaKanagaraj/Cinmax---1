@@ -7,6 +7,7 @@ import { useHomeMarketingQuery, useUpdateHomeMarketingMutation } from '@cinmax/h
 import { parseYouTubeEmbedUrl, getYouTubeThumbnailUrl } from '@cinmax/utils';
 import type {
   HomeMarketingSettings,
+  TopOfferItem,
   HeroBannerItem,
   WatchShopVideoItem,
   TransformationStoryItem,
@@ -61,7 +62,13 @@ export default function AdminHomePageManager() {
   >('none');
 
   // Form states for modals
-  const [newOfferText, setNewOfferText] = React.useState('');
+  const [newOfferForm, setNewOfferForm] = React.useState({
+    text: '',
+    linkUrl: '/shop',
+    code: '',
+    offerType: 'free_shipping' as 'free_shipping' | 'coupon_code' | 'link' | 'announcement',
+    isActive: true,
+  });
 
   const [heroForm, setHeroForm] = React.useState({
     title: '',
@@ -130,7 +137,7 @@ export default function AdminHomePageManager() {
       badgeText: heroForm.badgeText,
       buttonText: heroForm.buttonText,
       linkUrl: heroForm.linkUrl,
-      imageUrl: heroForm.imageUrl || 'https://images.unsplash.com/photo-1607006314147-759088fd21c2?w=1200',
+      imageUrl: heroForm.imageUrl || 'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=1200',
       isActive: heroForm.isActive,
     };
     setFormData({
@@ -351,33 +358,114 @@ export default function AdminHomePageManager() {
                 </button>
               </div>
 
-              <div className="space-y-3">
-                {(formData.topOffers || []).map((offer, idx) => (
-                  <div
-                    key={idx}
-                    className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3"
-                  >
-                    <input
-                      type="text"
-                      value={offer}
-                      onChange={(e) => {
-                        const updated = [...(formData.topOffers || [])];
-                        updated[idx] = e.target.value;
-                        setFormData({ ...formData, topOffers: updated });
-                      }}
-                      className="flex-1 bg-transparent text-xs font-bold text-[#0F172A] dark:text-white outline-none"
-                    />
-                    <button
-                      onClick={() => {
-                        const updated = (formData.topOffers || []).filter((_, i) => i !== idx);
-                        setFormData({ ...formData, topOffers: updated });
-                      }}
-                      className="text-red-500 hover:text-red-700 p-1"
+              <div className="space-y-4">
+                {(formData.topOffers || []).map((rawOffer, idx) => {
+                  const offer: TopOfferItem = typeof rawOffer === 'string'
+                    ? {
+                        id: `off_${idx}`,
+                        text: rawOffer,
+                        linkUrl: '/shop',
+                        code: '',
+                        offerType: (rawOffer.toLowerCase().includes('shipping') ? 'free_shipping' : 'announcement') as TopOfferItem['offerType'],
+                        isActive: true,
+                      }
+                    : rawOffer;
+
+                  const updateCurrentOffer = (fields: Partial<TopOfferItem>) => {
+                    const updated = [...(formData.topOffers || [])];
+                    updated[idx] = { ...offer, ...fields };
+                    setFormData({ ...formData, topOffers: updated });
+                  };
+
+                  return (
+                    <div
+                      key={offer.id || idx}
+                      className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3"
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
+                      <div className="flex items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 font-extrabold text-[10px]">
+                            OFFER #{idx + 1}
+                          </span>
+                          <span className="text-xs font-bold text-slate-500">
+                            Type: <strong className="text-slate-800 dark:text-slate-200">{offer.offerType || 'announcement'}</strong>
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={offer.isActive !== false}
+                              onChange={(e) => updateCurrentOffer({ isActive: e.target.checked })}
+                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span>{offer.isActive !== false ? 'Active' : 'Disabled'}</span>
+                          </label>
+                          <button
+                            onClick={() => {
+                              const updated = (formData.topOffers || []).filter((_, i) => i !== idx);
+                              setFormData({ ...formData, topOffers: updated });
+                            }}
+                            className="text-red-500 hover:text-red-700 p-1 flex items-center gap-1 text-xs font-bold"
+                          >
+                            <Trash2 className="w-4 h-4" /> Delete
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className="md:col-span-2">
+                          <label className="block text-[11px] font-bold text-slate-400 mb-1">Offer Display Text</label>
+                          <input
+                            type="text"
+                            value={offer.text || ''}
+                            onChange={(e) => updateCurrentOffer({ text: e.target.value })}
+                            placeholder="e.g. Free Shipping above ₹499"
+                            className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs font-bold text-[#0F172A] dark:text-white outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-400 mb-1">Offer Logic / Type</label>
+                          <select
+                            value={offer.offerType || 'announcement'}
+                            onChange={(e) => updateCurrentOffer({ offerType: e.target.value as any })}
+                            className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs font-bold text-[#0F172A] dark:text-white outline-none"
+                          >
+                            <option value="free_shipping">Free Shipping (₹499+ Threshold)</option>
+                            <option value="link">Collection / Category Link</option>
+                            <option value="coupon_code">Coupon Code Promotion</option>
+                            <option value="announcement">General Announcement</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-400 mb-1">Click Action / Target Link URL</label>
+                          <input
+                            type="text"
+                            value={offer.linkUrl || ''}
+                            onChange={(e) => updateCurrentOffer({ linkUrl: e.target.value })}
+                            placeholder="/shop or /category/cold-process"
+                            className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs font-mono text-slate-700 dark:text-slate-300 outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-400 mb-1">Promo Coupon Code (Optional)</label>
+                          <input
+                            type="text"
+                            value={offer.code || ''}
+                            onChange={(e) => updateCurrentOffer({ code: e.target.value })}
+                            placeholder="e.g. CINMAX20"
+                            className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs font-mono font-bold text-blue-600 outline-none uppercase"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -992,40 +1080,108 @@ export default function AdminHomePageManager() {
       {/* MODAL 1: ADD OFFER PILL */}
       {activeModal === 'add_offer' && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 w-full max-w-md space-y-5 shadow-2xl">
+          <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 w-full max-w-lg space-y-4 shadow-2xl">
             <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
               <h3 className="font-bold text-sm text-[#0F172A] dark:text-white flex items-center gap-2">
                 <Tag className="w-4 h-4 text-blue-500" />
-                Add Top Offer Announcement Pill
+                Add Promotional Offer Bar Item
               </h3>
               <button onClick={() => setActiveModal('none')} className="text-slate-400 hover:text-slate-200">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-400 mb-1">Offer Text</label>
-              <input
-                type="text"
-                placeholder="e.g. Flat 25% OFF on Ayurvedic Soaps"
-                value={newOfferText}
-                onChange={(e) => setNewOfferText(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs bg-slate-50 dark:bg-slate-900 outline-none font-bold text-[#0F172A] dark:text-white"
-              />
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1">Offer Display Text *</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Free Shipping above ₹499"
+                  value={newOfferForm.text}
+                  onChange={(e) => setNewOfferForm({ ...newOfferForm, text: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs bg-slate-50 dark:bg-slate-900 outline-none font-bold text-[#0F172A] dark:text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 mb-1">Offer Type / Logic</label>
+                  <select
+                    value={newOfferForm.offerType}
+                    onChange={(e) => setNewOfferForm({ ...newOfferForm, offerType: e.target.value as any })}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs bg-slate-50 dark:bg-slate-900 outline-none font-bold text-[#0F172A] dark:text-white"
+                  >
+                    <option value="free_shipping">Free Shipping (₹499+ Threshold)</option>
+                    <option value="link">Collection / Category Link</option>
+                    <option value="coupon_code">Coupon Code Promotion</option>
+                    <option value="announcement">General Announcement</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 mb-1">Target Link / Route URL</label>
+                  <input
+                    type="text"
+                    placeholder="/shop or /category/bath-soap"
+                    value={newOfferForm.linkUrl}
+                    onChange={(e) => setNewOfferForm({ ...newOfferForm, linkUrl: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-mono bg-slate-50 dark:bg-slate-900 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1">Promo Coupon Code (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. CINMAX20"
+                  value={newOfferForm.code}
+                  onChange={(e) => setNewOfferForm({ ...newOfferForm, code: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-mono font-bold text-blue-600 bg-slate-50 dark:bg-slate-900 outline-none uppercase"
+                />
+              </div>
+
+              <div className="pt-1">
+                <label className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newOfferForm.isActive}
+                    onChange={(e) => setNewOfferForm({ ...newOfferForm, isActive: e.target.checked })}
+                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span>Enable &amp; Publish Offer Immediately</span>
+                </label>
+              </div>
             </div>
-            <div className="flex justify-end gap-3 pt-2">
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
               <button onClick={() => setActiveModal('none')} className="px-4 py-2 rounded-xl border text-xs font-bold text-slate-500">
                 Cancel
               </button>
               <button
                 onClick={() => {
-                  if (!newOfferText.trim()) return;
-                  setFormData({ ...formData, topOffers: [...(formData.topOffers || []), newOfferText.trim()] });
-                  setNewOfferText('');
+                  if (!newOfferForm.text.trim()) return;
+                  const item = {
+                    id: `off_${Date.now()}`,
+                    text: newOfferForm.text.trim(),
+                    linkUrl: newOfferForm.linkUrl.trim() || '/shop',
+                    code: newOfferForm.code.trim(),
+                    minSubtotal: newOfferForm.offerType === 'free_shipping' ? 499 : undefined,
+                    offerType: newOfferForm.offerType,
+                    isActive: newOfferForm.isActive,
+                  };
+                  setFormData({ ...formData, topOffers: [...(formData.topOffers || []), item] });
+                  setNewOfferForm({
+                    text: '',
+                    linkUrl: '/shop',
+                    code: '',
+                    offerType: 'free_shipping',
+                    isActive: true,
+                  });
                   setActiveModal('none');
                 }}
-                className="px-5 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs"
+                className="px-5 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs shadow-md shadow-blue-600/20"
               >
-                Add Offer
+                Create Promotional Offer
               </button>
             </div>
           </div>

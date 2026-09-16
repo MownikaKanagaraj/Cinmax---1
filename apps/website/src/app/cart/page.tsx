@@ -2,9 +2,11 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Header } from '../../components/header';
 import { Footer } from '../../components/footer';
 import { CartDrawer } from '../../components/cart-drawer';
+import { LoginRequiredModal } from '../../components/login-required-modal';
 import {
   Container,
   PageHeader,
@@ -14,14 +16,25 @@ import {
   Button,
   EmptyState,
 } from '@cinmax/ui';
-import { useCartStore, useFeaturedProductsQuery } from '@cinmax/hooks';
-import { formatCurrency } from '@cinmax/utils';
+import { useCartStore, useFeaturedProductsQuery, useValidateCouponMutation, useUser } from '@cinmax/hooks';
+import { formatCurrency, calculateDeliveryCharge } from '@cinmax/utils';
 
 export default function CartPage() {
+  const router = useRouter();
+  const { user, isAuthenticated } = useUser();
+  const [showLoginModal, setShowLoginModal] = React.useState(false);
   const { items, updateQuantity, removeItem, coupon, applyCoupon, removeCoupon, getTotals, addItem } =
     useCartStore();
   const [couponInput, setCouponInput] = React.useState('');
   const { data: featuredProducts = [] } = useFeaturedProductsQuery(1);
+
+  const handleProceedToCheckout = () => {
+    if (!isAuthenticated && !user) {
+      setShowLoginModal(true);
+    } else {
+      router.push('/checkout');
+    }
+  };
 
   // Prepopulate 1 item for architecture demonstration if empty
   React.useEffect(() => {
@@ -30,22 +43,39 @@ export default function CartPage() {
     }
   }, [items.length, featuredProducts, addItem]);
 
+  const validateCouponMutation = useValidateCouponMutation();
+  const [couponError, setCouponError] = React.useState('');
+
   const totals = getTotals();
-  const freeShippingThreshold = 50;
+  // Free shipping threshold (CINMAX: orders >= 6 products qualify in TN/Pondicherry)
+  const freeShippingThreshold = 499;
   const progressToFreeShipping = Math.min(
     100,
     (totals.subtotal / freeShippingThreshold) * 100
   );
 
-  const handleApplyCoupon = (e: React.FormEvent) => {
+  const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (couponInput.toUpperCase() === 'AZURELUXE') {
-      applyCoupon({
-        code: 'AZURELUXE',
-        discountType: 'percentage',
-        discountValue: 15,
-        description: '15% Atelier Privilege Discount',
+    if (!couponInput.trim()) return;
+    setCouponError('');
+    try {
+      const result = await validateCouponMutation.mutateAsync({
+        code: couponInput.trim(),
+        subtotal: totals.subtotal,
       });
+      if (result.isValid && result.coupon) {
+        applyCoupon({
+          code: result.coupon.code,
+          discountType: result.coupon.discountType as any,
+          discountValue: result.coupon.discountValue,
+          description: result.coupon.description,
+        });
+        setCouponInput('');
+      } else {
+        setCouponError(result.message || 'Invalid coupon code');
+      }
+    } catch {
+      setCouponError('Could not validate coupon. Please try again.');
     }
   };
 
@@ -85,10 +115,8 @@ export default function CartPage() {
                   <div className="flex justify-between text-xs font-semibold">
                     <span>
                       {totals.subtotal >= freeShippingThreshold
-                        ? '🎉 You unlocked Complimentary Carbon-Neutral Shipping!'
-                        : `Add $${(freeShippingThreshold - totals.subtotal).toFixed(
-                            2
-                          )} more to unlock Complimentary Shipping`}
+                        ? '🎉 You unlocked Complimentary Delivery!'
+                        : `Add ₹${(freeShippingThreshold - totals.subtotal).toFixed(0)} more to unlock Complimentary Shipping`}
                     </span>
                     <span>{progressToFreeShipping.toFixed(0)}%</span>
                   </div>
@@ -109,8 +137,12 @@ export default function CartPage() {
                       <div className="w-24 h-24 rounded-[16px] overflow-hidden bg-slate-100 flex-shrink-0">
                         <img
                           src={
-                            item.product.images?.[0]?.url ||
-                            'https://images.unsplash.com/photo-1607006314147-759088fd21c2?w=300&auto=format&fit=crop&q=80'
+                            (() => {
+                              const img = item.product.images?.[0];
+                              if (!img) return 'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=300&auto=format&fit=crop&q=80';
+                              if (typeof img === 'string') return img;
+                              return img.url || 'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=300&auto=format&fit=crop&q=80';
+                            })()
                           }
                           alt={item.product.title}
                           className="w-full h-full object-cover"
@@ -123,7 +155,7 @@ export default function CartPage() {
                         <p className="text-xs text-muted-foreground">
                           Edition: {item.variant.title} ({item.variant.weightGrams}g)
                         </p>
-                        <PriceTag price={item.unitPrice} currency="USD" size="md" />
+                        <PriceTag price={item.unitPrice} currency="INR" size="md" />
                       </div>
                       <div className="flex items-center gap-4">
                         <QuantitySelector
@@ -169,11 +201,14 @@ export default function CartPage() {
                   </form>
                   {coupon && (
                     <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 text-xs">
-                      <span>{coupon.code} applied (-${totals.discount.toFixed(2)})</span>
+                      <span>🎉 {coupon.code} applied (-₹{totals.discount.toFixed(0)})</span>
                       <button onClick={removeCoupon} className="underline hover:text-emerald-900">
                         Remove
                       </button>
                     </div>
+                  )}
+                  {couponError && (
+                    <p className="text-xs text-red-500 mt-1">{couponError}</p>
                   )}
 
                   <div className="space-y-3 text-sm border-t border-[#0A3D78]/10 pt-4">
@@ -194,19 +229,24 @@ export default function CartPage() {
                       </span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
-                      <span>Estimated Tax</span>
-                      <span>{formatCurrency(totals.tax)}</span>
+                      <span>GST (18% Included)</span>
+                      <span>{formatCurrency(Math.round(((totals.subtotal - totals.discount) * 18) / 118))}</span>
                     </div>
-                    <div className="flex justify-between font-serif text-xl font-bold text-[#002754] dark:text-white pt-3 border-t border-[#0A3D78]/10">
-                      <span>Estimated Total</span>
-                      <span>{formatCurrency(totals.total)}</span>
+                    <div className="flex justify-between font-bold text-base border-t border-[#0A3D78]/10 pt-3 text-foreground">
+                      <span>Total Payable</span>
+                      <span className="text-[#0A3D78] dark:text-[#C5A880]">
+                        {formatCurrency(totals.subtotal - totals.discount + totals.shippingFee)}
+                      </span>
                     </div>
                   </div>
 
-                  <Button variant="primary" size="lg" className="w-full rounded-full text-base font-bold shadow-xl">
-                    <Link href="/checkout" className="w-full">
-                      Proceed to Checkout
-                    </Link>
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    onClick={handleProceedToCheckout}
+                    className="w-full rounded-full text-base font-bold shadow-xl cursor-pointer"
+                  >
+                    Proceed to Checkout
                   </Button>
                 </div>
               </div>
@@ -214,6 +254,11 @@ export default function CartPage() {
           )}
         </Container>
       </main>
+
+      <LoginRequiredModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+      />
 
       <Footer />
     </div>

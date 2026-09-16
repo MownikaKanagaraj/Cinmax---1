@@ -58,13 +58,18 @@ export class InvoiceEngine {
       totalPrice: item.totalPrice,
     }));
 
+    const deliveryText = shippingAmount === 0 ? 'FREE' : `₹${shippingAmount}`;
+
     const pdfHtml = `
-      <div style="font-family: serif; padding: 32px;">
+      <div style="font-family: serif; padding: 32px; color: #191C1E;">
         <h2>CINMAX GLOBAL BOTANICAL ATELIER</h2>
         <h3>TAX INVOICE: ${invoiceNumber}</h3>
         <p>Order Reference: ${order.orderNumber} | Date: ${new Date(issueDate).toLocaleDateString()}</p>
         <hr/>
-        <p><strong>Grand Total:</strong> $${order.grandTotal.toFixed(2)} ${order.currency}</p>
+        <p>Subtotal: ₹${itemsSubtotal}</p>
+        <p>Discount: -₹${discountAmount}</p>
+        <p>Delivery Charges: ${deliveryText}</p>
+        <p><strong>Grand Total:</strong> ₹${order.grandTotal} (${order.currency || 'INR'})</p>
       </div>
     `;
 
@@ -72,8 +77,8 @@ export class InvoiceEngine {
       invoiceNumber,
       orderNumber: order.orderNumber,
       issueDate,
-      customerName: `${order.shippingAddress.firstName} ${order.shippingAddress.lastName}`,
-      customerEmail: order.shippingAddress.email,
+      customerName: `${order.shippingAddress?.firstName || ''} ${order.shippingAddress?.lastName || ''}`.trim() || 'Customer',
+      customerEmail: order.shippingAddress?.email,
       shippingAddress: order.shippingAddress,
       billingAddress: order.billingAddress,
       items,
@@ -82,7 +87,7 @@ export class InvoiceEngine {
       taxResult,
       shippingAmount,
       grandTotal: order.grandTotal,
-      currency: order.currency || 'USD',
+      currency: order.currency || 'INR',
       paymentMethod: order.paymentMethod || 'razorpay',
       pdfExportPayload: {
         title: `Invoice_${invoiceNumber}.pdf`,

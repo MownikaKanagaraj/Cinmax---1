@@ -3,29 +3,46 @@ import type { Database } from '@cinmax/types';
 import { CouponEntity } from './entity';
 import { CouponMapper } from './mapper';
 import type { ICouponRepository } from './repository.interface';
+import { CENTRAL_COUPON_CONFIGS, getCentralCouponByCode } from '../../config/coupons.config';
 
 export class SupabaseCouponRepository implements ICouponRepository {
   constructor(private supabase: SupabaseClient<Database>) {}
 
   public async getAll(): Promise<CouponEntity[]> {
-    const { data, error } = await this.supabase
-      .from('coupons')
-      .select('*')
-      .eq('is_active', true);
+    try {
+      const { data, error } = await this.supabase
+        .from('coupons')
+        .select('*')
+        .eq('is_active', true);
 
-    if (error) throw error;
-    return CouponMapper.toEntityList(data as any);
+      if (!error && data && data.length > 0) {
+        return CouponMapper.toEntityList(data as any);
+      }
+    } catch {
+      // Fallback to central config
+    }
+    return CENTRAL_COUPON_CONFIGS.map((c) => new CouponEntity(c as any));
   }
 
   public async getByCode(code: string): Promise<CouponEntity | null> {
-    const { data, error } = await this.supabase
-      .from('coupons')
-      .select('*')
-      .eq('code', code.toUpperCase().trim())
-      .single();
+    try {
+      const { data, error } = await this.supabase
+        .from('coupons')
+        .select('*')
+        .eq('code', code.toUpperCase().trim())
+        .single();
 
-    if (error || !data) return null;
-    return CouponMapper.toEntity(data as any);
+      if (!error && data) {
+        return CouponMapper.toEntity(data as any);
+      }
+    } catch {
+      // Ignore database error and try fallback
+    }
+
+    const central = getCentralCouponByCode(code);
+    if (central) return new CouponEntity(central as any);
+
+    return null;
   }
 
   public async validate(
@@ -49,9 +66,10 @@ export class SupabaseCouponRepository implements ICouponRepository {
       return {
         isValid: false,
         coupon,
-        message: `Minimum order amount of $${coupon.minOrderAmount} required for this coupon.`,
+        message: `Minimum order amount of ₹${coupon.minOrderAmount} required for this coupon.`,
       };
     }
+
 
     return { isValid: true, coupon, message: 'Coupon applied successfully!' };
   }

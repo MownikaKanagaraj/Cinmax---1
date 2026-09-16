@@ -1,5 +1,13 @@
-import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
-import { useProductService, queryKeys, type ProductEntity, type PaginatedResult, type PaginationParams } from '@cinmax/api';
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  useProductService,
+  queryKeys,
+  type ProductEntity,
+  type PaginatedResult,
+  type PaginationParams,
+  type CreateProductPayload,
+  type UpdateProductPayload,
+} from '@cinmax/api';
 import type { ProductFilter } from '@cinmax/types';
 
 export function useProductsQuery(
@@ -131,5 +139,95 @@ export function useSearchProductsQuery(query: string, options?: { enabled?: bool
     },
     enabled: Boolean(query.trim()) && (options?.enabled ?? true),
     staleTime: 1000 * 60 * 2,
+  });
+}
+
+/**
+ * Mutation to create a new product formulation
+ */
+export function useCreateProductMutation() {
+  const queryClient = useQueryClient();
+  const productService = useProductService();
+
+  return useMutation({
+    mutationFn: async (payload: CreateProductPayload) => {
+      // Try local API route if available, otherwise direct service
+      try {
+        const response = await fetch('/api/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          return data.product;
+        }
+      } catch {
+        // Direct service fallback
+      }
+      return productService.createProduct(payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
+    },
+  });
+}
+
+/**
+ * Mutation to update an existing product formulation
+ */
+export function useUpdateProductMutation() {
+  const queryClient = useQueryClient();
+  const productService = useProductService();
+
+  return useMutation({
+    mutationFn: async (payload: UpdateProductPayload) => {
+      try {
+        const response = await fetch(`/api/products/${payload.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          return data.product;
+        }
+      } catch {
+        // Direct service fallback
+      }
+      return productService.updateProduct(payload.id, payload);
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.products.detail(variables.id) });
+    },
+  });
+}
+
+/**
+ * Mutation to delete a product
+ */
+export function useDeleteProductMutation() {
+  const queryClient = useQueryClient();
+  const productService = useProductService();
+
+  return useMutation({
+    mutationFn: async (productId: string) => {
+      try {
+        const response = await fetch(`/api/products/${productId}`, {
+          method: 'DELETE',
+        });
+        if (response.ok) {
+          return true;
+        }
+      } catch {
+        // Direct service fallback
+      }
+      await productService.deleteProduct(productId);
+      return true;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
+    },
   });
 }

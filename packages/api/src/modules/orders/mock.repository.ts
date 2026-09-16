@@ -134,7 +134,10 @@ export class MockOrderRepository implements IOrderRepository {
     id: string,
     status: OrderStatus,
     reason?: string,
-    _actorId?: string
+    _actorId?: string,
+    trackingNumber?: string,
+    carrier?: string,
+    estimatedDeliveryDate?: string
   ): Promise<OrderEntity> {
     const index = this.orders.findIndex((o) => o.id === id);
     if (index === -1) {
@@ -147,6 +150,9 @@ export class MockOrderRepository implements IOrderRepository {
     const updated = new OrderEntity({
       ...order,
       status,
+      trackingNumber: trackingNumber || order.trackingNumber,
+      carrier: carrier || order.carrier,
+      estimatedDeliveryDate: estimatedDeliveryDate || order.estimatedDeliveryDate,
       timeline: [
         ...(order.timeline || []),
         {

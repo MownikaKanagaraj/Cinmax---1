@@ -39,7 +39,7 @@ export interface ProductDTO {
     inventory_quantity: number;
     low_stock_threshold: number;
     is_available: boolean;
-    options?: Record<string, string> | null;
+    options?: Record<string, any> | null;
   }> | null;
   ingredients?: Array<{
     id: string;

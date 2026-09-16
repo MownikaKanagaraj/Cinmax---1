@@ -1,60 +1,88 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Product } from '@cinmax/types';
 
 export interface WishlistStoreState {
   items: Product[];
   productIds: string[];
   toggleWishlist: (product: Product) => void;
-  toggleItem: (productId: string) => void;
+  toggleItem: (productOrId: Product | string) => void;
   isInWishlist: (productId: string) => boolean;
   isWishlisted: (productId: string) => boolean;
   clearWishlist: () => void;
 }
 
-export const useWishlistStore = create<WishlistStoreState>((set, get) => ({
-  items: [],
-  productIds: [],
+export const useWishlistStore = create<WishlistStoreState>()(
+  persist(
+    (set, get) => ({
+      items: [],
+      productIds: [],
 
-  toggleWishlist: (product) => {
-    set((state) => {
-      const exists = state.productIds.includes(product.id);
-      if (exists) {
-        return {
-          items: state.items.filter((item) => item.id !== product.id),
-          productIds: state.productIds.filter((id) => id !== product.id),
-        };
-      } else {
-        return {
-          items: [...state.items, product],
-          productIds: [...state.productIds, product.id],
-        };
-      }
-    });
-  },
+      toggleWishlist: (product) => {
+        set((state) => {
+          const exists = state.productIds.includes(product.id);
+          if (exists) {
+            return {
+              items: state.items.filter((item) => item.id !== product.id),
+              productIds: state.productIds.filter((id) => id !== product.id),
+            };
+          } else {
+            return {
+              items: [...state.items, product],
+              productIds: [...state.productIds, product.id],
+            };
+          }
+        });
+      },
 
-  toggleItem: (productId) => {
-    set((state) => {
-      const exists = state.productIds.includes(productId);
-      if (exists) {
-        return {
-          items: state.items.filter((item) => item.id !== productId),
-          productIds: state.productIds.filter((id) => id !== productId),
-        };
-      } else {
-        return {
-          productIds: [...state.productIds, productId],
-        };
-      }
-    });
-  },
+      toggleItem: (productOrId) => {
+        set((state) => {
+          if (typeof productOrId === 'string') {
+            const exists = state.productIds.includes(productOrId);
+            if (exists) {
+              return {
+                items: state.items.filter((item) => item.id !== productOrId),
+                productIds: state.productIds.filter((id) => id !== productOrId),
+              };
+            } else {
+              return {
+                productIds: [...state.productIds, productOrId],
+              };
+            }
+          } else {
+            const product = productOrId;
+            const exists = state.productIds.includes(product.id);
+            if (exists) {
+              return {
+                items: state.items.filter((item) => item.id !== product.id),
+                productIds: state.productIds.filter((id) => id !== product.id),
+              };
+            } else {
+              return {
+                items: [...state.items, product],
+                productIds: [...state.productIds, product.id],
+              };
+            }
+          }
+        });
+      },
 
-  isInWishlist: (productId) => {
-    return get().productIds.includes(productId);
-  },
+      isInWishlist: (productId) => {
+        return get().productIds.includes(productId);
+      },
 
-  isWishlisted: (productId) => {
-    return get().productIds.includes(productId);
-  },
+      isWishlisted: (productId) => {
+        return get().productIds.includes(productId);
+      },
 
-  clearWishlist: () => set({ items: [], productIds: [] }),
-}));
+      clearWishlist: () => set({ items: [], productIds: [] }),
+    }),
+    {
+      name: 'cinmax-wishlist-storage',
+      storage: createJSONStorage(() =>
+        typeof window !== 'undefined' ? window.localStorage : { getItem: () => null, setItem: () => {}, removeItem: () => {} }
+      ),
+    }
+  )
+);
+

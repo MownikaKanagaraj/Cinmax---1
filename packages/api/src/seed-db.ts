@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { CENTRAL_COUPON_CONFIGS } from './config/coupons.config';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://nthyavlzdgucrldtgjeo.supabase.co';
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50aHlhdmx6ZGd1Y3JsZHRnamVvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NTc1NTYwMCwiZXhwIjoyMTAxMzMxNjAwfQ.WhVVQo2bsvvo3NN8isPSbaQNUPef8MloYdjG3B_LaU0';
@@ -31,8 +32,8 @@ async function seed() {
       how_to_use: 'Lather between wet palms or with a natural sisal pouch.',
       process_type: 'cold-process',
       category_id: 'c1000000-0000-0000-0000-000000000001',
-      base_price: 18.00,
-      compare_at_price: 22.00,
+      base_price: 399.00,
+      compare_at_price: 499.00,
       skin_types: ['all', 'normal', 'dry'],
       fragrance_family: 'aquatic',
       certifications: ['USDA Organic Oils', 'Cruelty-Free', '100% Biodegradable'],
@@ -50,8 +51,8 @@ async function seed() {
       how_to_use: 'Gentle enough for daily face and body use.',
       process_type: 'cold-process',
       category_id: 'c1000000-0000-0000-0000-000000000001',
-      base_price: 16.50,
-      compare_at_price: null,
+      base_price: 349.00,
+      compare_at_price: 449.00,
       skin_types: ['all', 'sensitive', 'dry'],
       fragrance_family: 'floral',
       certifications: ['USDA Organic Oils', 'Vegan Certified'],
@@ -69,8 +70,8 @@ async function seed() {
       how_to_use: 'Glide directly over rough areas 2-3 times per week.',
       process_type: 'triple-milled',
       category_id: 'c1000000-0000-0000-0000-000000000004',
-      base_price: 20.00,
-      compare_at_price: 24.00,
+      base_price: 449.00,
+      compare_at_price: 549.00,
       skin_types: ['oily', 'combination'],
       fragrance_family: 'woody',
       certifications: ['100% Natural Origin', 'Microplastic-Free'],
@@ -85,12 +86,23 @@ async function seed() {
   if (prodErr) console.error('Error seeding products:', prodErr.message);
   else console.log('✅ Products seeded successfully.');
 
+  // 2b. Product Images
+  const productImages = [
+    { id: 'img1000000-0000-0000-0000-000000000001', product_id: 'p1000000-0000-0000-0000-000000000001', url: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=800&auto=format&fit=crop&q=80', alt: 'Azure Marine Botanical Bar', sort_order: 1, is_primary: true },
+    { id: 'img1000000-0000-0000-0000-000000000002', product_id: 'p1000000-0000-0000-0000-000000000002', url: 'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=800&auto=format&fit=crop&q=80', alt: 'French Lavender & Cashmere Soap', sort_order: 1, is_primary: true },
+    { id: 'img1000000-0000-0000-0000-000000000003', product_id: 'p1000000-0000-0000-0000-000000000003', url: 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=800&auto=format&fit=crop&q=80', alt: 'Nordic Pine & Volcanic Ash Scrub', sort_order: 1, is_primary: true },
+  ];
+
+  const { error: imgErr } = await supabase.from('product_images').upsert(productImages, { onConflict: 'id' });
+  if (imgErr) console.log('Notice: product_images seed:', imgErr.message);
+  else console.log('✅ Product images seeded successfully.');
+
   // 3. Product Variants
   const variants = [
-    { id: 'v1000000-0000-0000-0000-000000000001', product_id: 'p1000000-0000-0000-0000-000000000001', sku: 'CNX-COLD-AZUR-150', title: 'Single Bar (150g / 5.3 oz)', weight_grams: 150, price: 18.00, compare_at_price: 22.00, inventory_quantity: 450, is_available: true },
-    { id: 'v1000000-0000-0000-0000-000000000002', product_id: 'p1000000-0000-0000-0000-000000000001', sku: 'CNX-COLD-AZUR-3PK', title: 'Trio Bundle (3 x 150g)', weight_grams: 450, price: 48.00, compare_at_price: 66.00, inventory_quantity: 180, is_available: true },
-    { id: 'v1000000-0000-0000-0000-000000000003', product_id: 'p1000000-0000-0000-0000-000000000002', sku: 'CNX-COLD-LAVN-150', title: 'Single Bar (150g / 5.3 oz)', weight_grams: 150, price: 16.50, compare_at_price: null, inventory_quantity: 320, is_available: true },
-    { id: 'v1000000-0000-0000-0000-000000000004', product_id: 'p1000000-0000-0000-0000-000000000003', sku: 'CNX-EXFO-PINE-170', title: 'Single Bar (170g / 6.0 oz)', weight_grams: 170, price: 20.00, compare_at_price: 24.00, inventory_quantity: 210, is_available: true },
+    { id: 'v1000000-0000-0000-0000-000000000001', product_id: 'p1000000-0000-0000-0000-000000000001', sku: 'CNX-COLD-AZUR-150', title: 'Single Bar (150g / 5.3 oz)', weight_grams: 150, price: 399.00, compare_at_price: 499.00, inventory_quantity: 450, is_available: true },
+    { id: 'v1000000-0000-0000-0000-000000000002', product_id: 'p1000000-0000-0000-0000-000000000001', sku: 'CNX-COLD-AZUR-3PK', title: 'Trio Bundle (3 x 150g)', weight_grams: 450, price: 999.00, compare_at_price: 1299.00, inventory_quantity: 180, is_available: true },
+    { id: 'v1000000-0000-0000-0000-000000000003', product_id: 'p1000000-0000-0000-0000-000000000002', sku: 'CNX-COLD-LAVN-150', title: 'Single Bar (150g / 5.3 oz)', weight_grams: 150, price: 349.00, compare_at_price: 449.00, inventory_quantity: 320, is_available: true },
+    { id: 'v1000000-0000-0000-0000-000000000004', product_id: 'p1000000-0000-0000-0000-000000000003', sku: 'CNX-EXFO-PINE-170', title: 'Single Bar (170g / 6.0 oz)', weight_grams: 170, price: 449.00, compare_at_price: 549.00, inventory_quantity: 210, is_available: true },
   ];
 
   const { error: varErr } = await supabase.from('product_variants').upsert(variants, { onConflict: 'id' });
@@ -98,11 +110,14 @@ async function seed() {
   else console.log('✅ Product variants seeded successfully.');
 
   // 4. Coupons
-  const coupons = [
-    { id: 'cp_welcome10', code: 'WELCOME10', discount_type: 'percentage', discount_value: 10, min_order_amount: 50, is_active: true },
-    { id: 'cp_botanical20', code: 'BOTANICAL20', discount_type: 'percentage', discount_value: 20, min_order_amount: 100, is_active: true },
-    { id: 'cp_luxesummer', code: 'LUXESUMMER', discount_type: 'fixed_amount', discount_value: 15, min_order_amount: 75, is_active: true },
-  ];
+  const coupons = CENTRAL_COUPON_CONFIGS.map((c) => ({
+    id: c.id,
+    code: c.code,
+    discount_type: c.discountType,
+    discount_value: c.discountValue,
+    min_order_amount: c.minOrderAmount || 0,
+    is_active: c.isActive,
+  }));
 
   const { error: cpnErr } = await supabase.from('coupons').upsert(coupons, { onConflict: 'id' });
   if (cpnErr) console.error('Error seeding coupons:', cpnErr.message);

@@ -25,4 +25,9 @@ export interface IProductRepository {
   getRelatedProducts(productIdOrSlug: string, limit?: number): Promise<ProductEntity[]>;
   getProductsByCollection(collectionSlug: string, pagination?: PaginationParams): Promise<PaginatedResult<ProductEntity>>;
   getRecommendedProducts(productIdOrSlug: string, limit?: number): Promise<ProductEntity[]>;
+
+  // Mutations
+  createProduct(payload: import('./types').CreateProductPayload): Promise<ProductEntity>;
+  updateProduct(id: string, payload: import('./types').UpdateProductPayload): Promise<ProductEntity>;
+  deleteProduct(id: string): Promise<void>;
 }

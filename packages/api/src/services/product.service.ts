@@ -116,4 +116,16 @@ export class ProductService {
   public async getFeaturedCategories(limit = 4): Promise<CategoryEntity[]> {
     return this.categoryRepo.getFeaturedCategories(limit);
   }
+
+  public async createProduct(payload: import('../modules/products').CreateProductPayload): Promise<ProductEntity> {
+    return this.productRepo.createProduct(payload);
+  }
+
+  public async updateProduct(id: string, payload: import('../modules/products').UpdateProductPayload): Promise<ProductEntity> {
+    return this.productRepo.updateProduct(id, payload);
+  }
+
+  public async deleteProduct(id: string): Promise<void> {
+    return this.productRepo.deleteProduct(id);
+  }
 }

@@ -12,7 +12,7 @@ const defaultMarketingSettings: HomeMarketingSettings = {
       id: 'hb_1',
       title: 'French Green Clay & Eucalyptus',
       subtitle: 'Artisan Cold-Processed Saponification • 40-Day Slow Cured',
-      imageUrl: 'https://images.unsplash.com/photo-1607006314147-759088fd21c2?w=1600&auto=format&fit=crop&q=80',
+      imageUrl: 'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=1600&auto=format&fit=crop&q=80',
       badgeText: 'New Cure Release',
       buttonText: 'Discover Blend',
       linkUrl: '/shop',

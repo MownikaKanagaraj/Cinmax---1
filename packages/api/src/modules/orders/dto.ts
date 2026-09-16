@@ -15,6 +15,7 @@ export interface OrderDTO {
   currency?: string | null;
   shipping_address: any;
   billing_address?: any | null;
+  metadata?: Record<string, any> | null;
   items?: Array<{
     id: string;
     order_id: string;

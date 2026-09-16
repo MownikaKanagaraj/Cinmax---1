@@ -14,3 +14,6 @@ export * from './stores';
 // Contexts & Providers
 export * from './contexts';
 export * from './providers';
+
+export { useQueryClient } from '@tanstack/react-query';
+

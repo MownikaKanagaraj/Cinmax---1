@@ -2,6 +2,7 @@
   "name": "@cinmax/theme",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "Design system tokens, Tailwind CSS presets, and styling primitives for CINMAX Global Products",
   "main": "./src/index.ts",
   "types": "./src/index.ts",

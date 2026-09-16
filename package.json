@@ -26,8 +26,14 @@
     "db:generate-types": "supabase gen types typescript --local > packages/types/src/database.types.ts"
   },
   "pnpm": {
+    "peerDependencyRules": {
+      "ignoreMissing": [
+        "react-native-reanimated"
+      ]
+    },
     "overrides": {
       "@supabase/supabase-js": "2.48.1",
+      "react": "19.2.3",
       "@types/react": "~18.3.12"
     }
   },
@@ -37,10 +43,12 @@
     "eslint": "^9.18.0",
     "prettier": "^3.4.2",
     "prettier-plugin-tailwindcss": "^0.6.11",
+    "qrcode": "^1.5.4",
     "turbo": "^2.3.4",
     "typescript": "^5.7.3"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.66.0",
     "@types/pg": "^8.21.0",
     "pg": "^8.22.0"
   }

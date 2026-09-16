@@ -22,7 +22,7 @@ export const mockCategoriesData: ProductCategory[] = [
     slug: 'artisan-cold-process-soaps',
     name: 'Artisan Cold-Process Soaps',
     description: 'Slow-cured for 6 weeks with cold-pressed virgin olive oil and unrefined shea butter.',
-    imageUrl: 'https://images.unsplash.com/photo-1607006314147-759088fd21c2?w=800&auto=format&fit=crop&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=800&auto=format&fit=crop&q=80',
     parentId: null,
     sortOrder: 1,
     isActive: true,
@@ -83,11 +83,11 @@ export const mockProductsData: Product[] = [
     category: mockCategoriesData[0],
     basePrice: 18.0,
     compareAtPrice: 22.0,
-    currency: 'USD',
+    currency: 'INR',
     images: [
       {
         id: 'img_001',
-        url: 'https://images.unsplash.com/photo-1607006314147-759088fd21c2?w=800&auto=format&fit=crop&q=80',
+        url: 'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=800&auto=format&fit=crop&q=80',
         alt: 'French Green Clay Bar',
         sortOrder: 1,
         isPrimary: true,
@@ -159,7 +159,7 @@ export const mockProductsData: Product[] = [
     category: mockCategoriesData[0],
     basePrice: 17.5,
     compareAtPrice: null,
-    currency: 'USD',
+    currency: 'INR',
     images: [
       {
         id: 'img_003',
@@ -213,7 +213,7 @@ export const mockProductsData: Product[] = [
     category: mockCategoriesData[2],
     basePrice: 19.0,
     compareAtPrice: 24.0,
-    currency: 'USD',
+    currency: 'INR',
     images: [
       {
         id: 'img_004',
@@ -267,7 +267,7 @@ export const mockProductsData: Product[] = [
     category: mockCategoriesData[1],
     basePrice: 32.0,
     compareAtPrice: null,
-    currency: 'USD',
+    currency: 'INR',
     images: [
       {
         id: 'img_005',
@@ -334,7 +334,7 @@ export const mockProductsData: Product[] = [
     category: mockCategoriesData[3],
     basePrice: 28.0,
     compareAtPrice: null,
-    currency: 'USD',
+    currency: 'INR',
     images: [
       {
         id: 'img_006',
@@ -388,7 +388,7 @@ export const mockProductsData: Product[] = [
     category: mockCategoriesData[4],
     basePrice: 78.0,
     compareAtPrice: 92.0,
-    currency: 'USD',
+    currency: 'INR',
     images: [
       {
         id: 'img_007',
@@ -427,66 +427,23 @@ export const mockProductsData: Product[] = [
   },
 ];
 
-export const mockCouponsData: Coupon[] = [
-  {
-    id: 'cpn_001',
-    code: 'AZURE10',
-    title: '10% Off Your Botanical Order',
-    description: 'Enjoy 10% off your entire cart of artisanal soaps.',
-    discountType: 'percentage',
-    discountValue: 10,
-    minOrderAmount: 30.0,
-    maxDiscountAmount: 50.0,
-    startDate: '2026-01-01T00:00:00Z',
-    endDate: '2026-12-31T23:59:59Z',
-    usageLimit: 1000,
-    usageCount: 234,
-    isActive: true,
-  },
-  {
-    id: 'cpn_002',
-    code: 'FREESHIP50',
-    title: 'Complimentary Atelier Shipping',
-    description: 'Free standard shipping on all cured slab orders over $50.',
-    discountType: 'free_shipping',
-    discountValue: 6.95,
-    minOrderAmount: 50.0,
-    startDate: '2026-01-01T00:00:00Z',
-    endDate: '2026-12-31T23:59:59Z',
-    usageLimit: 5000,
-    usageCount: 891,
-    isActive: true,
-  },
-  {
-    id: 'cpn_003',
-    code: 'BOTANICAL20',
-    title: 'VIP 20% Off Connoisseur Slabs',
-    description: 'Exclusive 20% savings on purchases of $80 or more.',
-    discountType: 'percentage',
-    discountValue: 20,
-    minOrderAmount: 80.0,
-    maxDiscountAmount: 100.0,
-    startDate: '2026-06-01T00:00:00Z',
-    endDate: '2026-09-30T23:59:59Z',
-    usageLimit: 250,
-    usageCount: 68,
-    isActive: true,
-  },
-  {
-    id: 'cpn_004',
-    code: 'WELCOME15',
-    title: 'New Collector 15% Welcome',
-    description: 'First order 15% savings across all cold-process soaps.',
-    discountType: 'percentage',
-    discountValue: 15,
-    minOrderAmount: 25.0,
-    startDate: '2026-01-01T00:00:00Z',
-    endDate: '2026-12-31T23:59:59Z',
-    usageLimit: 5000,
-    usageCount: 1420,
-    isActive: true,
-  },
-];
+import { CENTRAL_COUPON_CONFIGS } from '../config/coupons.config';
+
+export const mockCouponsData: Coupon[] = CENTRAL_COUPON_CONFIGS.map((c) => ({
+  id: c.id,
+  code: c.code,
+  title: c.title,
+  description: c.description,
+  discountType: c.discountType,
+  discountValue: c.discountValue,
+  minOrderAmount: c.minOrderAmount || 0,
+  maxDiscountAmount: c.maxDiscountAmount,
+  startDate: c.startDate || '2026-01-01T00:00:00Z',
+  endDate: c.endDate || '2026-12-31T23:59:59Z',
+  usageLimit: c.usageLimit || 1000,
+  usageCount: c.usageCount || 0,
+  isActive: c.isActive,
+}));
 
 export const mockOrdersData: Order[] = [
   {
@@ -503,7 +460,7 @@ export const mockOrdersData: Order[] = [
     taxTotal: 3.85,
     shippingTotal: 0.0,
     grandTotal: 52.0,
-    currency: 'USD',
+    currency: 'INR',
     shippingAddress: {
       id: 'addr_1',
       firstName: 'Elena',
@@ -542,7 +499,7 @@ export const mockOrdersData: Order[] = [
         unitPrice: 18.0,
         quantity: 2,
         totalPrice: 36.0,
-        imageUrl: 'https://images.unsplash.com/photo-1607006314147-759088fd21c2?w=800&auto=format&fit=crop&q=80',
+        imageUrl: 'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=800&auto=format&fit=crop&q=80',
       },
       {
         id: 'item_2',
@@ -583,7 +540,7 @@ export const mockOrdersData: Order[] = [
     taxTotal: 6.24,
     shippingTotal: 0.0,
     grandTotal: 84.24,
-    currency: 'USD',
+    currency: 'INR',
     shippingAddress: {
       id: 'addr_1',
       firstName: 'Elena',
@@ -729,7 +686,7 @@ export const mockBannersData: PromoBanner[] = [
     subtitle: 'Artisan Saponified • 6-Week Cure',
     ctaText: 'Discover Blend',
     ctaLink: '/product/french-green-clay-eucalyptus',
-    imageUrl: 'https://images.unsplash.com/photo-1607006314147-759088fd21c2?w=1600&auto=format&fit=crop&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=1600&auto=format&fit=crop&q=80',
     badgeText: 'New Cure Release',
     backgroundColor: '#002754',
     isActive: true,
@@ -757,7 +714,7 @@ export const mockBlogPostsData: BlogPost[] = [
     excerpt: 'Exploring the slow saponification science behind why unheated plant oils produce longer lasting, richer skin lather.',
     content:
       'Unlike mass-produced commercial detergents that strip natural glycerin to sell as a separate byproduct, authentic cold-process saponification is a gentle thermal reaction between plant lipids and mineral alkali. Over 40-42 days on wooden drying racks, excess moisture slowly evaporates, leaving behind a firm, highly concentrated bar rich in skin-conditioning emollients.',
-    coverImageUrl: 'https://images.unsplash.com/photo-1607006314147-759088fd21c2?w=800&auto=format&fit=crop&q=80',
+    coverImageUrl: 'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=800&auto=format&fit=crop&q=80',
     authorName: 'Dr. Arthur Vance',
     authorAvatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
     category: 'Atelier Science',

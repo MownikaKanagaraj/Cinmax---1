@@ -2,10 +2,24 @@ import { create } from 'zustand';
 import type { CartItem, Product, ProductVariant, AppliedCoupon } from '@cinmax/types';
 import { calculateCartTotals } from '@cinmax/utils';
 
+export interface SavedLocalAddress {
+  id: string;
+  name: string;
+  phone: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  pincode: string;
+  landmark?: string;
+  type?: string;
+}
+
 export interface CartStoreState {
   items: CartItem[];
   coupon: AppliedCoupon | null;
   isOpen: boolean;
+  savedLocalAddress: SavedLocalAddress | null;
   
   // Actions
   addItem: (product: any, variant?: any, quantity?: number) => void;
@@ -17,16 +31,31 @@ export interface CartStoreState {
   openDrawer: () => void;
   closeDrawer: () => void;
   toggleDrawer: () => void;
+  setSavedLocalAddress: (address: SavedLocalAddress) => void;
 
   // Computed
   getItemCount: () => number;
   getTotals: () => ReturnType<typeof calculateCartTotals>;
 }
 
+const DEFAULT_ADDRESS: SavedLocalAddress = {
+  id: 'addr_default_local',
+  name: 'Aanya Sharma',
+  phone: '9876543210',
+  addressLine1: 'Flat 402, Royal Enclave',
+  addressLine2: '2nd Main Road, T. Nagar',
+  city: 'Chennai',
+  state: 'Tamil Nadu',
+  pincode: '600017',
+  landmark: 'Near Apollo Hospital',
+  type: 'Home',
+};
+
 export const useCartStore = create<CartStoreState>((set, get) => ({
   items: [],
   coupon: null,
   isOpen: false,
+  savedLocalAddress: DEFAULT_ADDRESS,
 
   addItem: (productOrItem: any, variant?: any, quantity = 1) => {
     set((state) => {
@@ -78,10 +107,10 @@ export const useCartStore = create<CartStoreState>((set, get) => ({
           quantity: newQty,
           totalPrice: newQty * current.unitPrice,
         };
-        return { items: updated, isOpen: true };
+        return { items: updated };
       }
 
-      return { items: [...state.items, newItem], isOpen: true };
+      return { items: [...state.items, newItem] };
     });
   },
 
@@ -114,6 +143,8 @@ export const useCartStore = create<CartStoreState>((set, get) => ({
   closeDrawer: () => set({ isOpen: false }),
   toggleDrawer: () => set((state) => ({ isOpen: !state.isOpen })),
 
+  setSavedLocalAddress: (address) => set({ savedLocalAddress: address }),
+
   getItemCount: () => {
     return get().items.reduce((acc, item) => acc + item.quantity, 0);
   },
@@ -123,8 +154,11 @@ export const useCartStore = create<CartStoreState>((set, get) => ({
     return calculateCartTotals(
       items,
       coupon?.discountValue ?? 0,
-      0.08, // standard 8% tax
-      50.0 // free shipping threshold
+      0, // 0 tax rate for inclusive pricing
+      50.0, // free shipping threshold
+      6.95, // flat shipping rate
+      coupon?.discountType ?? 'percentage'
     );
   },
 }));
+

@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { AppProviders } from '@cinmax/hooks';
+import { QueryProvider, ToastProvider } from '@cinmax/hooks';
 import { GlobalErrorBoundary, ToastContainer } from '@cinmax/ui';
 
 export interface ProvidersProps {
@@ -11,10 +11,13 @@ export interface ProvidersProps {
 export function Providers({ children }: ProvidersProps) {
   return (
     <GlobalErrorBoundary>
-      <AppProviders>
-        {children}
-        <ToastContainer />
-      </AppProviders>
+      <QueryProvider>
+        <ToastProvider>
+          {children}
+          <ToastContainer />
+        </ToastProvider>
+      </QueryProvider>
     </GlobalErrorBoundary>
   );
 }
+

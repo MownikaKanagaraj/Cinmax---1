@@ -1,18 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import * as fs from 'fs';
-import * as path from 'path';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://nthyavlzdgucrldtgjeo.supabase.co';
 const supabaseKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50aHlhdmx6ZGd1Y3JsZGtnamVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg1Njc2MDAsImV4cCI6MjA1NDE0MzYwMH0.123';
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50aHlhdmx6ZGd1Y3JsZHRnamVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3NTU2MDAsImV4cCI6MjEwMTMzMTYwMH0.XzL0nuUOnksJLgsT9tGlsi4-adHtosCjV4fk9-MXClc';
 
 const supabase = createClient(supabaseUrl, supabaseKey);
-
-// Local JSON File Backup path for seamless persistence
-const LOCAL_STORAGE_PATH = path.join(process.cwd(), '.next', 'home_marketing_db.json');
 
 const DEFAULT_SETTINGS = {
   id: 'default',
@@ -29,7 +24,7 @@ const DEFAULT_SETTINGS = {
       subtitle: 'Flat 40% OFF on all Gift Hampers & Combo Packs',
       buttonText: 'Shop Collection',
       linkUrl: '/shop',
-      imageUrl: 'https://images.unsplash.com/photo-1607006314147-759088fd21c2?w=1200',
+      imageUrl: 'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=1200',
       badgeText: 'New Release',
       isActive: true,
     },
@@ -51,7 +46,7 @@ const DEFAULT_SETTINGS = {
       title: 'Aloe Vera Hydrating Soap Reel',
       productName: 'Aloe Vera Bar',
       productPrice: '₹199',
-      productImage: 'https://images.unsplash.com/photo-1607006482140-520e7df6504a?w=400',
+      productImage: 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=400',
       videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
       isActive: true,
     },
@@ -67,7 +62,7 @@ const DEFAULT_SETTINGS = {
   realResults: [
     {
       id: 'r1',
-      beforeUrl: 'https://images.unsplash.com/photo-1512290900676-26c2a48f4134?w=400',
+      beforeUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400',
       afterUrl: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=400',
       quote: 'My acne cleared up in 3 weeks!',
       userName: 'Ananya V. (Neem Soap User)',
@@ -91,48 +86,31 @@ const DEFAULT_SETTINGS = {
   updatedAt: new Date().toISOString(),
 };
 
-function readLocalSettings() {
-  try {
-    if (fs.existsSync(LOCAL_STORAGE_PATH)) {
-      const data = fs.readFileSync(LOCAL_STORAGE_PATH, 'utf-8');
-      return JSON.parse(data);
-    }
-  } catch (err) {
-    console.error('Error reading local home marketing DB:', err);
-  }
-  return DEFAULT_SETTINGS;
-}
-
-function writeLocalSettings(settings: any) {
-  try {
-    const dir = path.dirname(LOCAL_STORAGE_PATH);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    fs.writeFileSync(LOCAL_STORAGE_PATH, JSON.stringify(settings, null, 2), 'utf-8');
-  } catch (err) {
-    console.error('Error writing local home marketing DB:', err);
-  }
+function sanitizeSettings<T>(data: T): T {
+  const jsonStr = JSON.stringify(data);
+  const cleanedStr = jsonStr
+    .replaceAll('photo-1607006314147-759088fd21c2', 'photo-1600857544200-b2f666a9a2ec')
+    .replaceAll('photo-1607006482140-520e7df6504a', 'photo-1608248543803-ba4f8c70ae0b')
+    .replaceAll('photo-1512290900676-26c2a48f4134', 'photo-1544005313-94ddf0286df2');
+  return JSON.parse(cleanedStr);
 }
 
 export async function GET() {
   try {
-    // Attempt Supabase query first
     const { data, error } = await supabase
       .from('home_marketing_settings')
       .select('*')
       .eq('id', 'default')
-      .single();
+      .maybeSingle();
 
     if (!error && data?.settings) {
-      return NextResponse.json({ ...DEFAULT_SETTINGS, ...data.settings, updatedAt: data.updated_at });
+      return NextResponse.json(sanitizeSettings({ ...DEFAULT_SETTINGS, ...data.settings, updatedAt: data.updated_at }));
     }
   } catch (e) {
-    console.warn('Supabase DB fetch failed, using local storage fallback:', e);
+    console.warn('Supabase DB fetch failed for home_marketing_settings:', e);
   }
 
-  const localData = readLocalSettings();
-  return NextResponse.json(localData);
+  return NextResponse.json(sanitizeSettings(DEFAULT_SETTINGS));
 }
 
 export async function POST(req: Request) {
@@ -143,18 +121,15 @@ export async function POST(req: Request) {
       updatedAt: new Date().toISOString(),
     };
 
-    // Save to local disk cache instantly
-    writeLocalSettings(updatedSettings);
+    // Sync directly to Supabase PostgreSQL table
+    const { error } = await supabase.from('home_marketing_settings').upsert({
+      id: 'default',
+      settings: updatedSettings,
+      updated_at: updatedSettings.updatedAt,
+    });
 
-    // Sync to Supabase PostgreSQL database
-    try {
-      await supabase.from('home_marketing_settings').upsert({
-        id: 'default',
-        settings: updatedSettings,
-        updated_at: updatedSettings.updatedAt,
-      });
-    } catch (dbErr) {
-      console.warn('Could not sync to Supabase table home_marketing_settings:', dbErr);
+    if (error) {
+      console.error('Supabase home_marketing_settings upsert error:', error);
     }
 
     return NextResponse.json({ success: true, data: updatedSettings });

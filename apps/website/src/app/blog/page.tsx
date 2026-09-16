@@ -14,7 +14,7 @@ export default function BlogPage() {
       excerpt: 'Exploring the slow saponification science behind why unheated plant oils produce longer lasting, richer skin lather.',
       date: 'July 28, 2026',
       category: 'Atelier Science',
-      image: 'https://images.unsplash.com/photo-1607006314147-759088fd21c2?w=600&auto=format&fit=crop&q=80',
+      image: 'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=600&auto=format&fit=crop&q=80',
     },
     {
       slug: 'wildcrafted-sea-kelp-skin-benefits',

@@ -62,9 +62,12 @@ export class OrderService {
     id: string,
     status: OrderStatus,
     reason?: string,
-    actorId?: string
+    actorId?: string,
+    trackingNumber?: string,
+    carrier?: string,
+    estimatedDeliveryDate?: string
   ): Promise<OrderEntity> {
-    return this.orderRepo.updateStatus(id, status, reason, actorId);
+    return this.orderRepo.updateStatus(id, status, reason, actorId, trackingNumber, carrier, estimatedDeliveryDate);
   }
 
   public async cancelOrder(id: string, reason?: string): Promise<OrderEntity> {

@@ -4,12 +4,12 @@ import * as path from 'path';
 
 const connectionString =
   process.env.DATABASE_URL ||
-  'postgresql://postgres.nthyavlzdgucrldtgjeo:Inaiyam%402025@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres';
+  'postgresql://postgres:Inaiyam%402025@db.nthyavlzdgucrldtgjeo.supabase.co:5432/postgres';
 
 async function applyMigrations() {
   console.log('🚀 Connecting to Supabase PostgreSQL Database...');
   const client = new Client({
-    connectionString: 'postgresql://postgres.nthyavlzdgucrldtgjeo:Inaiyam%402025@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres',
+    connectionString,
     ssl: { rejectUnauthorized: false },
   });
 

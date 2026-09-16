@@ -10,3 +10,5 @@ export * from './imageOptimizer';
 export * from './cart';
 export * from './security';
 export * from './youtube';
+export * from './loyalty';
+

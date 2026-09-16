@@ -4,15 +4,20 @@
 
 export function formatPrice(
   amount: number,
-  currency: string = 'USD',
-  locale: string = 'en-US'
+  currency: string = 'INR',
+  locale: string = 'en-IN'
 ): string {
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
+  const safeAmount = typeof amount === 'number' && !isNaN(amount) ? amount : 0;
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: currency || 'INR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(safeAmount);
+  } catch {
+    return `₹${safeAmount.toFixed(2)}`;
+  }
 }
 
 export const formatCurrency = formatPrice;
@@ -37,7 +42,7 @@ export function calculateTax(taxableAmount: number, taxRate: number = 0.08): num
 
 export function calculateFreeShippingProgress(
   subtotal: number,
-  threshold: number = 50.0
+  threshold: number = 499.0
 ): { progressPercentage: number; remainingAmount: number; isEligible: boolean } {
   if (subtotal >= threshold) {
     return { progressPercentage: 100, remainingAmount: 0, isEligible: true };

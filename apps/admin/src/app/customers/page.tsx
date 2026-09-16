@@ -5,23 +5,31 @@ import Link from 'next/link';
 import { AdminLayout } from '../../components/admin-layout';
 import { PageHeader, SearchBar } from '@cinmax/ui';
 import { formatCurrency } from '@cinmax/utils';
-import { useCustomersQuery } from '@cinmax/hooks';
+import { useCustomersQuery, useOrdersQuery } from '@cinmax/hooks';
 import type { CustomerEntity } from '@cinmax/api';
 import { ArrowUpRight } from 'lucide-react';
 
 export default function AdminCustomersPage() {
   const [search, setSearch] = React.useState('');
   const { data: customerEntities = [] } = useCustomersQuery();
+  const { data: ordersData } = useOrdersQuery(undefined, { page: 1, pageSize: 100 });
 
-  const customers = customerEntities.map((c: CustomerEntity) => ({
-    id: c.id,
-    name: c.fullName || c.email.split('@')[0],
-    email: c.email,
-    tier: `${c.loyaltyTier.toUpperCase()} Member`,
-    ordersCount: c.savedAddresses?.length || 1,
-    lifetimeSpend: (c.loyaltyPoints || 5) * 10,
-    lastOrder: new Date(c.updatedAt).toLocaleDateString(),
-  })).filter(cust =>
+  const rawOrders = ordersData?.items || [];
+
+  const customers = customerEntities.map((c: CustomerEntity) => {
+    const userOrders = rawOrders.filter((o) => o.userId === c.id || (o.guestEmail && o.guestEmail.toLowerCase() === c.email.toLowerCase()));
+    const realSpend = userOrders.reduce((sum, o) => sum + (o.grandTotal || 0), 0);
+
+    return {
+      id: c.id,
+      name: c.fullName || c.email.split('@')[0],
+      email: c.email,
+      tier: `${c.loyaltyTier.toUpperCase()} Member`,
+      ordersCount: userOrders.length,
+      lifetimeSpend: realSpend,
+      lastOrder: userOrders.length > 0 ? new Date(userOrders[0].createdAt).toLocaleDateString() : new Date(c.updatedAt).toLocaleDateString(),
+    };
+  }).filter((cust) =>
     !search ||
     cust.name.toLowerCase().includes(search.toLowerCase()) ||
     cust.email.toLowerCase().includes(search.toLowerCase())

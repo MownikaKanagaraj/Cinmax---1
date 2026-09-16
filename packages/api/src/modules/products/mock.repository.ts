@@ -177,4 +177,140 @@ export class MockProductRepository implements IProductRepository {
   ): Promise<ProductEntity[]> {
     return this.getRelatedProducts(productIdOrSlug, limit);
   }
+
+  public async createProduct(payload: import('./types').CreateProductPayload): Promise<ProductEntity> {
+    const newId = `prod_${Date.now()}`;
+    const newProduct = new ProductEntity({
+      id: newId,
+      slug: payload.slug,
+      title: payload.title,
+      subtitle: payload.subtitle,
+      description: payload.description,
+      howToUse: payload.howToUse,
+      processType: payload.processType || 'cold-process',
+      categoryId: payload.categoryId,
+      basePrice: payload.basePrice,
+      compareAtPrice: payload.compareAtPrice || null,
+      currency: payload.currency || 'INR',
+      skinTypes: payload.skinTypes || [],
+      fragranceFamily: payload.fragranceFamily || 'herbal',
+      certifications: payload.certifications || [],
+      isFeatured: payload.isFeatured ?? false,
+      isNew: payload.isNew ?? true,
+      isActive: payload.isActive ?? true,
+      images: (payload.images || []).map((img, idx) => ({
+        id: img.id || `img_${newId}_${idx}`,
+        url: img.url,
+        alt: img.alt || payload.title,
+        sortOrder: img.sortOrder ?? idx,
+        isPrimary: img.isPrimary ?? idx === 0,
+      })),
+      variants: (payload.variants && payload.variants.length > 0
+        ? payload.variants
+        : [
+            {
+              title: 'Standard Single Bar (150g)',
+              sku: `CNX-${payload.slug.toUpperCase()}-150`,
+              weightGrams: payload.weightGrams || 150,
+              volumeMl: undefined,
+              price: payload.basePrice,
+              compareAtPrice: payload.compareAtPrice || null,
+              inventoryQuantity: payload.stock ?? 25,
+              options: { Size: `${payload.weightGrams || 150}g` },
+            },
+          ]
+      ).map((v, idx) => ({
+        id: v.id || `var_${newId}_${idx}`,
+        productId: newId,
+        sku: v.sku || `CNX-${payload.slug.toUpperCase()}-${v.volumeMl ? `${v.volumeMl}ML` : v.weightGrams ? `${v.weightGrams}G` : (idx + 1) * 100}`,
+        title: v.title,
+        weightGrams: v.weightGrams,
+        volumeMl: v.volumeMl,
+        price: Number(v.price),
+        compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
+        inventoryQuantity: v.inventoryQuantity ?? 25,
+        lowStockThreshold: v.lowStockThreshold ?? 10,
+        isAvailable: v.isAvailable ?? true,
+        options: v.options || {},
+      })),
+      ingredients: (payload.ingredients || []).map((ing, idx) => ({
+        id: ing.id || `ing_${newId}_${idx}`,
+        name: ing.name,
+        inciName: ing.inciName,
+        purpose: ing.purpose,
+        isOrganic: ing.isOrganic ?? true,
+        isKeyBotanical: ing.isKeyBotanical ?? false,
+        sortOrder: ing.sortOrder ?? idx,
+      })),
+      averageRating: 5.0,
+      reviewCount: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    this.products.unshift(newProduct);
+    return newProduct;
+  }
+
+  public async updateProduct(id: string, payload: import('./types').UpdateProductPayload): Promise<ProductEntity> {
+    const idx = this.products.findIndex((p) => p.id === id);
+    if (idx === -1) throw new Error(`Product not found: ${id}`);
+
+    const existing = this.products[idx];
+    const updatedImages = payload.images
+      ? payload.images.map((img, i) => ({
+          id: img.id || `img_${id}_${i}`,
+          productId: id,
+          url: img.url,
+          alt: img.alt || existing.title,
+          sortOrder: img.sortOrder ?? i,
+          isPrimary: Boolean(img.isPrimary),
+        }))
+      : existing.images;
+
+    const updatedVariants = payload.variants
+      ? payload.variants.map((v, i) => ({
+          id: v.id || `var_${id}_${i}`,
+          productId: id,
+          sku: v.sku || `CNX-${(payload.slug || existing.slug).toUpperCase()}-${v.volumeMl ? `${v.volumeMl}ML` : v.weightGrams ? `${v.weightGrams}G` : (i + 1) * 100}`,
+          title: v.title,
+          weightGrams: v.weightGrams,
+          volumeMl: v.volumeMl,
+          price: Number(v.price),
+          compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
+          inventoryQuantity: v.inventoryQuantity ?? 25,
+          lowStockThreshold: v.lowStockThreshold ?? 10,
+          isAvailable: v.isAvailable ?? true,
+          options: v.options || {},
+        }))
+      : existing.variants;
+
+    const updatedIngredients = payload.ingredients
+      ? payload.ingredients.map((ing, i) => ({
+          id: ing.id || `ing_${id}_${i}`,
+          productId: id,
+          name: ing.name,
+          inciName: ing.inciName,
+          purpose: ing.purpose,
+          isOrganic: Boolean(ing.isOrganic),
+          isKeyBotanical: Boolean(ing.isKeyBotanical),
+          sortOrder: ing.sortOrder ?? i,
+        }))
+      : existing.ingredients;
+
+    const updated = new ProductEntity({
+      ...existing,
+      ...payload,
+      images: updatedImages,
+      variants: updatedVariants,
+      ingredients: updatedIngredients,
+      updatedAt: new Date().toISOString(),
+    });
+    this.products[idx] = updated;
+    return updated;
+  }
+
+  public async deleteProduct(id: string): Promise<void> {
+    this.products = this.products.filter((p) => p.id !== id);
+  }
 }

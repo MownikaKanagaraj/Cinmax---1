@@ -4,3 +4,5 @@ export * from './order';
 export * from './user';
 export * from './review';
 export * from './marketing';
+export * from './playlist';
+

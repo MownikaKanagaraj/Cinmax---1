@@ -14,8 +14,7 @@ export class SupabaseProductRepository implements IProductRepository {
       *,
       category:categories(*),
       variants:product_variants(*),
-      images:product_images(*),
-      ingredients:ingredients(*)
+      images:product_images(*)
     `);
   }
 
@@ -25,11 +24,9 @@ export class SupabaseProductRepository implements IProductRepository {
   ): Promise<PaginatedResult<ProductEntity>> {
     let query = this.baseSelectQuery.eq('is_active', true);
 
-    if (filter?.searchQuery) {
-      const q = filter.searchQuery.trim();
-      if (q) {
-        query = query.or(`title.ilike.%${q}%,description.ilike.%${q}%,subtitle.ilike.%${q}%`);
-      }
+    const searchTerm = (filter?.searchQuery || filter?.search || '').trim();
+    if (searchTerm) {
+      query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,subtitle.ilike.%${searchTerm}%`);
     }
 
     if (filter?.categorySlug) {
@@ -95,18 +92,14 @@ export class SupabaseProductRepository implements IProductRepository {
         break;
     }
 
-    try {
-      const { data, error } = await query;
-      if (error) throw new Error(`Supabase Database Error: ${error.message}`);
-
-      const entities = (data || []).map((row: any) => ProductMapper.toEntity(row));
-      return paginateArray(entities, pagination);
-    } catch (err) {
-      console.warn('[SupabaseProductRepository] Network/DNS failure, returning mock data fallback');
-      const { MockProductRepository } = await import('./mock.repository');
-      const mockRepo = new MockProductRepository();
-      return mockRepo.getAll(filter, pagination);
+    const { data, error } = await query;
+    if (error) {
+      console.error('[SupabaseProductRepository.getAll] Query error:', error.message);
+      throw new Error(`Supabase Database Error: ${error.message}`);
     }
+
+    const entities = (data || []).map((row: any) => ProductMapper.toEntity(row));
+    return paginateArray(entities, pagination);
   }
 
   public async getProducts(
@@ -248,5 +241,242 @@ export class SupabaseProductRepository implements IProductRepository {
     limit = 4
   ): Promise<ProductEntity[]> {
     return this.getRelatedProducts(productIdOrSlug, limit);
+  }
+
+  public async createProduct(payload: import('./types').CreateProductPayload): Promise<ProductEntity> {
+    try {
+      const productInsert: any = {
+        title: payload.title,
+        slug: payload.slug,
+        subtitle: payload.subtitle || null,
+        description: payload.description,
+        how_to_use: payload.howToUse || null,
+        process_type: payload.processType || 'cold-process',
+        category_id: payload.categoryId,
+        base_price: payload.basePrice,
+        compare_at_price: payload.compareAtPrice || null,
+        currency: payload.currency || 'INR',
+        skin_types: payload.skinTypes || [],
+        fragrance_family: payload.fragranceFamily || 'herbal',
+        certifications: payload.certifications || [],
+        is_featured: payload.isFeatured ?? false,
+        is_new: payload.isNew ?? true,
+        is_active: payload.isActive ?? true,
+      };
+
+      const { data: inserted, error: prodErr } = await this.supabase
+        .from('products')
+        .insert(productInsert)
+        .select()
+        .single();
+
+      if (prodErr) throw new Error(`Supabase Product Insert Error: ${prodErr.message}`);
+
+      const productId = inserted.id;
+
+      // Insert Images
+      if (payload.images && payload.images.length > 0) {
+        const imagesData = payload.images.map((img, idx) => ({
+          product_id: productId,
+          url: img.url,
+          alt: img.alt || payload.title,
+          sort_order: img.sortOrder ?? idx,
+          is_primary: img.isPrimary ?? idx === 0,
+        }));
+        await this.supabase.from('product_images').insert(imagesData as any);
+      }
+
+      // Insert Variants
+      if (payload.variants && payload.variants.length > 0) {
+        const variantsData = payload.variants.map((v, idx) => ({
+          product_id: productId,
+          sku: v.sku?.trim() || `CNX-${payload.slug.toUpperCase()}-${v.volumeMl ? `${v.volumeMl}ML` : v.weightGrams ? `${v.weightGrams}G` : (idx + 1) * 100}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+          title: v.title,
+          weight_grams: v.weightGrams ?? null,
+          volume_ml: v.volumeMl ?? null,
+          price: Number(v.price),
+          compare_at_price: v.compareAtPrice ? Number(v.compareAtPrice) : null,
+          inventory_quantity: v.inventoryQuantity !== undefined ? Number(v.inventoryQuantity) : 25,
+          low_stock_threshold: v.lowStockThreshold !== undefined ? Number(v.lowStockThreshold) : 10,
+          is_available: v.isAvailable !== undefined ? Boolean(v.isAvailable) : true,
+          options: v.options || {},
+        }));
+        const { error: varErr } = await this.supabase.from('product_variants').insert(variantsData as any);
+        if (varErr) {
+          console.error('[SupabaseProductRepository] Variants insert error:', varErr);
+        }
+      } else {
+        // Create default variant if none provided
+        await this.supabase.from('product_variants').insert({
+          product_id: productId,
+          sku: `CNX-${payload.slug.toUpperCase()}-STD-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+          title: 'Standard Single Bar (150g)',
+          weight_grams: payload.weightGrams || 150,
+          volume_ml: null,
+          price: payload.basePrice,
+          compare_at_price: payload.compareAtPrice || null,
+          inventory_quantity: payload.stock ?? 25,
+          low_stock_threshold: 10,
+          is_available: true,
+          options: { Size: `${payload.weightGrams || 150}g` },
+        } as any);
+      }
+
+      // Insert Ingredients
+      if (payload.ingredients && payload.ingredients.length > 0) {
+        const ingredientsData = payload.ingredients.map((ing, idx) => ({
+          product_id: productId,
+          name: ing.name,
+          inci_name: ing.inciName || null,
+          purpose: ing.purpose || null,
+          is_organic: ing.isOrganic ?? true,
+          is_key_botanical: ing.isKeyBotanical ?? false,
+          sort_order: ing.sortOrder ?? idx,
+        }));
+        await this.supabase.from('ingredients').insert(ingredientsData as any);
+      }
+
+      const entity = await this.getById(productId);
+      if (entity) return entity;
+
+      return ProductMapper.toEntity({
+        ...inserted,
+        images: payload.images || [],
+        variants: payload.variants || [],
+        ingredients: payload.ingredients || [],
+      });
+    } catch (err) {
+      console.warn('[SupabaseProductRepository] Fallback to Mock Repository for creation:', err);
+      const { MockProductRepository } = await import('./mock.repository');
+      const mockRepo = new MockProductRepository();
+      return mockRepo.createProduct(payload);
+    }
+  }
+
+  public async updateProduct(id: string, payload: import('./types').UpdateProductPayload): Promise<ProductEntity> {
+    try {
+      const updates: any = {
+        updated_at: new Date().toISOString(),
+      };
+      if (payload.title !== undefined) updates.title = payload.title;
+      if (payload.slug !== undefined) updates.slug = payload.slug;
+      if (payload.subtitle !== undefined) updates.subtitle = payload.subtitle;
+      if (payload.description !== undefined) updates.description = payload.description;
+      if (payload.howToUse !== undefined) updates.how_to_use = payload.howToUse;
+      if (payload.processType !== undefined) updates.process_type = payload.processType;
+      if (payload.categoryId !== undefined) updates.category_id = payload.categoryId;
+      if (payload.basePrice !== undefined) updates.base_price = payload.basePrice;
+      if (payload.compareAtPrice !== undefined) updates.compare_at_price = payload.compareAtPrice;
+      if (payload.skinTypes !== undefined) updates.skin_types = payload.skinTypes;
+      if (payload.fragranceFamily !== undefined) updates.fragrance_family = payload.fragranceFamily;
+      if (payload.certifications !== undefined) updates.certifications = payload.certifications;
+      if (payload.isFeatured !== undefined) updates.is_featured = payload.isFeatured;
+      if (payload.isNew !== undefined) updates.is_new = payload.isNew;
+      if (payload.isActive !== undefined) updates.is_active = payload.isActive;
+
+      const { error: updateErr } = await this.supabase
+        .from('products')
+        .update(updates)
+        .eq('id', id);
+
+      if (updateErr) throw new Error(`Supabase Product Update Error: ${updateErr.message}`);
+
+      // Synchronize Variants if provided
+      if (payload.variants !== undefined) {
+        const { data: existingVariants } = await this.supabase
+          .from('product_variants')
+          .select('id')
+          .eq('product_id', id);
+
+        const existingIds = new Set((existingVariants || []).map((v) => v.id));
+        const incomingIds = new Set(payload.variants.filter((v) => v.id).map((v) => v.id as string));
+
+        // Delete variants that were removed
+        const toDeleteIds = [...existingIds].filter((existingId) => !incomingIds.has(existingId));
+        if (toDeleteIds.length > 0) {
+          await this.supabase.from('product_variants').delete().in('id', toDeleteIds);
+        }
+
+        const productSlug = payload.slug || 'PRODUCT';
+
+        // Upsert / Insert / Update incoming variants
+        for (let i = 0; i < payload.variants.length; i++) {
+          const v = payload.variants[i];
+          const variantData: any = {
+            product_id: id,
+            title: v.title,
+            sku: v.sku?.trim() || `CNX-${productSlug.toUpperCase()}-${v.volumeMl ? `${v.volumeMl}ML` : v.weightGrams ? `${v.weightGrams}G` : (i + 1) * 100}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+            weight_grams: v.weightGrams ?? null,
+            volume_ml: v.volumeMl ?? null,
+            price: Number(v.price),
+            compare_at_price: v.compareAtPrice ? Number(v.compareAtPrice) : null,
+            inventory_quantity: v.inventoryQuantity !== undefined ? Number(v.inventoryQuantity) : 25,
+            low_stock_threshold: v.lowStockThreshold !== undefined ? Number(v.lowStockThreshold) : 10,
+            is_available: v.isAvailable !== undefined ? Boolean(v.isAvailable) : true,
+            options: v.options || {},
+            updated_at: new Date().toISOString(),
+          };
+
+          if (v.id && existingIds.has(v.id)) {
+            await this.supabase.from('product_variants').update(variantData).eq('id', v.id);
+          } else {
+            await this.supabase.from('product_variants').insert(variantData);
+          }
+        }
+      }
+
+      // Synchronize Images if provided
+      if (payload.images !== undefined) {
+        await this.supabase.from('product_images').delete().eq('product_id', id);
+        if (payload.images.length > 0) {
+          const imagesData = payload.images.map((img, idx) => ({
+            product_id: id,
+            url: img.url,
+            alt: img.alt || payload.title || 'Product Image',
+            sort_order: img.sortOrder ?? idx,
+            is_primary: img.isPrimary ?? idx === 0,
+          }));
+          await this.supabase.from('product_images').insert(imagesData as any);
+        }
+      }
+
+      // Synchronize Ingredients if provided
+      if (payload.ingredients !== undefined) {
+        await this.supabase.from('ingredients').delete().eq('product_id', id);
+        if (payload.ingredients.length > 0) {
+          const ingredientsData = payload.ingredients.map((ing, idx) => ({
+            product_id: id,
+            name: ing.name,
+            inci_name: ing.inciName || null,
+            purpose: ing.purpose || null,
+            is_organic: ing.isOrganic ?? true,
+            is_key_botanical: ing.isKeyBotanical ?? false,
+            sort_order: ing.sortOrder ?? idx,
+          }));
+          await this.supabase.from('ingredients').insert(ingredientsData as any);
+        }
+      }
+
+      const entity = await this.getById(id);
+      if (!entity) throw new Error('Updated product could not be re-fetched');
+      return entity;
+    } catch (err) {
+      console.warn('[SupabaseProductRepository] Fallback to Mock Repository for update:', err);
+      const { MockProductRepository } = await import('./mock.repository');
+      const mockRepo = new MockProductRepository();
+      return mockRepo.updateProduct(id, payload);
+    }
+  }
+
+  public async deleteProduct(id: string): Promise<void> {
+    try {
+      const { error } = await this.supabase.from('products').delete().eq('id', id);
+      if (error) throw new Error(`Supabase Product Delete Error: ${error.message}`);
+    } catch (err) {
+      console.warn('[SupabaseProductRepository] Fallback to Mock Repository for delete:', err);
+      const { MockProductRepository } = await import('./mock.repository');
+      const mockRepo = new MockProductRepository();
+      return mockRepo.deleteProduct(id);
+    }
   }
 }

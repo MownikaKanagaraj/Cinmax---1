@@ -13,4 +13,8 @@ export * from './useAuthDomain';
 export * from './useCheckoutDomain';
 export * from './useAdminOperations';
 export * from './useOperationsDomain';
+export * from './useVideos';
+export * from './usePlaylists';
+export * from './useLoyaltyDomain';
 export * from '../useHomeMarketingQuery';
+

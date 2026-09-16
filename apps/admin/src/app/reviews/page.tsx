@@ -5,7 +5,7 @@ import { AdminLayout } from '../../components/admin-layout';
 import { PageHeader, Badge, RatingStars, Button } from '@cinmax/ui';
 import { useReviewsQuery, useUpdateReviewStatusMutation } from '@cinmax/hooks';
 import type { ReviewEntity } from '@cinmax/api';
-import { Sparkles, Plus, Trash2, Edit2, Star, Image as ImageIcon, X } from 'lucide-react';
+import { Sparkles, Plus, Trash2, Edit2, Star, Image as ImageIcon, X, Check } from 'lucide-react';
 
 export default function AdminReviewsPage() {
   const { data: reviewsData } = useReviewsQuery();
@@ -156,54 +156,90 @@ export default function AdminReviewsPage() {
           </div>
         </div>
       ) : (
-        <div className="space-y-4 pt-6">
-          {reviews.map((r) => (
-            <div
-              key={r.id}
-              className="p-6 rounded-[24px] bg-white dark:bg-[#071324] border border-[#0A3D78]/10 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6"
-            >
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <span className="font-bold text-sm text-[#002754] dark:text-white">
-                    {r.author}
-                  </span>
-                  <RatingStars rating={r.rating} size="sm" />
-                  <Badge variant={r.status === 'published' ? 'success' : 'gold'}>
-                    {r.status.replace('_', ' ').toUpperCase()}
-                  </Badge>
-                </div>
-                <p className="text-xs font-semibold text-[#0A3D78] dark:text-[#C5A880]">
-                  {r.product}
-                </p>
-                <p className="text-sm text-muted-foreground italic leading-relaxed">
-                  "{r.comment}"
-                </p>
-                <p className="text-[10px] text-muted-foreground">Submitted on {r.date}</p>
+        <div className="space-y-6 pt-6">
+          {/* Loyalty Banner Info */}
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-900 to-indigo-900 text-white flex items-center justify-between shadow-md">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-amber-400">
+                <Star className="w-5 h-5 fill-amber-400 text-amber-400" />
               </div>
+              <div>
+                <h4 className="font-bold text-xs tracking-wide">Automatic Loyalty Integration Active</h4>
+                <p className="text-[11px] text-blue-200">
+                  Approving verified customer reviews automatically awards <b>+4 Loyalty Points</b> to their digital wallet.
+                </p>
+              </div>
+            </div>
+            <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30">
+              Duplicate-Proof Enabled
+            </span>
+          </div>
 
-              <div className="flex gap-2">
-                {r.status !== 'published' ? (
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    className="rounded-full text-xs"
-                    onClick={() => updateStatusMutation.mutate({ id: r.id, status: 'approved' })}
-                  >
-                    Approve Review
-                  </Button>
-                ) : (
+          <div className="space-y-4">
+            {reviews.map((r) => (
+              <div
+                key={r.id}
+                className="p-6 rounded-[24px] bg-white dark:bg-[#071324] border border-[#0A3D78]/10 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6"
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <span className="font-bold text-sm text-[#002754] dark:text-white">
+                      {r.author}
+                    </span>
+                    <RatingStars rating={r.rating} size="sm" />
+                    <Badge variant={r.status === 'published' ? 'success' : 'gold'}>
+                      {r.status.replace('_', ' ').toUpperCase()}
+                    </Badge>
+                  </div>
+                  <p className="text-xs font-semibold text-[#0A3D78] dark:text-[#C5A880]">
+                    {r.product}
+                  </p>
+                  <p className="text-sm text-muted-foreground italic leading-relaxed">
+                    "{r.comment}"
+                  </p>
+                  <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
+                    <span>Submitted on {r.date}</span>
+                    {r.status === 'published' && (
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                        <Check className="w-3 h-3 text-emerald-500" />
+                        <span>+50 Loyalty Points Awarded</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  {r.status !== 'published' ? (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      className="rounded-full text-xs font-bold"
+                      onClick={() => updateStatusMutation.mutate({ id: r.id, status: 'approved' })}
+                    >
+                      Approve &amp; Award +4 Pts
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full text-xs"
+                      onClick={() => updateStatusMutation.mutate({ id: r.id, status: 'rejected' })}
+                    >
+                      Unpublish
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
-                    className="rounded-full text-xs"
+                    className="rounded-full text-xs text-red-600 hover:bg-red-50"
                     onClick={() => updateStatusMutation.mutate({ id: r.id, status: 'rejected' })}
                   >
-                    Unpublish
+                    <Trash2 className="w-3.5 h-3.5" />
                   </Button>
-                )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
 

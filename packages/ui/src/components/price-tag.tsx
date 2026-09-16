@@ -12,7 +12,7 @@ export interface PriceTagProps {
 export function PriceTag({
   price,
   compareAtPrice,
-  currency = 'USD',
+  currency = 'INR',
   size = 'md',
   className,
 }: PriceTagProps) {
@@ -23,16 +23,18 @@ export function PriceTag({
     xl: 'text-2xl font-bold',
   };
 
-  const hasDiscount = compareAtPrice && compareAtPrice > price;
+  const safePrice = typeof price === 'number' && !isNaN(price) ? price : 0;
+  const safeCompareAt = typeof compareAtPrice === 'number' && !isNaN(compareAtPrice) ? compareAtPrice : null;
+  const hasDiscount = Boolean(safeCompareAt && safeCompareAt > safePrice);
 
   return (
     <div className={cn('inline-flex items-baseline space-x-2', className)}>
       <span className={cn('text-[#002754]', sizeClasses[size])}>
-        {formatPrice(price, currency)}
+        {formatPrice(safePrice, currency)}
       </span>
-      {hasDiscount && (
+      {hasDiscount && safeCompareAt !== null && (
         <span className="text-xs text-[#737781] line-through">
-          {formatPrice(compareAtPrice, currency)}
+          {formatPrice(safeCompareAt, currency)}
         </span>
       )}
     </div>

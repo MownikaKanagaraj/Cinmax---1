@@ -69,3 +69,27 @@ export class SearchProductsUseCase {
     return this.productRepo.search(query, filter, pagination);
   }
 }
+
+export class CreateProductUseCase {
+  constructor(private productRepo: IProductRepository) {}
+
+  public async execute(payload: import('./types').CreateProductPayload): Promise<ProductEntity> {
+    return this.productRepo.createProduct(payload);
+  }
+}
+
+export class UpdateProductUseCase {
+  constructor(private productRepo: IProductRepository) {}
+
+  public async execute(id: string, payload: import('./types').UpdateProductPayload): Promise<ProductEntity> {
+    return this.productRepo.updateProduct(id, payload);
+  }
+}
+
+export class DeleteProductUseCase {
+  constructor(private productRepo: IProductRepository) {}
+
+  public async execute(id: string): Promise<void> {
+    return this.productRepo.deleteProduct(id);
+  }
+}

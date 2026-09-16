@@ -15,6 +15,8 @@ import type {
   IBlogRepository,
   ISettingsRepository,
   IAuthRepository,
+  IVideoRepository,
+  IPlaylistRepository,
 } from '../modules';
 import type {
   ProductService,
@@ -30,6 +32,7 @@ import type {
   AuthService,
   AdminService,
   OperationsService,
+  HomeMarketingService,
 } from '../services';
 
 export interface ContainerConfig {
@@ -55,6 +58,8 @@ export interface IContainer {
   readonly blogRepo: IBlogRepository;
   readonly settingsRepo: ISettingsRepository;
   readonly authRepo: IAuthRepository;
+  readonly videoRepo: IVideoRepository;
+  readonly playlistRepo: IPlaylistRepository;
 
   // Services
   readonly products: ProductService;

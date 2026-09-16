@@ -17,7 +17,8 @@ export function calculateCartTotals(
   discountAmountOrPercentage: number = 0,
   taxRate: number = 0.08,
   freeShippingThreshold: number = 50.0,
-  flatShippingRate: number = 6.95
+  flatShippingRate: number = 6.95,
+  discountType: 'percentage' | 'fixed_amount' | 'free_shipping' = 'percentage'
 ): CartTotalsResult {
   const subtotal = items.reduce(
     (sum, item) => sum + (item.totalPrice || item.unitPrice * item.quantity),
@@ -25,19 +26,29 @@ export function calculateCartTotals(
   );
 
   let discountTotal = 0;
+  let shippingTotal = subtotal === 0 || subtotal >= freeShippingThreshold ? 0 : flatShippingRate;
+
   if (discountAmountOrPercentage > 0) {
-    if (discountAmountOrPercentage <= 100) {
+    if (discountType === 'percentage') {
       discountTotal = (subtotal * discountAmountOrPercentage) / 100;
+    } else if (discountType === 'fixed_amount') {
+      discountTotal = Math.min(subtotal, discountAmountOrPercentage);
+    } else if (discountType === 'free_shipping') {
+      shippingTotal = 0;
+      discountTotal = flatShippingRate;
     } else {
-      discountTotal = discountAmountOrPercentage;
+      if (discountAmountOrPercentage <= 100) {
+        discountTotal = (subtotal * discountAmountOrPercentage) / 100;
+      } else {
+        discountTotal = Math.min(subtotal, discountAmountOrPercentage);
+      }
     }
   }
 
   const discountedSubtotal = Math.max(0, subtotal - discountTotal);
   const taxTotal = Math.round(discountedSubtotal * taxRate * 100) / 100;
-  const shippingTotal =
-    subtotal === 0 || discountedSubtotal >= freeShippingThreshold ? 0 : flatShippingRate;
   const grandTotal = Math.round((discountedSubtotal + taxTotal + shippingTotal) * 100) / 100;
+
 
   const roundedSubtotal = Math.round(subtotal * 100) / 100;
   const roundedDiscount = Math.round(discountTotal * 100) / 100;

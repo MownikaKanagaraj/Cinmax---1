@@ -7,8 +7,11 @@ import { RewardPointEngine, type RewardCalculationResult } from './reward.engine
 
 export interface PricingEngineInput {
   items: CartItem[];
+  shippingState?: string | null;
   coupon?: CouponRule | null;
   loyaltyTier?: LoyaltyTier;
+  userLoyaltyBalance?: number;
+  loyaltyPointsRedeemed?: number;
   isIntraState?: boolean;
   isFirstOrder?: boolean;
   customerRedemptionCount?: number;
@@ -20,6 +23,10 @@ export interface PricingEngineOutput {
   basePriceTotal: number;
   campaignDiscountTotal: number;
   couponResult: CouponEvaluationResult | null;
+  maxLoyaltyRedemption: number;
+  loyaltyDiscount: number;
+  loyaltyPointsRedeemed: number;
+  netProductPrice: number;
   taxResult: TaxResult;
   shippingResult: ShippingResult;
   inventoryValidation: InventoryCartValidationResult;
@@ -33,24 +40,28 @@ export class PricingEngine {
   public static calculate(input: PricingEngineInput): PricingEngineOutput {
     const {
       items,
+      shippingState,
       coupon,
       loyaltyTier = 'bronze',
+      userLoyaltyBalance = 0,
+      loyaltyPointsRedeemed = 0,
       isIntraState = true,
       isFirstOrder = false,
       customerRedemptionCount = 0,
-      totalWeightGrams = 0,
     } = input;
 
     let subtotal = 0;
     let basePriceTotal = 0;
+    let totalProducts = 0;
 
     items.forEach((item) => {
       const itemPrice = item.unitPrice ?? (item.variant?.price || (item.product as any)?.basePrice || 0);
       const itemCompareAt = (item.variant as any)?.compareAtPrice ?? (item.product as any)?.compareAtPrice ?? itemPrice;
-      const qty = item.quantity;
+      const qty = item.quantity || 0;
 
       subtotal += itemPrice * qty;
       basePriceTotal += itemCompareAt * qty;
+      totalProducts += qty;
     });
 
     subtotal = Math.round(subtotal * 100) / 100;
@@ -81,19 +92,27 @@ export class PricingEngine {
       }
     }
 
-    const discountedSubtotal = Math.max(0, Math.round((subtotal - couponDiscount) * 100) / 100);
+    const afterCoupon = Math.max(0, Math.round((subtotal - couponDiscount) * 100) / 100);
+
+    // Loyalty Points Validation (Max 20% of net product subtotal after coupon)
+    const maxLoyaltyRedemption = Math.floor(afterCoupon * 0.20);
+    const validPointsToRedeem = Math.max(0, Math.min(Math.floor(userLoyaltyBalance), maxLoyaltyRedemption, Math.floor(loyaltyPointsRedeemed)));
+    const loyaltyDiscount = validPointsToRedeem; // 1 Point = ₹1
+
+    const netProductPrice = Math.max(0, Math.round((afterCoupon - loyaltyDiscount) * 100) / 100);
 
     // Tax Engine
     const taxResult = TaxEngine.calculateTax({
-      subtotal: discountedSubtotal,
+      subtotal: netProductPrice,
       gstRate: 18,
       isIntraState,
     });
 
-    // Shipping Engine
+    // Shipping Engine (Centralized Delivery Charge Algorithm)
     const shippingResult = ShippingEngine.calculateShipping({
-      subtotal: discountedSubtotal,
-      totalWeightGrams,
+      subtotal: netProductPrice,
+      state: shippingState,
+      totalProducts,
     });
 
     // Inventory Engine
@@ -106,25 +125,29 @@ export class PricingEngine {
       }))
     );
 
-    const grandTotal = Math.round((discountedSubtotal + taxResult.taxTotal + shippingResult.shippingTotal) * 100) / 100;
+    const grandTotal = Math.round((netProductPrice + shippingResult.shippingTotal) * 100) / 100;
 
-    // Reward Point Engine
-    const rewardResult = RewardPointEngine.calculatePoints(grandTotal, loyaltyTier);
+    // Reward Point Engine (1 Point per ₹1 of eligible net product amount)
+    const rewardResult = RewardPointEngine.calculatePoints(netProductPrice, loyaltyTier);
 
-    const totalPatronSavings = Math.round((campaignDiscountTotal + couponDiscount) * 100) / 100;
+    const totalPatronSavings = Math.round((campaignDiscountTotal + couponDiscount + loyaltyDiscount) * 100) / 100;
 
     return {
       subtotal,
       basePriceTotal,
       campaignDiscountTotal,
       couponResult,
+      maxLoyaltyRedemption,
+      loyaltyDiscount,
+      loyaltyPointsRedeemed: validPointsToRedeem,
+      netProductPrice,
       taxResult,
       shippingResult,
       inventoryValidation,
       rewardResult,
       grandTotal,
       totalPatronSavings,
-      currency: 'USD',
+      currency: 'INR',
     };
   }
 }

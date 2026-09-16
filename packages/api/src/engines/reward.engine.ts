@@ -21,11 +21,11 @@ export class RewardPointEngine {
     }
   }
 
-  public static calculatePoints(grandTotal: number, tier: LoyaltyTier = 'bronze'): RewardCalculationResult {
-    const basePoints = Math.max(0, Math.floor(grandTotal));
+  public static calculatePoints(eligibleAmount: number, tier: LoyaltyTier = 'bronze'): RewardCalculationResult {
+    const basePoints = Math.max(0, Math.floor(eligibleAmount));
     const multiplier = this.getMultiplier(tier);
     const pointsEarned = Math.round(basePoints * multiplier);
-    const pointsValueAmount = Math.round((pointsEarned * 0.05) * 100) / 100; // $0.05 value per point
+    const pointsValueAmount = pointsEarned * 1.0; // ₹1 discount value per point
 
     return {
       pointsEarned,

@@ -1,3 +1,14 @@
+export interface TopOfferItem {
+  id: string;
+  text: string;
+  linkUrl?: string;
+  code?: string;
+  minSubtotal?: number;
+  offerType?: 'free_shipping' | 'coupon_code' | 'link' | 'announcement';
+  isActive: boolean;
+  sortOrder?: number;
+}
+
 export interface HeroBannerItem {
   id: string;
   title: string;
@@ -47,7 +58,7 @@ export interface PromoBannerConfig {
 }
 
 export interface HomeMarketingSettings {
-  topOffers: string[];
+  topOffers: (string | TopOfferItem)[];
   heroBanners: HeroBannerItem[];
   watchShopVideos: WatchShopVideoItem[];
   midBanner: PromoBannerConfig;

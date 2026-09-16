@@ -24,7 +24,15 @@ export interface IOrderRepository {
   getByUserId(userId: string, pagination?: PaginationParams): Promise<PaginatedResult<OrderEntity>>;
   getCustomerOrders(userId: string, pagination?: PaginationParams): Promise<PaginatedResult<OrderEntity>>;
   create(order: CreateOrderInput): Promise<OrderEntity>;
-  updateStatus(id: string, status: OrderStatus, reason?: string, actorId?: string): Promise<OrderEntity>;
+  updateStatus(
+    id: string,
+    status: OrderStatus,
+    reason?: string,
+    actorId?: string,
+    trackingNumber?: string,
+    carrier?: string,
+    estimatedDeliveryDate?: string
+  ): Promise<OrderEntity>;
   cancel(id: string, reason?: string): Promise<OrderEntity>;
   returnOrder(id: string, reason: string): Promise<OrderEntity>;
   refundOrder(id: string, amount?: number): Promise<OrderEntity>;

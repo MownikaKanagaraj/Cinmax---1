@@ -55,8 +55,21 @@ export interface DeliveryCalculationResult {
 }
 
 /**
- * Calculates delivery charges according to CinMax business rules.
- * Single centralized delivery charge algorithm.
+ * Single Centralized Delivery Charge Algorithm for CinMax E-Commerce.
+ * 
+ * Rules:
+ * 1. Tamil Nadu / Puducherry:
+ *    1-5 products => ₹60
+ *    6+ products  => ₹0 (FREE)
+ * 
+ * 2. Kerala / Karnataka / Andhra Pradesh / Telangana:
+ *    1-5 products => ₹80
+ *    6-10 products => ₹0 (FREE)
+ *    11+ products  => ₹10 * TOTAL PRODUCT QUANTITY
+ * 
+ * 3. All Other States:
+ *    1-10 products => ₹140
+ *    11+ products  => ₹10 * TOTAL PRODUCT QUANTITY
  */
 export function calculateDeliveryCharge(
   state: string | null | undefined,
@@ -74,16 +87,26 @@ export function calculateDeliveryCharge(
     };
   }
 
-  let deliveryCharge = 0;
+  if (qty === 0) {
+    return {
+      state: normalizedState,
+      totalProducts: 0,
+      deliveryCharge: 0,
+      isFreeDelivery: true,
+    };
+  }
 
-  if (normalizedState === 'Tamil Nadu' || normalizedState === 'Puducherry') {
+  let deliveryCharge = 0;
+  const s = normalizedState.toLowerCase();
+
+  if (s === 'tamil nadu' || s === 'puducherry' || s === 'pondicherry') {
     if (qty <= 5) {
       deliveryCharge = 60;
     } else {
       deliveryCharge = 0;
     }
   } else if (
-    ['Kerala', 'Karnataka', 'Andhra Pradesh', 'Telangana'].includes(normalizedState)
+    ['kerala', 'karnataka', 'andhra pradesh', 'telangana'].includes(s)
   ) {
     if (qty <= 5) {
       deliveryCharge = 80;

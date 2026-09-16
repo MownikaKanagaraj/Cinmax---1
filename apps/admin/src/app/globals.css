@@ -1,11 +1,108 @@
-@import '@cinmax/theme/globals.css';
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Smooth admin page transitions */
+@layer base {
+  :root {
+    /* Azure Luxe System Tokens */
+    --background: 210 20% 98%;       /* #F7F9FB */
+    --foreground: 204 10% 11%;       /* #191C1E */
+
+    --card: 0 0% 100%;               /* #FFFFFF */
+    --card-foreground: 204 10% 11%;  /* #191C1E */
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 204 10% 11%;
+
+    --primary: 213 85% 26%;          /* #0A3D78 */
+    --primary-foreground: 0 0% 100%; /* #FFFFFF */
+
+    --secondary: 218 33% 41%;        /* #465F8A */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 210 14% 93%;            /* #ECEEF0 */
+    --muted-foreground: 220 9% 29%;  /* #434750 */
+
+    --accent: 214 90% 95%;           /* #EBF3FF */
+    --accent-foreground: 213 85% 26%;
+
+    --destructive: 0 75% 42%;        /* #BA1A1A */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 20% 91%;           /* #E2E8F0 */
+    --input: 214 20% 91%;
+    --ring: 213 85% 26%;
+
+    --radius: 1.25rem;               /* 20px for luxury containers */
+  }
+
+  .dark {
+    --background: 222 25% 10%;
+    --foreground: 210 20% 98%;
+
+    --card: 222 25% 12%;
+    --card-foreground: 210 20% 98%;
+
+    --popover: 222 25% 12%;
+    --popover-foreground: 210 20% 98%;
+
+    --primary: 213 90% 65%;
+    --primary-foreground: 222 47% 11%;
+
+    --secondary: 217 33% 30%;
+    --secondary-foreground: 210 20% 98%;
+
+    --muted: 223 20% 18%;
+    --muted-foreground: 215 15% 65%;
+
+    --accent: 217 33% 20%;
+    --accent-foreground: 210 20% 98%;
+
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 210 20% 98%;
+
+    --border: 220 15% 20%;
+    --input: 220 15% 20%;
+    --ring: 213 90% 65%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-slate-50 dark:bg-[#070F1E] text-slate-900 dark:text-slate-100;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
 @layer utilities {
+  .glass-card {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .glass-nav {
+    background: rgba(247, 249, 251, 0.85);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+  }
+
+  .luxury-gradient-btn {
+    background: linear-gradient(135deg, #0A3D78 0%, #1E5AAD 100%);
+    box-shadow: 0 4px 14px 0 rgba(10, 61, 120, 0.25);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .luxury-gradient-btn:hover {
+    box-shadow: 0 6px 20px 0 rgba(10, 61, 120, 0.35);
+    transform: translateY(-1px);
+  }
+
+  /* Smooth admin page transitions */
   @keyframes admin-fade-in {
     from {
       opacity: 0;
@@ -20,4 +117,21 @@
   .admin-page-enter {
     animation: admin-fade-in 150ms ease-out both;
   }
+
+  /* Custom smooth touch scrollbars */
+  .custom-scrollbar::-webkit-scrollbar {
+    height: 4px;
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.4);
+    border-radius: 9999px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.7);
+  }
 }
+

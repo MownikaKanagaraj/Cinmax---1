@@ -132,6 +132,7 @@ export interface Product {
   id: string;
   slug: string;
   title: string;
+  brand?: string;
   subtitle?: string;
   description: string;
   howToUse?: string;
@@ -147,9 +148,11 @@ export interface Product {
   skinTypes: SkinType[];
   fragranceFamily: FragranceFamily;
   certifications: string[];
+  trustBadges?: string[];
   isFeatured: boolean;
   isNew: boolean;
   isBestSeller?: boolean;
+  isActive?: boolean;
   averageRating: number;
   reviewCount: number;
   ratingAverage?: number;
