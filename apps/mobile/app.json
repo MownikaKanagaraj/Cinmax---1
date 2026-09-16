@@ -6,6 +6,7 @@
     "sdkVersion": "57.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
+    "jsEngine": "jsc",
     "web": {
       "bundler": "metro",
       "output": "single"
@@ -34,6 +35,7 @@
     ],
     "android": {
       "package": "com.cinmax.mobile",
+      "jsEngine": "jsc",
       "adaptiveIcon": {
         "backgroundColor": "#040c18"
       }
