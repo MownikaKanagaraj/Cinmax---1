@@ -53,7 +53,7 @@ export default function MobileOrdersScreen() {
               </Text>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
                 <Text style={{ fontSize: 14, fontWeight: '900', color: '#002754' }}>
-                  ${ord.grandTotal?.toFixed(2) || '36.00'}
+                  ₹{ord.grandTotal?.toFixed(2) || '499.00'}
                 </Text>
                 <Text style={{ fontSize: 11, fontWeight: '800', color: '#0A3D78' }}>
                   View Details →

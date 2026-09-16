@@ -43,35 +43,23 @@ export default function MobileSearchScreen() {
 
   const searchSuggestions = ['Saffron Soap', 'Sandalwood', 'Charcoal Detox', 'Lavender Oil', 'Face Serum'];
 
-  const sampleResults = [
-    {
-      id: 'sr1',
-      slug: 'organic-saffron-sandalwood-soap',
-      title: 'Organic Saffron & Sandalwood Soap',
-      price: '₹450',
-      rating: '4.9',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA7n5GiAyFNPfR50EAcreiLfe6dY1vdtXU13rdcu1eIMDtm-QSOx2pkbzKyOyjJrWy8hmEXtmhusYQmGrdE-E6ku99c8OKVH1utKpqms-BYUIpaSyWFthLoEm-5BGFHTpAodC9bRjbFXZNq37PV-r3fr1_cpSISPof_jcton611JUddKe2U_6W9-0gg5DL42_WDr8mGqAE9nsBKYSNFuKBZ97Fg1hRhHWnE6Bw2EmlCN0f8qZH_ZYoV',
-    },
-    {
-      id: 'sr2',
-      slug: 'charcoal-detox-soap',
-      title: 'Charcoal Detox Soap',
-      price: '₹380',
-      rating: '4.8',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCIVIfscf9bbZiiFhCq-SrVg2hAhw5O5hF-tLhMwhfwh9HIF9m1ZNVJZM0uk6TwAzXQpiXC7crHq4bAX3-GEY-YSH2Jz45H4Sg5Ym5xYX16zcWDWO2r0Vv_P7LXEHQT2I5mP4qlDwnI5MHmhyQIO1sGBH-06Q6Ek9H_0xkB5URjl7Ogxdn7J6tA2D_v9v4aFOpqiTV4z_hi0yy1QwgzBYDrbPubczF70JAW3R_CeCIk8y4ggLcAILFL',
-    },
-    {
-      id: 'sr3',
-      slug: 'hydrating-face-serum',
-      title: 'Hydrating Face Serum with Vit C',
-      price: '₹499',
-      rating: '4.9',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBxglU_913hJAApUMg2iOhzfjeFzxCh1GLo5bHQgsP-MvaGYLOMIKuLn60dqkfmtrUAbe_k_5pdHGwCC-OnyC9-mSf7K6TFe1y1zdawHjJmKzDHh2IilNAt_Hscs_4LR1g_Sm9KiR_ApGDoMTYgNJNN6as7IIzYXf7BprDVq0Uzru2_swUX01SRJK9seAqyIknGvbUDMuB2agm-0w9fFO2o4CkjtXwS2dxKDbQp2Ln3AGQaLzMAsa8R',
-    },
-  ];
+  const { data: productsData, isLoading } = useProductsQuery();
+  const rawProducts: Product[] = productsData?.items || [];
 
-  const filteredResults = sampleResults.filter((p) =>
-    p.title.toLowerCase().includes(query.toLowerCase())
+  const liveResults = rawProducts.map((p) => ({
+    id: p.id,
+    slug: p.slug,
+    title: p.title,
+    price: `₹${p.basePrice}`,
+    originalPrice: p.compareAtPrice ? `₹${p.compareAtPrice}` : undefined,
+    rating: `${p.averageRating || 4.9}`,
+    image: typeof p.images?.[0] === 'string' ? p.images[0] : p.images?.[0]?.url || 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=400&auto=format&fit=crop&q=80',
+    badge: p.isFeatured ? 'Hero Bar' : 'Botanical',
+    badgeBg: p.isFeatured ? '#002754' : '#365E9B',
+  }));
+
+  const filteredResults = liveResults.filter((p) =>
+    !query.trim() || p.title.toLowerCase().includes(query.toLowerCase())
   );
 
   return (

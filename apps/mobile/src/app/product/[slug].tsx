@@ -10,10 +10,11 @@ import {
   Dimensions,
   Platform,
   Share,
+  Modal,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ProductCard } from '../../components/ProductCard';
-import { useProductsQuery, useWishlistStore, useCartStore } from '@cinmax/hooks';
+import { useProductsQuery, useWishlistStore, useCartStore, usePlaylistsQuery, useUser } from '@cinmax/hooks';
 import {
   ArrowLeft,
   Share2,
@@ -32,6 +33,10 @@ import {
   Plus,
   Minus,
   CreditCard,
+  GraduationCap,
+  Layers,
+  ArrowRight,
+  Lock,
 } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -60,8 +65,11 @@ const FONT_SANS_BOLD = Platform.select({
 export default function MobileProductDetailsScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
+  const { user, isAuthenticated } = useUser();
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const { data: productsData } = useProductsQuery();
   const productData = productsData?.items?.find((p) => p.slug === slug) || productsData?.items?.[0];
+  const { data: productPlaylists = [] } = usePlaylistsQuery(true, productData?.id);
   const { isWishlisted, toggleItem } = useWishlistStore();
   const { addItem } = useCartStore();
 
@@ -73,6 +81,7 @@ export default function MobileProductDetailsScreen() {
 
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [selectedWeight, setSelectedWeight] = useState('100g');
+  const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [pincode, setPincode] = useState('201301');
   const [isPincodeChecked, setIsPincodeChecked] = useState(false);
@@ -85,11 +94,20 @@ export default function MobileProductDetailsScreen() {
     'https://lh3.googleusercontent.com/aida-public/AB6AXuCZfQtzA9d4pmFfzymqypTKQTGS-5-fHBtJ08VsBNtq5oVz9yMxPZMEdZB39Z6vlsaPwav2RoVK1u0uau1Lp9Fl8DX-IjmIWbfUS0F0xDEqWfR4VTtozZHh10cEOtlROVba_nbwyJwg4-Dtq1kLiaEJgCYfmp5kSVOY1U_TEpxg9Bxeczec9BYy3GNlVOhlAaiOMwOLfobcZmdJaRzQChY0hYNRXsMK17H74dZ5td__IpHgF1WKtsnl',
   ];
 
-  const productImages = productData?.images?.map((i: any) => (typeof i === 'string' ? i : i.url)) || defaultImages;
-  const productTitle = productData?.title || 'Azure Marine Botanical Bar';
-  const productDesc = productData?.description || 'Handcrafted over a 6-week slow cold-cure process. Infused with wild-harvested Atlantic kelp, cold-pressed virgin olive oil, and organic bergamot peel for an invigorating, deeply hydrating cleansing ritual.';
-  const productPrice = productData?.basePrice ? Number(productData.basePrice) : 18;
-  const originalPrice = productData?.compareAtPrice ? Number(productData.compareAtPrice) : 22;
+  const rawImgs = productData?.images && productData.images.length > 0
+    ? productData.images.map((i: any) => (typeof i === 'string' ? i : i.url)).filter(Boolean)
+    : [];
+  const productImages = rawImgs.length > 0 ? rawImgs : defaultImages;
+  const productTitle = productData?.title || 'Botanical Product';
+  const productDesc = productData?.description || 'Artisanal formulation with pure botanical extracts.';
+  
+  const variantsList = productData?.variants && productData.variants.length > 0 ? productData.variants : null;
+  const activeVariant = variantsList ? (variantsList[selectedVariantIndex] || variantsList[0]) : null;
+
+  const productPrice = activeVariant ? Number(activeVariant.price) : (productData?.basePrice ? Number(productData.basePrice) : 199);
+  const originalPrice = activeVariant?.compareAtPrice ? Number(activeVariant.compareAtPrice) : (productData?.compareAtPrice ? Number(productData.compareAtPrice) : null);
+  const discountPercent = originalPrice && originalPrice > productPrice ? Math.round(((originalPrice - productPrice) / originalPrice) * 100) : 0;
+  const savings = originalPrice && originalPrice > productPrice ? originalPrice - productPrice : 0;
 
   const relatedProducts = (productsData?.items || [])
     .filter((p) => p.slug !== slug)
@@ -129,15 +147,25 @@ export default function MobileProductDetailsScreen() {
   };
 
   const handleAddToCart = () => {
+    const variantToUse = activeVariant || {
+      id: `v_${selectedWeight}`,
+      sku: `SKU-${selectedWeight}`,
+      title: selectedWeight,
+      price: productPrice,
+      weightGrams: 100,
+      volumeMl: 0,
+      options: {},
+    };
+
     addItem({
-      id: `ci_${productData?.id || 'saffron'}`,
+      id: `ci_${productData?.id || 'prod'}_${variantToUse.id}`,
       cartId: 'c1',
-      productId: productData?.id || 'p_saffron',
+      productId: productData?.id || 'p_prod',
       unitPrice: productPrice,
       totalPrice: productPrice * quantity,
       quantity,
-      product: { id: productData?.id || 'p_saffron', title: productTitle, slug: slug || 'saffron-soap', images: [], processType: 'cold-process' },
-      variant: { id: `v_${selectedWeight}`, sku: `SKU-${selectedWeight}`, title: selectedWeight, price: productPrice, weightGrams: 100, volumeMl: 0, options: {} },
+      product: { id: productData?.id || 'p_prod', title: productTitle, slug: slug || 'product', images: [], processType: 'cold-process' },
+      variant: variantToUse,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
@@ -145,23 +173,38 @@ export default function MobileProductDetailsScreen() {
   };
 
   const handleBuyNow = () => {
+    const variantToUse = activeVariant || {
+      id: `v_${selectedWeight}`,
+      sku: `SKU-${selectedWeight}`,
+      title: selectedWeight,
+      price: productPrice,
+      weightGrams: 100,
+      volumeMl: 0,
+      options: {},
+    };
+
     addItem({
-      id: `ci_${productData?.id || 'saffron'}`,
+      id: `ci_${productData?.id || 'prod'}_${variantToUse.id}`,
       cartId: 'c1',
-      productId: productData?.id || 'p_saffron',
+      productId: productData?.id || 'p_prod',
       unitPrice: productPrice,
       totalPrice: productPrice * quantity,
       quantity,
-      product: { id: productData?.id || 'p_saffron', title: productTitle, slug: slug || 'saffron-soap', images: [], processType: 'cold-process' },
-      variant: { id: `v_${selectedWeight}`, sku: `SKU-${selectedWeight}`, title: selectedWeight, price: productPrice, weightGrams: 100, volumeMl: 0, options: {} },
+      product: { id: productData?.id || 'p_prod', title: productTitle, slug: slug || 'product', images: [], processType: 'cold-process' },
+      variant: variantToUse,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
-    router.push('/checkout' as any);
+
+    if (!user && !isAuthenticated) {
+      setIsLoginModalOpen(true);
+    } else {
+      router.push('/checkout' as any);
+    }
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F9FB' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF7F2' }}>
       {/* 1. TOP HEADER NAVIGATION BAR */}
       <View style={{ paddingHorizontal: CONTAINER_PADDING, paddingTop: 12, paddingBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(247, 249, 251, 0.95)', borderBottomWidth: 1, borderBottomColor: 'rgba(195, 198, 209, 0.3)', zIndex: 100 }}>
         <TouchableOpacity
@@ -177,7 +220,7 @@ export default function MobileProductDetailsScreen() {
           <TouchableOpacity onPress={handleShare} style={{ width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' }}>
             <Share2 size={20} color="#434750" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => toggleItem({ id: productData?.id || 'p_saffron', title: productTitle, slug: slug || 'saffron-soap', price: productPrice, images: productImages })} style={{ width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' }}>
+          <TouchableOpacity onPress={() => toggleItem(productData?.id || 'p_saffron')} style={{ width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' }}>
             <Heart size={20} color="#002754" fill={isWishlisted(productData?.id || 'p_saffron') ? '#002754' : 'none'} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/cart' as any)} style={{ width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
@@ -289,33 +332,62 @@ export default function MobileProductDetailsScreen() {
           </View>
         </View>
 
-        {/* 5. Selectors: Weight & Quantity */}
+        {/* 5. Selectors: Variant / Weight & Quantity */}
         <View style={{ paddingHorizontal: CONTAINER_PADDING, marginTop: 22, gap: 18 }}>
-          {/* Weight */}
+          {/* Variant Selector */}
           <View>
             <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 14, fontWeight: '700', color: '#191C1E', marginBottom: 10 }}>
-              Weight
+              {variantsList ? 'Select Size / Variant' : 'Weight'}
             </Text>
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              {['75g', '100g', '125g'].map((w) => (
-                <TouchableOpacity
-                  key={w}
-                  onPress={() => setSelectedWeight(w)}
-                  style={{
-                    paddingHorizontal: 20,
-                    paddingVertical: 10,
-                    borderRadius: 12,
-                    borderWidth: selectedWeight === w ? 2 : 1,
-                    borderColor: selectedWeight === w ? '#002754' : '#C3C6D1',
-                    backgroundColor: selectedWeight === w ? 'rgba(0, 39, 84, 0.05)' : '#FFFFFF',
-                  }}
-                >
-                  <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 14, color: selectedWeight === w ? '#002754' : '#434750', fontWeight: '600' }}>
-                    {w}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+              {variantsList
+                ? variantsList.map((v, idx) => {
+                    const isSelected = selectedVariantIndex === idx;
+                    const vPrice = Number(v.price);
+                    return (
+                      <TouchableOpacity
+                        key={v.id || idx}
+                        onPress={() => setSelectedVariantIndex(idx)}
+                        style={{
+                          paddingHorizontal: 16,
+                          paddingVertical: 10,
+                          borderRadius: 12,
+                          borderWidth: isSelected ? 2 : 1,
+                          borderColor: isSelected ? '#002754' : '#C3C6D1',
+                          backgroundColor: isSelected ? 'rgba(0, 39, 84, 0.05)' : '#FFFFFF',
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                        }}
+                      >
+                        <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 13, color: isSelected ? '#002754' : '#434750', fontWeight: '600' }}>
+                          {v.title}
+                        </Text>
+                        <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 13, color: isSelected ? '#002754' : '#737781', fontWeight: '700' }}>
+                          ₹{vPrice}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })
+                : ['75g', '100g', '125g'].map((w) => (
+                    <TouchableOpacity
+                      key={w}
+                      onPress={() => setSelectedWeight(w)}
+                      style={{
+                        paddingHorizontal: 20,
+                        paddingVertical: 10,
+                        borderRadius: 12,
+                        borderWidth: selectedWeight === w ? 2 : 1,
+                        borderColor: selectedWeight === w ? '#002754' : '#C3C6D1',
+                        backgroundColor: selectedWeight === w ? 'rgba(0, 39, 84, 0.05)' : '#FFFFFF',
+                      }}
+                    >
+                      <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 14, color: selectedWeight === w ? '#002754' : '#434750', fontWeight: '600' }}>
+                        {w}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+            </ScrollView>
           </View>
 
           {/* Quantity */}
@@ -484,8 +556,40 @@ export default function MobileProductDetailsScreen() {
           </View>
         </View>
 
-        {/* 9. Customer Reviews Section */}
-        <View style={{ paddingHorizontal: CONTAINER_PADDING, marginTop: 32 }}>
+        {/* Classes for this Product Section */}
+          {productPlaylists && productPlaylists.length > 0 && (
+            <View style={{ marginTop: 24, backgroundColor: '#002754', borderRadius: 20, padding: 18, gap: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: '#C5A880', justifyContent: 'center', alignItems: 'center' }}>
+                  <GraduationCap size={20} color="#002754" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 16, color: '#FFFFFF' }}>Classes for this Product</Text>
+                  <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 11, color: '#E0E3E5' }}>Dedicated masterclass course</Text>
+                </View>
+              </View>
+
+              {productPlaylists.map((pl: any) => (
+                <View key={pl.id} style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 14, padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View style={{ flex: 1, marginRight: 8 }}>
+                    <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 13, color: '#FFFFFF' }} numberOfLines={1}>{pl.title}</Text>
+                    <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 11, color: '#C5A880', marginTop: 2 }}>
+                      {pl.videos?.length || pl.videoCount || 0} Classes Included • ₹{pl.price}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => router.push('/(tabs)/videos' as any)}
+                    style={{ backgroundColor: '#C5A880', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 }}
+                  >
+                    <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 11, color: '#002754' }}>View Playlist</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* 9. Customer Reviews Section */}
+          <View style={{ paddingHorizontal: CONTAINER_PADDING, marginTop: 32 }}>
           <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 22, fontWeight: '700', color: '#002754', marginBottom: 16 }}>
             Customer Reviews
           </Text>
@@ -596,6 +700,48 @@ export default function MobileProductDetailsScreen() {
           <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', fontSize: 14, fontWeight: '700' }}>Buy Now</Text>
         </TouchableOpacity>
       </View>
+
+      {/* LOGIN REQUIRED MODAL */}
+      <Modal visible={isLoginModalOpen} animationType="fade" transparent>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 }}>
+          <View style={{ width: '100%', maxWidth: 360, backgroundColor: '#FFFFFF', borderRadius: 24, padding: 24, alignItems: 'center', shadowColor: '#002754', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 8 }}>
+            <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#F0F4F8', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
+              <Lock size={26} color="#002754" />
+            </View>
+
+            <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 20, color: '#002754', marginBottom: 8, textAlign: 'center' }}>
+              Login Required
+            </Text>
+
+            <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#434750', textAlign: 'center', marginBottom: 24, lineHeight: 20 }}>
+              Please login to proceed with checkout.
+            </Text>
+
+            <View style={{ flexDirection: 'row', gap: 12, width: '100%' }}>
+              <TouchableOpacity
+                onPress={() => setIsLoginModalOpen(false)}
+                style={{ flex: 1, paddingVertical: 13, borderRadius: 14, borderWidth: 1, borderColor: '#C3C6D1', alignItems: 'center' }}
+              >
+                <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#434750', fontSize: 14 }}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  setIsLoginModalOpen(false);
+                  router.push('/(auth)/login?redirect=/checkout' as any);
+                }}
+                style={{ flex: 1, paddingVertical: 13, borderRadius: 14, backgroundColor: '#002754', alignItems: 'center', shadowColor: '#002754', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8 }}
+              >
+                <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#FFFFFF', fontSize: 14 }}>
+                  Login
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

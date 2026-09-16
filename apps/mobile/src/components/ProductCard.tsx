@@ -32,7 +32,7 @@ export interface ProductCardProps {
   reviewCount?: string | number;
   badge?: string;
   badgeBg?: string;
-  width?: number;
+  width?: number | string;
 }
 
 export function ProductCard({
@@ -52,8 +52,27 @@ export function ProductCard({
   const { toggleItem, isWishlisted } = useWishlistStore();
   const { addItem } = useCartStore();
 
-  const isWeb = Platform.OS === 'web';
-  const computedWidth = width || (isWeb ? Math.min((SCREEN_WIDTH - 54) / 2, 210) : (SCREEN_WIDTH - 54) / 2);
+  const cardWidth = width || '48%';
+
+  const isGreenOrPlaceholder =
+    !image ||
+    typeof image !== 'string' ||
+    image.toLowerCase().includes('55ff') ||
+    image.toLowerCase().includes('00ff') ||
+    image.toLowerCase().includes('placehold') ||
+    image.toLowerCase().includes('svg') ||
+    image.toLowerCase().includes('lh3.googleusercontent') ||
+    image.startsWith('data:');
+
+  const displayImage = isGreenOrPlaceholder
+    ? title.toLowerCase().includes('saffron') || title.toLowerCase().includes('rose')
+      ? 'https://images.unsplash.com/photo-1607006482172-35891d9e1158?w=500&auto=format&fit=crop&q=80'
+      : title.toLowerCase().includes('ash') || title.toLowerCase().includes('charcoal') || title.toLowerCase().includes('pine') || title.toLowerCase().includes('scrub')
+      ? 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=500&auto=format&fit=crop&q=80'
+      : title.toLowerCase().includes('serum') || title.toLowerCase().includes('glow') || title.toLowerCase().includes('oil')
+      ? 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=500&auto=format&fit=crop&q=80'
+      : 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=500&auto=format&fit=crop&q=80'
+    : image;
 
   const formattedPrice = typeof price === 'number' ? `₹${price}` : price.startsWith('₹') ? price : `₹${price}`;
   const formattedOriginalPrice = originalPrice
@@ -86,8 +105,7 @@ export function ProductCard({
       onPress={() => router.push(`/product/${slug}` as any)}
       activeOpacity={0.9}
       style={{
-        width: computedWidth,
-        maxWidth: 220,
+        width: cardWidth as any,
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
         overflow: 'hidden',
@@ -103,7 +121,7 @@ export function ProductCard({
       {/* Image & Badges */}
       <View style={{ width: '100%', height: 140, position: 'relative', backgroundColor: '#F2F4F6' }}>
         <Image
-          source={{ uri: image || 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=400&auto=format&fit=crop&q=80' }}
+          source={{ uri: displayImage }}
           style={{ width: '100%', height: '100%' }}
           resizeMode="cover"
         />
@@ -117,12 +135,13 @@ export function ProductCard({
         <TouchableOpacity
           onPress={(e) => {
             e.stopPropagation();
-            toggleItem({ id, title, slug, price: typeof price === 'number' ? price : parseInt(String(price).replace(/[^0-9]/g, '')) || 249, images: [image] });
+            toggleItem(id);
           }}
-          style={{ position: 'absolute', top: 6, right: 6, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.85)', justifyContent: 'center', alignItems: 'center' }}
+          style={{ position: 'absolute', top: 6, right: 6, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.9)', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }}
         >
-          <Heart size={15} color="#002754" fill={isWishlisted(id) ? '#002754' : 'none'} />
+          <Heart size={15} color={isWishlisted(id) ? '#DC2626' : '#002754'} fill={isWishlisted(id) ? '#DC2626' : 'none'} />
         </TouchableOpacity>
+
       </View>
 
       {/* Info Body */}

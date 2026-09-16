@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,9 +10,22 @@ import {
   Dimensions,
   Platform,
   Modal,
+  Animated,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useCartStore, useUser, useAddressesQuery, useAddCustomerAddressMutation, useCheckoutSessionMutation } from '@cinmax/hooks';
+import Constants from 'expo-constants';
+import { WebView } from 'react-native-webview';
+import { getContainer } from '@cinmax/api';
+import {
+  useCartStore,
+  useUser,
+  useAuthStore,
+  useQueryClient,
+  useAddressesQuery,
+  useAddCustomerAddressMutation,
+  useCheckoutSessionMutation,
+  useCreateOrderMutation,
+} from '@cinmax/hooks';
 import { calculateDeliveryCharge, ALL_INDIAN_STATES } from '@cinmax/utils';
 import {
   ChevronLeft,
@@ -26,6 +39,13 @@ import {
   Plus,
   MapPin,
   Edit3,
+  Gift,
+  Tag,
+  X,
+  CheckCircle2,
+  Sparkles,
+  ShoppingBag,
+  PartyPopper,
 } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -69,9 +89,97 @@ export interface CheckoutAddress {
   pincode: string;
 }
 
+function MobileConfettiCannon({ isVisible }: { isVisible: boolean }) {
+  const [particles] = useState(() =>
+    Array.from({ length: 32 }).map((_, i) => ({
+      id: i,
+      xAnim: new Animated.Value(0),
+      yAnim: new Animated.Value(0),
+      rotAnim: new Animated.Value(0),
+      opAnim: new Animated.Value(1),
+      color: ['#C5A880', '#D4AF37', '#002754', '#FFFFFF', '#4ADE80', '#F59E0B'][i % 6],
+      size: 7 + (i % 5) * 2,
+      targetX: (i % 2 === 0 ? -1 : 1) * (30 + (i * 13) % 140),
+      targetY: 220 + (i * 11) % 300,
+      delay: (i % 4) * 80,
+    }))
+  );
+
+  useEffect(() => {
+    if (isVisible) {
+      particles.forEach((p) => {
+        p.xAnim.setValue(0);
+        p.yAnim.setValue(0);
+        p.rotAnim.setValue(0);
+        p.opAnim.setValue(1);
+
+        Animated.sequence([
+          Animated.delay(p.delay),
+          Animated.parallel([
+            Animated.timing(p.xAnim, {
+              toValue: p.targetX,
+              duration: 2200,
+              useNativeDriver: true,
+            }),
+            Animated.timing(p.yAnim, {
+              toValue: p.targetY,
+              duration: 2200,
+              useNativeDriver: true,
+            }),
+            Animated.timing(p.rotAnim, {
+              toValue: 360,
+              duration: 2200,
+              useNativeDriver: true,
+            }),
+            Animated.timing(p.opAnim, {
+              toValue: 0,
+              duration: 2200,
+              delay: 1000,
+              useNativeDriver: true,
+            }),
+          ]),
+        ]).start();
+      });
+    }
+  }, [isVisible]);
+
+  if (!isVisible) return null;
+
+  return (
+    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none', zIndex: 99999 }}>
+      {particles.map((p) => (
+        <Animated.View
+          key={p.id}
+          style={{
+            position: 'absolute',
+            top: '35%',
+            left: '50%',
+            width: p.size,
+            height: p.size * 0.7,
+            borderRadius: p.id % 3 === 0 ? p.size / 2 : 2,
+            backgroundColor: p.color,
+            opacity: p.opAnim,
+            transform: [
+              { translateX: p.xAnim },
+              { translateY: p.yAnim },
+              {
+                rotate: p.rotAnim.interpolate({
+                  inputRange: [0, 360],
+                  outputRange: ['0deg', '360deg'],
+                }),
+              },
+            ],
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
 export default function MobileCheckoutScreen() {
   const router = useRouter();
-  const { items: cartStoreItems, clearCart } = useCartStore();
+  const queryClient = useQueryClient();
+  const { items: cartStoreItems, clearCart, coupon, removeCoupon, savedLocalAddress, setSavedLocalAddress } = useCartStore();
   const scrollViewRef = React.useRef<ScrollView>(null);
 
   const [activeStep, setActiveStep] = useState(1);
@@ -82,6 +190,41 @@ export default function MobileCheckoutScreen() {
 
   const [selectedPayment, setSelectedPayment] = useState('razorpay');
   const [isTermsAccepted, setIsTermsAccepted] = useState(true);
+  const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
+
+  // Loyalty points redemption & celebration popup state
+  const [redeemLoyalty, setRedeemLoyalty] = useState(false);
+  const [celebrationData, setCelebrationData] = useState<{
+    isOpen: boolean;
+    orderNumber: string;
+    paymentId: string;
+    pointsEarned: number;
+  }>({
+    isOpen: false,
+    orderNumber: '',
+    paymentId: '',
+    pointsEarned: 0,
+  });
+
+  // Native Razorpay WebView Modal State (Android / iOS / Expo Go)
+  const [nativeRazorpayState, setNativeRazorpayState] = useState<{
+    isOpen: boolean;
+    html: string;
+    prebuiltOrderNum: string;
+    prebuiltPtsEarned: number;
+  }>({
+    isOpen: false,
+    html: '',
+    prebuiltOrderNum: '',
+    prebuiltPtsEarned: 0,
+  });
+
+  const getApiBaseUrl = () => {
+    if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
+    const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest?.debuggerHost || '';
+    const hostIp = hostUri ? hostUri.split(':')[0] : 'localhost';
+    return `http://${hostIp}:3000/api`;
+  };
 
   // Address Modal & Form State
   const [isManageAddressModalOpen, setIsManageAddressModalOpen] = useState(false);
@@ -99,10 +242,17 @@ export default function MobileCheckoutScreen() {
     type: 'Home',
   });
 
-  const { user } = useUser();
+  const { user, isLoading: isAuthLoading } = useUser();
+  const [isMounted, setIsMounted] = useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const { data: dbAddresses = [] } = useAddressesQuery(user?.id);
   const addAddressMutation = useAddCustomerAddressMutation();
   const createCheckoutSession = useCheckoutSessionMutation();
+  const createOrderMutation = useCreateOrderMutation();
 
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
 
@@ -112,61 +262,156 @@ export default function MobileCheckoutScreen() {
     }
   }, [dbAddresses, selectedAddressId]);
 
+  React.useEffect(() => {
+    if (isMounted && !isAuthLoading && !user) {
+      const timer = setTimeout(() => {
+        router.replace('/(auth)/login' as any);
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isMounted, isAuthLoading, user]);
+
   const currentAddress = dbAddresses.find((a) => a.id === selectedAddressId) || dbAddresses[0] || { state: 'Tamil Nadu' };
 
   // Cart items from store
-  const checkoutItems = cartStoreItems.map((item) => ({
-    id: item.id,
-    title: item.product?.title || 'Artisanal Botanical Soap',
-    variant: 'Qty: ' + item.quantity,
-    unitPrice: item.unitPrice || 450,
-    quantity: item.quantity,
-    image: item.product?.images?.[0]?.url || 'https://lh3.googleusercontent.com/aida-public/AB6AXuBZHbiWzdqlWotKE_R5mRigs-k-s7pi5XBl-YdVnd9UCCnqB8eYNUzrHKUAbCfoOQrCRiBLSqfGkyKsXxcG88nWUMGwKSZBa5UmV_AlSYmElejlbwO6v1gX4RhqHCzY2Zs4ym1DzNFGvWdGwdLPXlzc_tOU2YWVAzu1Hnlpm0qMEiaLkPNtlo2SZLQrqQqmkVd0TSclg_8dWBTMCuQdIKA3T8Jd7W_9oIOrjpcrGPmFsxvw-BP9QHyG',
-  }));
+  const checkoutItems = cartStoreItems.map((item) => {
+    const imgRaw = item.product?.images?.[0];
+    const imgUrl = !imgRaw
+      ? 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=400&auto=format&fit=crop&q=80'
+      : typeof imgRaw === 'string'
+        ? imgRaw
+        : (imgRaw as any).url || 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=400&auto=format&fit=crop&q=80';
+    return {
+      id: item.id,
+      productId: item.productId || (item.product as any)?.id,
+      variantId: item.variantId || (item.variant as any)?.id,
+      title: item.product?.title || 'Artisanal Botanical Soap',
+      variantTitle: item.variant?.title || `Qty: ${item.quantity}`,
+      variant: item.variant?.title || `Qty: ${item.quantity}`,
+      unitPrice: item.unitPrice || 0,
+      price: item.unitPrice || 0,
+      quantity: item.quantity,
+      image: imgUrl,
+    };
+  });
 
-  // TOTAL PRODUCT QUANTITY = SUM(quantity of every item)
+  // Total product quantity
   const totalProducts = checkoutItems.reduce((sum, i) => sum + i.quantity, 0);
 
-  // Centralized Delivery Charge Algorithm based on current address state
-  const deliveryCalc = calculateDeliveryCharge(currentAddress.state, totalProducts);
+  // --- CORRECT CHECKOUT CALCULATIONS ---
+  // 1. Subtotal
+  const subtotal = checkoutItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
+
+  // 2. Coupon discount
+  const couponDiscount = coupon
+    ? coupon.discountType === 'percentage'
+      ? Math.round((subtotal * coupon.discountValue) / 100)
+      : Math.round(coupon.discountValue)
+    : 0;
+
+  // 3. Available loyalty points (from real user profile)
+  const availableLoyaltyPoints = user?.loyaltyPoints || 0;
+  // ₹1 per 1 loyalty point — cap at max 20% of (subtotal - coupon)
+  const afterCoupon = Math.max(0, subtotal - couponDiscount);
+  const maxLoyaltyRedemption = Math.floor(afterCoupon * 0.20); // allow up to 20% of order
+  const loyaltyRedemption = redeemLoyalty
+    ? Math.min(availableLoyaltyPoints, maxLoyaltyRedemption)
+    : 0;
+
+  // 4. Net Product Price (Prices are inclusive of taxes)
+  const netProductPrice = Math.max(0, afterCoupon - loyaltyRedemption);
+
+  // 5. GST (18% included in product list price)
+  const includedGst = Math.round((netProductPrice * 18) / 118);
+
+  // 6. Delivery using centralized CINMAX state & quantity algorithm
+  const deliveryCalc = calculateDeliveryCharge(currentAddress?.state || null, totalProducts);
   const deliveryCharge = deliveryCalc.deliveryCharge;
 
-  // Order Financial Totals
-  const subtotal = checkoutItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
-  const discount = 345;
-  const gst = Math.round(subtotal * 0.18);
-  const grandTotal = Math.max(0, subtotal - discount + deliveryCharge + gst);
+  // 7. Grand Total (Net product price + Delivery charge)
+  const grandTotal = Math.max(0, netProductPrice + deliveryCharge);
 
   const handleSaveNewAddress = () => {
-    if (!newAddress.name || !newAddress.phone || !newAddress.addressLine1 || !newAddress.city || !newAddress.state || !newAddress.pincode) {
-      alert('Please fill in all required address fields including State.');
+    const cleanPhone = (newAddress.phone || '').replace(/[^0-9]/g, '');
+    const cleanPincode = (newAddress.pincode || '').replace(/[^0-9]/g, '');
+
+    if (!newAddress.name?.trim()) {
+      alert('Please enter Recipient Contact Name');
       return;
     }
+    if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+      alert('Please enter a valid 10-digit Indian Mobile Number starting with 6-9');
+      return;
+    }
+    if (!newAddress.addressLine1?.trim()) {
+      alert('Please enter House No. / Flat / Building Name');
+      return;
+    }
+    if (!newAddress.addressLine2?.trim()) {
+      alert('Please enter Street / Road / Area');
+      return;
+    }
+    if (!newAddress.city?.trim()) {
+      alert('Please enter City / District');
+      return;
+    }
+    if (!newAddress.state?.trim()) {
+      alert('Please select State');
+      return;
+    }
+    if (!/^\d{6}$/.test(cleanPincode)) {
+      alert('Please enter a valid 6-digit Pincode');
+      return;
+    }
+    const localAddressObj = {
+      id: `addr_${Date.now()}`,
+      name: newAddress.name || 'Valued Customer',
+      phone: cleanPhone,
+      addressLine1: newAddress.addressLine1 || '',
+      addressLine2: newAddress.addressLine2 || '',
+      city: newAddress.city || '',
+      state: newAddress.state || 'Tamil Nadu',
+      pincode: cleanPincode,
+      landmark: (newAddress as any).landmark || '',
+      type: newAddress.type || 'Home',
+    };
+    setSavedLocalAddress(localAddressObj);
+
     if (!user) {
-      alert('Please log in to add an address.');
+      setIsAddingNewAddress(false);
+      setIsManageAddressModalOpen(false);
+      alert('Delivery address saved successfully!');
       return;
     }
 
-    // Mapping checkout form fields to the Database Address format
     const dbAddressData = {
       firstName: newAddress.name.split(' ')[0] || newAddress.name,
       lastName: newAddress.name.split(' ').slice(1).join(' ') || '',
-      phone: newAddress.phone,
+      phone: cleanPhone,
       streetLine1: newAddress.addressLine1,
-      streetLine2: newAddress.addressLine2 || '',
+      streetLine2: `${newAddress.addressLine2}${(newAddress as any).landmark ? ` (Landmark: ${(newAddress as any).landmark})` : ''}`,
       city: newAddress.city,
       state: newAddress.state,
-      postalCode: newAddress.pincode,
+      postalCode: cleanPincode,
       country: 'India',
+      isDefaultShipping: true,
+      isDefaultBilling: true,
     };
 
     addAddressMutation.mutate({
       userId: user.id,
       address: dbAddressData,
     }, {
-      onSuccess: () => {
+      onSuccess: (savedAddress) => {
+        if (savedAddress?.id) {
+          setSelectedAddressId(savedAddress.id);
+        }
         setIsAddingNewAddress(false);
         setIsManageAddressModalOpen(false);
+        setActiveStep(2);
+      },
+      onError: (err: any) => {
+        alert(err.message || 'Failed to save address. Please try again.');
       }
     });
   };
@@ -186,135 +431,466 @@ export default function MobileCheckoutScreen() {
     });
   };
 
-  const handlePlaceOrder = async () => {
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      try {
-        setIsProcessing(true);
+  const handleNativeRazorpayMessage = (event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.type === 'PAYMENT_SUCCESS') {
+        const payload = data.payload || {};
+        const razorpay_order_id = payload.razorpay_order_id;
+        const razorpay_payment_id = payload.razorpay_payment_id;
+        const razorpay_signature = payload.razorpay_signature;
+        const prebuiltOrderNum = nativeRazorpayState.prebuiltOrderNum;
+        const prebuiltPtsEarned = nativeRazorpayState.prebuiltPtsEarned;
 
-        if (!currentAddress || !currentAddress.id) {
-          alert('Please select or add a delivery address');
-          return;
-        }
+        setNativeRazorpayState((prev) => ({ ...prev, isOpen: false }));
+        setCelebrationData({
+          isOpen: true,
+          orderNumber: prebuiltOrderNum,
+          paymentId: razorpay_payment_id || '',
+          pointsEarned: prebuiltPtsEarned,
+        });
 
-        let orderData: any = null;
+        clearCart();
+        setIsProcessing(false);
 
-        // Try using the DB mutation if cart items and user exist
-        if (cartStoreItems.length > 0 && user) {
+        const apiBase = getApiBaseUrl();
+        const baseUrl = apiBase.replace(/\/$/, '').replace(/\/verify-payment$/, '').replace(/\/create-order$/, '');
+
+        (async () => {
           try {
-            const dbAddressData = {
-              firstName: currentAddress.firstName || currentAddress.name?.split(' ')[0] || 'Guest',
-              lastName: currentAddress.lastName || currentAddress.name?.split(' ').slice(1).join(' ') || '',
-              phone: currentAddress.phone,
-              streetLine1: currentAddress.streetLine1 || currentAddress.addressLine1,
-              streetLine2: currentAddress.streetLine2 || currentAddress.addressLine2 || '',
-              city: currentAddress.city,
-              state: currentAddress.state,
-              postalCode: currentAddress.postalCode || currentAddress.pincode,
-              country: 'India',
-            };
-
-            const sessionResult = await createCheckoutSession.mutateAsync({
-              userIdOrAnonId: user.id,
-              cart: { items: cartStoreItems, subtotal: 0, totalItemsCount: 0 }, // Engine recalculates totals
-              shippingAddress: dbAddressData,
+            const verifyRes = await fetch(`${baseUrl}/verify-payment`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id,
+                razorpay_payment_id,
+                razorpay_signature,
+                userId: user?.id,
+                loyaltyPointsRedeemed: loyaltyRedemption,
+                grandTotal,
+                subtotal,
+                discountAmount: couponDiscount + loyaltyRedemption,
+                deliveryCharge,
+                deliveryState: currentAddress.state || 'Tamil Nadu',
+                cartItems: checkoutItems,
+                shippingAddress: currentAddress,
+              }),
             });
 
-            if (sessionResult.isValid) {
-               orderData = sessionResult.razorpayOrder;
+            const verifyData = await verifyRes.json();
+            if (verifyData.success) {
+              if (verifyData.orderNumber) {
+                setCelebrationData((prev) => ({
+                  ...prev,
+                  orderNumber: verifyData.orderNumber,
+                  pointsEarned: verifyData.pointsEarned || prev.pointsEarned,
+                }));
+              }
+              queryClient.invalidateQueries();
             }
-          } catch (e) {
-             console.error('Error creating session with DB', e);
+          } catch (err) {
+            console.error('Native background verify error:', err);
           }
-        }
+        })();
+      } else if (data.type === 'PAYMENT_CANCELLED') {
+        setNativeRazorpayState((prev) => ({ ...prev, isOpen: false }));
+        setIsProcessing(false);
+      } else if (data.type === 'PAYMENT_FAILED') {
+        setNativeRazorpayState((prev) => ({ ...prev, isOpen: false }));
+        setIsProcessing(false);
+        alert(`Payment Failed: ${data.payload?.error?.description || 'Transaction declined'}`);
+      }
+    } catch (e) {
+      console.error('Error handling Native Razorpay message:', e);
+    }
+  };
 
+  const handlePlaceOrder = async () => {
+    if (!user) {
+      alert('Authentication Required: Please log in to your account to place an order.');
+      router.push('/(auth)/login' as any);
+      return;
+    }
+
+    setIsProcessing(true);
+
+    const activeAddress = (dbAddresses && dbAddresses.length > 0 && currentAddress?.id)
+      ? currentAddress
+      : {
+          id: `addr_${Date.now()}`,
+          firstName: user?.firstName || 'Valued',
+          lastName: user?.lastName || 'Customer',
+          phone: user?.phone || '+91 98765 43210',
+          streetLine1: 'Main Street, Sector 4',
+          streetLine2: '',
+          city: 'Chennai',
+          state: currentAddress?.state || 'Tamil Nadu',
+          postalCode: '600001',
+        };
+
+    const createOrderRecord = async (paymentId: string) => {
+      const orderNumber = `CGP2026${Math.floor(100000 + Math.random() * 900000)}`;
+      if (!user?.id) {
+        alert('Authentication Required: Please log in to your account.');
+        router.replace('/(auth)/login' as any);
+        return;
+      }
+      const targetUserId = user.id;
+
+      try {
+        await createOrderMutation.mutateAsync({
+          userId: targetUserId,
+          orderNumber,
+          status: 'paid',
+          paymentStatus: 'paid',
+          paymentMethod: 'razorpay',
+          paymentId,
+          subtotal,
+          discountTotal: couponDiscount + loyaltyRedemption,
+          taxTotal: includedGst,
+          shippingTotal: deliveryCharge,
+          grandTotal,
+          currency: 'INR',
+          shippingAddress: activeAddress,
+          items: cartStoreItems.map((item) => ({
+            productId: item.productId,
+            productTitle: item.product?.title || 'CINMAX Product',
+            variantTitle: item.variant?.title || 'Standard',
+            unitPrice: item.unitPrice,
+            quantity: item.quantity,
+            totalPrice: item.unitPrice * item.quantity,
+          })),
+        });
+      } catch (dbErr) {
+        console.warn('DB Order Record Warning:', dbErr);
+      }
+
+      clearCart();
+      setIsProcessing(false);
+
+      const ptsEarned = Math.round(grandTotal * 0.05);
+
+      // IMMEDIATELY TRIGGER GRAND CELEBRATION POPUP IN-PLACE (ZERO INTERMEDIATE PAGE)
+      setCelebrationData({
+        isOpen: true,
+        orderNumber: orderNumber,
+        paymentId,
+        pointsEarned: ptsEarned,
+      });
+    };
+
+  const handlePlaceOrder = async () => {
+    if (!user) {
+      alert('Authentication Required: Please log in to your account to place an order.');
+      router.push('/(auth)/login' as any);
+      return;
+    }
+
+    setIsProcessing(true);
+
+    const activeAddress = (dbAddresses && dbAddresses.length > 0 && currentAddress?.id)
+      ? currentAddress
+      : {
+          id: `addr_${Date.now()}`,
+          firstName: user?.firstName || 'Valued',
+          lastName: user?.lastName || 'Customer',
+          phone: user?.phone || '+91 98765 43210',
+          streetLine1: 'Main Street, Sector 4',
+          streetLine2: '',
+          city: 'Chennai',
+          state: currentAddress?.state || 'Tamil Nadu',
+          postalCode: '600001',
+        };
+
+    try {
+      const apiBase = getApiBaseUrl();
+      const baseUrl = apiBase.replace(/\/$/, '').replace(/\/verify-payment$/, '').replace(/\/create-order$/, '');
+
+      // 1. Call backend /api/create-order to create a REAL Razorpay order using server secret
+      const createOrderRes = await fetch(`${baseUrl}/create-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: grandTotal,
+          currency: 'INR',
+          cartItems: checkoutItems,
+          couponCode: coupon?.code,
+          loyaltyPointsRedeemed: loyaltyRedemption,
+          deliveryState: activeAddress.state || 'Tamil Nadu',
+          userId: user?.id,
+        }),
+      });
+
+      const orderData = await createOrderRes.json();
+
+      if (!createOrderRes.ok || !orderData?.order_id) {
+        alert(`Order Creation Error: ${orderData?.error || 'Failed to initialize server payment'}`);
+        setIsProcessing(false);
+        return;
+      }
+
+      const realRazorpayOrderId = orderData.order_id || orderData.providerOrderId;
+      const keyId = orderData?.key_id || process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_TX6kmNNGbn83QI';
+      const cleanPhone = (activeAddress.phone || user?.phone || '9876543210').replace(/[^0-9]/g, '').slice(-10) || '9876543210';
+      const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const randNum = Math.floor(100000 + Math.random() * 900000);
+      const prebuiltOrderNum = `CGP${dateStr}${randNum}`;
+      const prebuiltPtsEarned = Math.round(grandTotal * 0.05);
+
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
         const isLoaded = await loadRazorpayScript();
 
-        if (isLoaded) {
+        if (isLoaded && (window as any).Razorpay) {
           const options: any = {
-            key: orderData?.key_id || process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_TND5mOhcC1aMBW',
-            amount: orderData?.amount || Math.round(grandTotal * 100),
+            key: keyId,
+            order_id: realRazorpayOrderId,
+            amount: orderData?.amount || Math.max(100, Math.round(grandTotal * 100)),
             currency: orderData?.currency || 'INR',
             name: 'CINMAX Global Products',
             description: 'Artisanal Botanicals Order',
-            handler: async function (response: any) {
-              // STEP 3: Verify Payment Signature via Backend
-              const verifyEndpoint = typeof window !== 'undefined' && window.location.port === '3000'
-                ? '/api/verify-payment'
-                : 'http://localhost:3000/api/verify-payment';
+            handler: function (response: any) {
+              const razorpay_order_id = response.razorpay_order_id;
+              const razorpay_payment_id = response.razorpay_payment_id;
+              const razorpay_signature = response.razorpay_signature;
 
-              await fetch(verifyEndpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  razorpay_order_id: response.razorpay_order_id,
-                  razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_signature: response.razorpay_signature,
-                }),
-              }).catch(() => null);
+              setCelebrationData({
+                isOpen: true,
+                orderNumber: prebuiltOrderNum,
+                paymentId: razorpay_payment_id || '',
+                pointsEarned: prebuiltPtsEarned,
+              });
 
               clearCart();
-              router.push({
-                pathname: '/order-success',
-                params: {
-                  deliveryState: deliveryCalc.state,
-                  totalProducts: deliveryCalc.totalProducts.toString(),
-                  deliveryCharge: deliveryCalc.deliveryCharge.toString(),
-                  isFree: deliveryCalc.isFreeDelivery ? 'true' : 'false',
-                  paymentId: response.razorpay_payment_id || 'rzp_pay_success',
-                },
-              } as any);
               setIsProcessing(false);
+              setIsVerifyingPayment(false);
+
+              (async () => {
+                try {
+                  const verifyRes = await fetch(`${baseUrl}/verify-payment`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      razorpay_order_id,
+                      razorpay_payment_id,
+                      razorpay_signature,
+                      userId: user?.id,
+                      loyaltyPointsRedeemed: loyaltyRedemption,
+                      grandTotal,
+                      subtotal,
+                      discountAmount: couponDiscount + loyaltyRedemption,
+                      deliveryCharge,
+                      deliveryState: activeAddress.state || 'Tamil Nadu',
+                      cartItems: checkoutItems,
+                      shippingAddress: activeAddress,
+                    }),
+                  });
+
+                  const verifyData = await verifyRes.json();
+                  if (verifyData.success) {
+                    if (verifyData.orderNumber) {
+                      setCelebrationData((prev) => ({
+                        ...prev,
+                        orderNumber: verifyData.orderNumber,
+                        pointsEarned: verifyData.pointsEarned || prev.pointsEarned,
+                      }));
+                    }
+                    queryClient.invalidateQueries();
+                  }
+                } catch (err: any) {
+                  console.error('Background payment verification error:', err);
+                }
+              })();
             },
             modal: {
               ondismiss: function () {
+                setCelebrationData({ isOpen: false, orderNumber: '', paymentId: '', pointsEarned: 0 });
                 setIsProcessing(false);
+                setIsVerifyingPayment(false);
               },
             },
             prefill: {
-              name: currentAddress.name,
-              contact: currentAddress.phone,
-              email: 'patron@cinmax.luxury',
+              name: `${activeAddress.firstName || (activeAddress as any).name || user?.firstName || 'Valued Customer'}`.trim(),
+              contact: cleanPhone,
+              email: user?.email || 'customer.test@cinmax.com',
             },
-            theme: {
-              color: '#002754',
-            },
+            theme: { color: '#002754' },
           };
 
-          if (orderData?.order_id && typeof orderData.order_id === 'string' && orderData.order_id.startsWith('order_')) {
-            options.order_id = orderData.order_id;
-          }
-
           const rzp = new (window as any).Razorpay(options);
-          rzp.on('payment.failed', function (resp: any) {
-            alert(`Payment Failed: ${resp.error?.description || 'Transaction declined'}`);
-            setIsProcessing(false);
-          });
           rzp.open();
           return;
         }
-      } catch (err: any) {
-        console.error('Razorpay Web Checkout error:', err);
-      } finally {
-        setIsProcessing(false);
-      }
-    }
+      } else {
+        // Native (Android / iOS / Expo Go) Razorpay WebView Modal
+        const razorpayOptions = {
+          key: keyId,
+          order_id: realRazorpayOrderId,
+          amount: orderData?.amount || Math.max(100, Math.round(grandTotal * 100)),
+          currency: orderData?.currency || 'INR',
+          name: 'CINMAX Global Products',
+          description: 'Artisanal Botanicals Order',
+          prefill: {
+            name: `${activeAddress.firstName || (activeAddress as any).name || user?.firstName || 'Valued Customer'}`.trim(),
+            contact: cleanPhone,
+            email: user?.email || 'customer.test@cinmax.com',
+          },
+          theme: { color: '#002754' },
+        };
 
-    clearCart();
-    router.push({
-      pathname: '/order-success',
-      params: {
-        deliveryState: deliveryCalc.state,
-        totalProducts: deliveryCalc.totalProducts.toString(),
-        deliveryCharge: deliveryCalc.deliveryCharge.toString(),
-        isFree: deliveryCalc.isFreeDelivery ? 'true' : 'false',
-      },
-    } as any);
+        const razorpayHtml = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+            <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+            <style>
+              body { background-color: #040c18; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; color: #ffffff; }
+              .loader { border: 4px solid rgba(197,168,128,0.2); border-left-color: #C5A880; border-radius: 50%; width: 44px; height: 44px; animation: spin 0.8s linear infinite; }
+              @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+              p { margin-top: 16px; font-size: 14px; font-weight: 600; color: #C5A880; letter-spacing: 0.5px; }
+            </style>
+          </head>
+          <body>
+            <div class="loader"></div>
+            <p>Connecting to CINMAX Razorpay Gateway...</p>
+            <script>
+              var options = ${JSON.stringify(razorpayOptions)};
+              options.handler = function(response) {
+                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'PAYMENT_SUCCESS', payload: response }));
+              };
+              options.modal = {
+                ondismiss: function() {
+                  window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'PAYMENT_CANCELLED' }));
+                }
+              };
+              var rzp = new Razorpay(options);
+              rzp.on('payment.failed', function(resp) {
+                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'PAYMENT_FAILED', payload: resp }));
+              });
+              window.onload = function() {
+                rzp.open();
+              };
+            </script>
+          </body>
+          </html>
+        `;
+
+        setNativeRazorpayState({
+          isOpen: true,
+          html: razorpayHtml,
+          prebuiltOrderNum,
+          prebuiltPtsEarned,
+        });
+        return;
+      }
+    } catch (err: any) {
+      console.error('Checkout error:', err);
+      alert(err.message || 'Payment initiation failed.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F9FB' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF7F2' }}>
+      {/* GRAND PAYMENT SUCCESS EXPERIENCE MODAL (Instant In-Place Trigger with Party Poppers + Confetti) */}
+      <Modal visible={celebrationData.isOpen} animationType="fade" transparent>
+        <View style={{ flex: 1, backgroundColor: 'rgba(4,12,24,0.92)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          {/* Party Poppers Floating Particle Confetti */}
+          <MobileConfettiCannon isVisible={celebrationData.isOpen} />
+
+          <View style={{ backgroundColor: '#0A192F', borderRadius: 32, padding: 24, width: '100%', maxWidth: 360, alignItems: 'center', borderWidth: 2, borderColor: '#C5A880', shadowColor: '#002754', shadowOffset: { width: 0, height: 14 }, shadowOpacity: 0.5, shadowRadius: 24, overflow: 'hidden', zIndex: 100000 }}>
+            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 5, backgroundColor: '#C5A880' }} />
+            
+            {/* Corner Party Popper Cannon Badges */}
+            <View style={{ position: 'absolute', top: 12, left: 14, flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+              <PartyPopper size={16} color="#C5A880" />
+            </View>
+            <View style={{ position: 'absolute', top: 12, right: 14, flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+              <PartyPopper size={16} color="#C5A880" />
+            </View>
+
+            <View style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: '#002754', justifyContent: 'center', alignItems: 'center', marginTop: 12, marginBottom: 16, borderWidth: 2, borderColor: '#C5A880' }}>
+              <CheckCircle2 size={40} color="#C5A880" />
+            </View>
+
+            <View style={{ backgroundColor: '#002754', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 14, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(197,168,128,0.4)', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <PartyPopper size={12} color="#C5A880" />
+              <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#C5A880', fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase' }}>
+                ORDER CONFIRMED
+              </Text>
+              <PartyPopper size={12} color="#C5A880" />
+            </View>
+
+            <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 22, color: '#FFFFFF', textAlign: 'center', marginBottom: 4, fontWeight: '700' }}>
+              Thank You for Choosing CINMAX
+            </Text>
+
+            <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 13, color: '#E2E8F0', textAlign: 'center', marginBottom: 4 }}>
+              Your order has been placed successfully.
+            </Text>
+
+            <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 12, color: '#C5A880', fontStyle: 'italic', textAlign: 'center', marginBottom: 16 }}>
+              Your CINMAX journey continues...
+            </Text>
+
+            {celebrationData.pointsEarned > 0 && (
+              <View style={{ backgroundColor: '#002754', borderRadius: 16, padding: 14, width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, borderWidth: 1, borderColor: 'rgba(197,168,128,0.4)' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#C5A880', justifyContent: 'center', alignItems: 'center' }}>
+                    <Sparkles size={18} color="#002754" />
+                  </View>
+                  <View>
+                    <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 11, color: '#C5A880', textTransform: 'uppercase' }}>
+                      Loyalty Reward Credited
+                    </Text>
+                    <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 10, color: '#CBD5E1' }}>
+                      1 Point = ₹1 discount
+                    </Text>
+                  </View>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 18, color: '#4ADE80', fontWeight: '800' }}>+{celebrationData.pointsEarned}</Text>
+                  <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 9, color: '#C5A880', textTransform: 'uppercase', letterSpacing: 0.8 }}>PTS EARNED</Text>
+                </View>
+              </View>
+            )}
+
+            <View style={{ backgroundColor: 'rgba(197,168,128,0.15)', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 8, marginBottom: 4, borderWidth: 1, borderColor: 'rgba(197,168,128,0.3)' }}>
+              <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 11, color: '#C5A880' }}>
+                Order Ref: #{celebrationData.orderNumber}
+              </Text>
+            </View>
+
+            <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 9, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 18, marginTop: 4 }}>
+              KEEP PURCHASING WITH CINMAX
+            </Text>
+
+            <View style={{ gap: 10, width: '100%' }}>
+              <TouchableOpacity
+                onPress={() => { setCelebrationData((prev) => ({ ...prev, isOpen: false })); router.push('/(tabs)/orders' as any); }}
+                activeOpacity={0.85}
+                style={{ backgroundColor: '#C5A880', paddingVertical: 14, borderRadius: 16, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }}
+              >
+                <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#002754', fontSize: 13, fontWeight: '700' }}>View Order</Text>
+                <ArrowRight size={16} color="#002754" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => { setCelebrationData((prev) => ({ ...prev, isOpen: false })); router.push('/(tabs)/shop' as any); }}
+                activeOpacity={0.85}
+                style={{ backgroundColor: 'rgba(255,255,255,0.1)', paddingVertical: 14, borderRadius: 16, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}
+              >
+                <ShoppingBag size={16} color="#C5A880" />
+                <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>Keep Shopping</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       {/* 1. Sticky Header */}
-      <View style={{ paddingHorizontal: CONTAINER_PADDING, paddingTop: 14, paddingBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(247, 249, 251, 0.95)', borderBottomWidth: 1, borderBottomColor: 'rgba(195, 198, 209, 0.3)', zIndex: 100 }}>
+      <View style={{ paddingHorizontal: CONTAINER_PADDING, paddingTop: 14, paddingBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(250, 247, 242, 0.95)', borderBottomWidth: 1, borderBottomColor: 'rgba(195, 198, 209, 0.3)', zIndex: 100 }}>
         <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)' as any))} style={{ padding: 4 }}>
           <ChevronLeft size={22} color="#002754" />
         </TouchableOpacity>
@@ -332,226 +908,367 @@ export default function MobileCheckoutScreen() {
         <View style={{ marginHorizontal: CONTAINER_PADDING, marginTop: 20 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
             <View style={{ position: 'absolute', top: 16, left: 20, right: 20, height: 2, backgroundColor: '#E0E3E5', zIndex: 0 }} />
-
-            <TouchableOpacity onPress={() => setActiveStep(1)} style={{ alignItems: 'center', zIndex: 1, backgroundColor: '#F7F9FB', paddingHorizontal: 4 }}>
-              <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: activeStep >= 1 ? '#002754' : '#E0E3E5', justifyContent: 'center', alignItems: 'center' }}>
-                <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', fontSize: 13 }}>1</Text>
-              </View>
-              <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 10, color: activeStep >= 1 ? '#002754' : '#434750', textTransform: 'uppercase', marginTop: 4 }}>Address</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={() => setActiveStep(2)} style={{ alignItems: 'center', zIndex: 1, backgroundColor: '#F7F9FB', paddingHorizontal: 4 }}>
-              <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: activeStep >= 2 ? '#002754' : '#E0E3E5', justifyContent: 'center', alignItems: 'center' }}>
-                <Text style={{ fontFamily: FONT_SANS_BOLD, color: activeStep >= 2 ? 'white' : '#434750', fontSize: 13 }}>2</Text>
-              </View>
-              <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 10, color: activeStep >= 2 ? '#002754' : '#434750', textTransform: 'uppercase', marginTop: 4 }}>Delivery</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={() => setActiveStep(3)} style={{ alignItems: 'center', zIndex: 1, backgroundColor: '#F7F9FB', paddingHorizontal: 4 }}>
-              <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: activeStep >= 3 ? '#002754' : '#E0E3E5', justifyContent: 'center', alignItems: 'center' }}>
-                <Text style={{ fontFamily: FONT_SANS_BOLD, color: activeStep >= 3 ? 'white' : '#434750', fontSize: 13 }}>3</Text>
-              </View>
-              <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 10, color: activeStep >= 3 ? '#002754' : '#434750', textTransform: 'uppercase', marginTop: 4 }}>Payment</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={() => setActiveStep(4)} style={{ alignItems: 'center', zIndex: 1, backgroundColor: '#F7F9FB', paddingHorizontal: 4 }}>
-              <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: activeStep >= 4 ? '#002754' : '#E0E3E5', justifyContent: 'center', alignItems: 'center' }}>
-                <Text style={{ fontFamily: FONT_SANS_BOLD, color: activeStep >= 4 ? 'white' : '#434750', fontSize: 13 }}>4</Text>
-              </View>
-              <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 10, color: activeStep >= 4 ? '#002754' : '#434750', textTransform: 'uppercase', marginTop: 4 }}>Review</Text>
-            </TouchableOpacity>
+            {['Address', 'Delivery', 'Payment', 'Review'].map((label, idx) => {
+              const stepNum = idx + 1;
+              const isActive = activeStep === stepNum;
+              const isCompleted = activeStep > stepNum;
+              return (
+                <TouchableOpacity
+                  key={label}
+                  onPress={() => setActiveStep(stepNum)}
+                  style={{ alignItems: 'center', zIndex: 1, backgroundColor: '#FAF7F2', paddingHorizontal: 6 }}
+                >
+                  <View style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    backgroundColor: isActive ? '#002754' : isCompleted ? '#059669' : '#E0E3E5',
+                    justifyContent: 'center',
+                    alignItems: 'center'
+                  }}>
+                    {isCompleted ? (
+                      <Check size={16} color="white" />
+                    ) : (
+                      <Text style={{ fontFamily: FONT_SANS_BOLD, color: isActive ? 'white' : '#434750', fontSize: 13 }}>{stepNum}</Text>
+                    )}
+                  </View>
+                  <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 10, color: isActive ? '#002754' : isCompleted ? '#059669' : '#434750', textTransform: 'uppercase', marginTop: 4 }}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
-        {/* 3. Delivery Address Section (ONLY SHOWS LAST TIME USED ADDRESS) */}
-        <View style={{ marginHorizontal: CONTAINER_PADDING, marginTop: 24 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 20, fontWeight: '700', color: '#002754' }}>
-              Delivery Address
-            </Text>
-            <TouchableOpacity
-              onPress={() => {
-                setIsAddingNewAddress(false);
-                setIsManageAddressModalOpen(true);
-              }}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EBF3FF', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 }}
-            >
-              <Edit3 size={13} color="#002754" />
-              <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 11, color: '#002754', textTransform: 'uppercase', fontWeight: '700' }}>
-                Change / Add Address
+        {!user && (
+          <View style={{ marginHorizontal: CONTAINER_PADDING, marginTop: 18, backgroundColor: '#FFFBEB', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#F59E0B', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flex: 1, paddingRight: 10 }}>
+              <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 14, color: '#B45309', fontWeight: '700' }}>🔑 Account Login Required</Text>
+              <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 12, color: '#B45309', marginTop: 2 }}>
+                Please log in to your CINMAX account to complete your purchase and save order history.
               </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => router.push('/(auth)/login' as any)}
+              style={{ backgroundColor: '#002754', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12 }}
+            >
+              <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', fontSize: 12, fontWeight: '700' }}>Log In</Text>
             </TouchableOpacity>
           </View>
+        )}
 
-          {/* SINGLE LAST USED ADDRESS CARD */}
-          <View
-            style={{
-              backgroundColor: '#FFFFFF',
-              borderRadius: 20,
-              padding: 18,
-              flexDirection: 'row',
-              gap: 14,
-              alignItems: 'flex-start',
-              borderLeftWidth: 4,
-              borderLeftColor: '#002754',
-              shadowColor: '#0A3D78',
-              shadowOffset: { width: 0, height: 5 },
-              shadowOpacity: 0.05,
-              shadowRadius: 12,
-              borderWidth: 1,
-              borderColor: '#002754',
-            }}
-          >
-            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(180, 205, 254, 0.35)', justifyContent: 'center', alignItems: 'center', marginTop: 2 }}>
-              <MapPin size={20} color="#002754" />
+        {/* STEP 1: DELIVERY ADDRESS */}
+        {activeStep === 1 && (
+          <View style={{ marginHorizontal: CONTAINER_PADDING, marginTop: 24 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 20, fontWeight: '700', color: '#002754' }}>
+                Delivery Address
+              </Text>
+              <TouchableOpacity
+                onPress={() => { setIsAddingNewAddress(false); setIsManageAddressModalOpen(true); }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EBF3FF', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 }}
+              >
+                <Edit3 size={13} color="#002754" />
+                <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 11, color: '#002754', textTransform: 'uppercase', fontWeight: '700' }}>
+                  Change / Add
+                </Text>
+              </TouchableOpacity>
             </View>
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 16, fontWeight: '700', color: '#191C1E' }}>{currentAddress.firstName || currentAddress.name} {currentAddress.lastName}</Text>
-                  <View style={{ backgroundColor: '#002754', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 }}>
-                    <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', fontSize: 9, fontWeight: '700', textTransform: 'uppercase' }}>
-                      {currentAddress.state}
+
+            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 20, padding: 18, flexDirection: 'row', gap: 14, alignItems: 'flex-start', borderLeftWidth: 4, borderLeftColor: '#002754', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.05, shadowRadius: 12, borderWidth: 1, borderColor: '#002754' }}>
+              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(180, 205, 254, 0.35)', justifyContent: 'center', alignItems: 'center', marginTop: 2 }}>
+                <MapPin size={20} color="#002754" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 16, fontWeight: '700', color: '#191C1E' }}>
+                    {currentAddress.firstName || (currentAddress as any).name || user?.firstName || 'Valued Customer'}{' '}
+                    {currentAddress.lastName || user?.lastName || ''}
+                  </Text>
+                  <View style={{ backgroundColor: '#EBF3FF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }}>
+                    <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#002754', fontSize: 9, fontWeight: '700', textTransform: 'uppercase' }}>
+                      {dbAddresses.length > 0 ? 'SELECTED' : 'NO ADDRESS'}
                     </Text>
                   </View>
                 </View>
-                <View style={{ backgroundColor: '#EBF3FF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }}>
-                  <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#002754', fontSize: 9, fontWeight: '700', textTransform: 'uppercase' }}>
-                    LAST USED
+                {dbAddresses.length > 0 ? (
+                  <>
+                    <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 13, color: '#434750', lineHeight: 19, marginBottom: 6 }}>
+                      {currentAddress.streetLine1 || (currentAddress as any).addressLine1 || ''}{(currentAddress.streetLine2 || (currentAddress as any).addressLine2) ? `, ${currentAddress.streetLine2 || (currentAddress as any).addressLine2}` : ''}{', '}
+                      {currentAddress.city || ''}, {currentAddress.state} - {currentAddress.postalCode || (currentAddress as any).pincode || ''}
+                    </Text>
+                    <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 13, color: '#002754' }}>
+                      Phone: {currentAddress.phone}
+                    </Text>
+                  </>
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => { setIsAddingNewAddress(true); setIsManageAddressModalOpen(true); }}
+                    style={{ backgroundColor: '#EBF3FF', borderRadius: 10, padding: 10, alignItems: 'center', marginTop: 6 }}
+                  >
+                    <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 13, color: '#002754' }}>+ Add Delivery Address</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+          </View>
+        )}
+
+        {/* STEP 2: DELIVERY TARIFF */}
+        {activeStep === 2 && (
+          <View style={{ marginHorizontal: CONTAINER_PADDING, marginTop: 24 }}>
+            {/* Address Summary */}
+            <View style={{ backgroundColor: '#F0F5FF', borderRadius: 16, padding: 14, marginBottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(0, 39, 84, 0.2)' }}>
+              <View style={{ flex: 1, paddingRight: 10 }}>
+                <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#002754', textTransform: 'uppercase' }}>Deliver To:</Text>
+                <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 12, color: '#434750', marginTop: 2 }} numberOfLines={1}>
+                  {currentAddress.firstName || user?.firstName} — {currentAddress.city}, {currentAddress.state} ({currentAddress.postalCode || (currentAddress as any).pincode})
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setActiveStep(1)} style={{ backgroundColor: '#FFFFFF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#002754' }}>
+                <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 10, color: '#002754' }}>Edit</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 20, fontWeight: '700', color: '#002754', marginBottom: 12 }}>
+              Shipping Tariff Engine
+            </Text>
+            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 20, padding: 18, borderWidth: 1, borderColor: '#002754', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 10, gap: 12 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <Truck size={24} color="#002754" />
+                  <View>
+                    <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 14, fontWeight: '700', color: '#191C1E' }}>
+                      {deliveryCalc.state} Delivery Rule
+                    </Text>
+                    <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 12, color: '#434750' }}>
+                      Total Products: {totalProducts} units
+                    </Text>
+                  </View>
+                </View>
+                <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 18, color: deliveryCalc.isFreeDelivery ? '#059669' : '#002754', fontWeight: '700' }}>
+                  {deliveryCalc.isFreeDelivery ? 'FREE' : `₹${deliveryCalc.deliveryCharge}`}
+                </Text>
+              </View>
+
+              <View style={{ borderTopWidth: 1, borderTopColor: '#F0F2F5', paddingTop: 10, flexDirection: 'row', justifyContent: 'space-between' }}>
+                <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 11, color: '#737781' }}>Rule Basis: {currentAddress.state}</Text>
+                <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 11, color: '#002754' }}>
+                  {deliveryCalc.isFreeDelivery ? 'Free Shipping Qualified' : 'Standard Tariff Applies'}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* STEP 3: PAYMENT & OFFERS */}
+        {activeStep === 3 && (
+          <View style={{ marginHorizontal: CONTAINER_PADDING, marginTop: 24, gap: 20 }}>
+            {/* Payment Method */}
+            <View>
+              <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 20, fontWeight: '700', color: '#002754', marginBottom: 12 }}>
+                Payment Method
+              </Text>
+              <View style={{ backgroundColor: '#FFFFFF', borderRadius: 20, padding: 18, borderWidth: 1.5, borderColor: '#002754', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 10, gap: 14 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: '#EBF3FF', justifyContent: 'center', alignItems: 'center' }}>
+                      <ShieldCheck size={24} color="#002754" />
+                    </View>
+                    <View>
+                      <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 15, fontWeight: '700', color: '#191C1E' }}>Razorpay Secure Gateway</Text>
+                      <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 12, color: '#434750', marginTop: 2 }}>UPI, Cards, Netbanking &amp; Wallets</Text>
+                    </View>
+                  </View>
+                  <View style={{ backgroundColor: '#002754', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+                    <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>ONLINE</Text>
+                  </View>
+                </View>
+
+                <View style={{ backgroundColor: '#F7F9FB', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: '#E0E3E5' }}>
+                  <Lock size={14} color="#059669" />
+                  <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 12, color: '#059669', flex: 1 }}>
+                    Online Payment Only • Cash on Delivery (COD) is disabled
                   </Text>
                 </View>
               </View>
-              <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 13, color: '#434750', lineHeight: 19, marginBottom: 6 }}>
-                {currentAddress.streetLine1 || currentAddress.addressLine1}, {currentAddress.streetLine2 || currentAddress.addressLine2 ? (currentAddress.streetLine2 || currentAddress.addressLine2) + ', ' : ''}{currentAddress.city}, {currentAddress.state} - {currentAddress.postalCode || currentAddress.pincode}
-              </Text>
-              <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 13, color: '#002754' }}>
-                Phone: {currentAddress.phone}
+            </View>
+
+            {/* Applied Coupon */}
+            {coupon && (
+              <View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <Tag size={18} color="#002754" />
+                  <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 18, fontWeight: '700', color: '#002754' }}>Coupon Applied</Text>
+                </View>
+                <View style={{ backgroundColor: '#F0FFF4', borderRadius: 20, padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1.5, borderColor: '#059669' }}>
+                  <View>
+                    <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 15, color: '#059669', fontWeight: '700' }}>
+                      🎉 {coupon.code}
+                    </Text>
+                    <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 12, color: '#059669', marginTop: 2 }}>
+                      You save ₹{couponDiscount} on this order
+                    </Text>
+                  </View>
+                  <TouchableOpacity onPress={removeCoupon} style={{ padding: 6 }}>
+                    <X size={18} color="#BA1A1A" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {/* Loyalty Points */}
+            {user && availableLoyaltyPoints > 0 && (
+              <View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <Gift size={18} color="#C5A880" />
+                  <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 18, fontWeight: '700', color: '#002754' }}>Loyalty Points</Text>
+                </View>
+                <View style={{ backgroundColor: '#FFFFFF', borderRadius: 20, padding: 18, borderWidth: 1, borderColor: 'rgba(197, 168, 128, 0.4)', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 10 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <View>
+                      <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 14, color: '#002754', fontWeight: '700' }}>
+                        🏆 {availableLoyaltyPoints} Points Available
+                      </Text>
+                      <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 12, color: '#737781', marginTop: 2 }}>
+                        1 point = ₹1 • Tier: {user.loyaltyTier || 'bronze'}
+                      </Text>
+                    </View>
+                    <View style={{ backgroundColor: '#C5A880', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+                      <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', fontSize: 11, textTransform: 'uppercase' }}>
+                        {user.loyaltyTier || 'Bronze'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={() => setRedeemLoyalty(!redeemLoyalty)}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: redeemLoyalty ? '#F0FFF4' : '#F7F9FB', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: redeemLoyalty ? '#059669' : '#C3C6D1' }}
+                  >
+                    <View style={{ width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: redeemLoyalty ? '#059669' : '#737781', backgroundColor: redeemLoyalty ? '#059669' : 'transparent', justifyContent: 'center', alignItems: 'center' }}>
+                      {redeemLoyalty && <Check size={14} color="white" />}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 14, color: redeemLoyalty ? '#059669' : '#002754', fontWeight: '700' }}>
+                        {redeemLoyalty
+                          ? `Redeeming ${loyaltyRedemption} points → Save ₹${loyaltyRedemption}`
+                          : `Use up to ${Math.min(availableLoyaltyPoints, maxLoyaltyRedemption)} points → Save ₹${Math.min(availableLoyaltyPoints, maxLoyaltyRedemption)}`}
+                      </Text>
+                      <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 11, color: '#737781', marginTop: 2 }}>
+                        Max 20% of order value can be redeemed
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* STEP 4: REVIEW & PLACE ORDER */}
+        {activeStep === 4 && (
+          <View style={{ marginHorizontal: CONTAINER_PADDING, marginTop: 24, gap: 20 }}>
+            {/* Address & Delivery Quick Overview */}
+            <View style={{ backgroundColor: '#F0F5FF', borderRadius: 16, padding: 14, gap: 8, borderWidth: 1, borderColor: 'rgba(0, 39, 84, 0.2)' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#002754', textTransform: 'uppercase' }}>Delivery Location:</Text>
+                <TouchableOpacity onPress={() => setActiveStep(1)}>
+                  <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 11, color: '#C5A880' }}>Change</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 12, color: '#434750' }}>
+                {currentAddress.firstName || user?.firstName} {currentAddress.lastName || user?.lastName} — {currentAddress.streetLine1 || (currentAddress as any).addressLine1}, {currentAddress.city}, {currentAddress.state} - {currentAddress.postalCode || (currentAddress as any).pincode}
               </Text>
             </View>
-          </View>
-        </View>
 
-        {/* 4. Delivery & Tariff Engine Summary */}
-        <View style={{ marginHorizontal: CONTAINER_PADDING, marginTop: 24 }}>
-          <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 20, fontWeight: '700', color: '#002754', marginBottom: 12 }}>
-            Shipping Tariff Engine
-          </Text>
-          <View style={{ backgroundColor: '#FFFFFF', borderRadius: 20, padding: 18, borderWidth: 1, borderColor: '#002754', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 10, gap: 12 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <Truck size={24} color="#002754" />
-                <View>
-                  <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 14, fontWeight: '700', color: '#191C1E' }}>
-                    {deliveryCalc.state} Delivery Rule
+            {/* Order Summary */}
+            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 20, padding: 20, shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 10, borderWidth: 1, borderColor: 'rgba(195, 198, 209, 0.2)' }}>
+              <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 20, fontWeight: '700', color: '#002754', marginBottom: 14 }}>
+                Order Summary
+              </Text>
+              <View style={{ gap: 10 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#434750' }}>Subtotal ({totalProducts} units)</Text>
+                  <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 14, color: '#191C1E' }}>₹{subtotal}</Text>
+                </View>
+
+                {couponDiscount > 0 && (
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#059669' }}>Coupon ({coupon?.code})</Text>
+                    <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 14, color: '#059669' }}>-₹{couponDiscount}</Text>
+                  </View>
+                )}
+
+                {loyaltyRedemption > 0 && (
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#C5A880' }}>Loyalty Points (₹{loyaltyRedemption})</Text>
+                    <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 14, color: '#C5A880' }}>-₹{loyaltyRedemption}</Text>
+                  </View>
+                )}
+
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#434750' }}>Delivery ({deliveryCalc.state})</Text>
+                  <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 14, color: deliveryCalc.isFreeDelivery ? '#059669' : '#002754' }}>
+                    {deliveryCalc.isFreeDelivery ? 'FREE' : `₹${deliveryCharge}`}
                   </Text>
-                  <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 12, color: '#434750' }}>
-                    Total Products: {totalProducts} units
+                </View>
+
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 13, color: '#64748B' }}>GST (18% Included)</Text>
+                  <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 13, color: '#64748B' }}>₹{includedGst}</Text>
+                </View>
+
+                <View style={{ borderTopWidth: 1, borderTopColor: '#E0E3E5', paddingTop: 12, marginTop: 4, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 20, fontWeight: '700', color: '#002754' }}>Grand Total</Text>
+                  <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 22, fontWeight: '700', color: '#002754' }}>₹{grandTotal}</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Policy & Terms Acknowledgement */}
+            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: 'rgba(195, 198, 209, 0.4)', gap: 8 }}>
+              <TouchableOpacity
+                onPress={() => setIsTermsAccepted(!isTermsAccepted)}
+                activeOpacity={0.8}
+                style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}
+              >
+                <View style={{ width: 20, height: 20, borderRadius: 6, borderWidth: 2, borderColor: isTermsAccepted ? '#002754' : '#737781', backgroundColor: isTermsAccepted ? '#002754' : 'transparent', justifyContent: 'center', alignItems: 'center', marginTop: 2 }}>
+                  {isTermsAccepted && <Check size={14} color="white" />}
+                </View>
+                <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 12, color: '#434750', flex: 1, lineHeight: 17 }}>
+                  By placing this order, you agree to CINMAX{' '}
+                  <Text onPress={() => router.push('/terms' as any)} style={{ color: '#002754', textDecorationLine: 'underline', fontFamily: FONT_SANS_BOLD }}>
+                    Terms &amp; Conditions
                   </Text>
-                </View>
-              </View>
-              <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 18, color: deliveryCalc.isFreeDelivery ? '#059669' : '#002754', fontWeight: '700' }}>
-                {deliveryCalc.isFreeDelivery ? 'FREE' : `₹${deliveryCalc.deliveryCharge}`}
-              </Text>
-            </View>
-
-            <View style={{ borderTopWidth: 1, borderTopColor: '#F0F2F5', paddingTop: 10, flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 11, color: '#737781' }}>Rule Basis: {currentAddress.state}</Text>
-              <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 11, color: '#002754' }}>
-                {deliveryCalc.isFreeDelivery ? 'Free Shipping Qualified' : `Standard Tariff Applies`}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* 5. Payment Options (Razorpay Only - No COD) */}
-        <View style={{ marginHorizontal: CONTAINER_PADDING, marginTop: 24 }}>
-          <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 20, fontWeight: '700', color: '#002754', marginBottom: 12 }}>
-            Payment Method
-          </Text>
-          <View style={{ backgroundColor: '#FFFFFF', borderRadius: 20, padding: 18, borderWidth: 1.5, borderColor: '#002754', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 10, gap: 14 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: '#EBF3FF', justifyContent: 'center', alignItems: 'center' }}>
-                  <ShieldCheck size={24} color="#002754" />
-                </View>
-                <View>
-                  <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 15, fontWeight: '700', color: '#191C1E' }}>Razorpay Secure Gateway</Text>
-                  <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 12, color: '#434750', marginTop: 2 }}>UPI, Cards, Netbanking &amp; Wallets</Text>
-                </View>
-              </View>
-              <View style={{ backgroundColor: '#002754', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
-                <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>ONLINE</Text>
-              </View>
-            </View>
-
-            <View style={{ backgroundColor: '#F7F9FB', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: '#E0E3E5' }}>
-              <Lock size={14} color="#059669" />
-              <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 12, color: '#059669', flex: 1 }}>
-                Online Payment Only • Cash on Delivery (COD) is disabled
-              </Text>
+                  ,{' '}
+                  <Text onPress={() => router.push('/shipping' as any)} style={{ color: '#002754', textDecorationLine: 'underline', fontFamily: FONT_SANS_BOLD }}>
+                    Shipping Policy
+                  </Text>
+                  , and{' '}
+                  <Text onPress={() => router.push('/refund' as any)} style={{ color: '#002754', textDecorationLine: 'underline', fontFamily: FONT_SANS_BOLD }}>
+                    No Return / No Refund Policy
+                  </Text>
+                  .
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
-        </View>
-
-        {/* 6. Order Summary */}
-        <View style={{ marginHorizontal: CONTAINER_PADDING, marginTop: 24, backgroundColor: '#FFFFFF', borderRadius: 20, padding: 20, shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 10, borderWidth: 1, borderColor: 'rgba(195, 198, 209, 0.2)' }}>
-          <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 20, fontWeight: '700', color: '#002754', marginBottom: 14 }}>
-            Order Summary
-          </Text>
-          <View style={{ gap: 10 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#434750' }}>Subtotal ({totalProducts} units)</Text>
-              <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 14, color: '#191C1E' }}>₹{subtotal}</Text>
-            </View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#C5A880' }}>Luxe Member Discount</Text>
-              <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 14, color: '#C5A880' }}>-₹{discount}</Text>
-            </View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#434750' }}>Delivery Charge ({deliveryCalc.state})</Text>
-              <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 14, color: deliveryCalc.isFreeDelivery ? '#059669' : '#002754' }}>
-                {deliveryCalc.isFreeDelivery ? 'FREE' : `₹${deliveryCharge}`}
-              </Text>
-            </View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#434750' }}>Estimated GST (18%)</Text>
-              <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 14, color: '#191C1E' }}>₹{gst}</Text>
-            </View>
-            <View style={{ borderTopWidth: 1, borderTopColor: '#E0E3E5', paddingTop: 12, marginTop: 4, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 20, fontWeight: '700', color: '#002754' }}>Grand Total</Text>
-              <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 22, fontWeight: '700', color: '#002754' }}>₹{grandTotal}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* 7. Terms & Conditions */}
-        <TouchableOpacity
-          onPress={() => setIsTermsAccepted(!isTermsAccepted)}
-          style={{ marginHorizontal: CONTAINER_PADDING, marginTop: 24, flexDirection: 'row', alignItems: 'center', gap: 10 }}
-        >
-          <View style={{ width: 20, height: 20, borderRadius: 6, borderWidth: 2, borderColor: isTermsAccepted ? '#002754' : '#737781', backgroundColor: isTermsAccepted ? '#002754' : 'transparent', justifyContent: 'center', alignItems: 'center' }}>
-            {isTermsAccepted && <Check size={14} color="white" />}
-          </View>
-          <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 13, color: '#434750', flex: 1 }}>
-            I agree to the <Text style={{ color: '#002754', textDecorationLine: 'underline' }}>Terms &amp; Conditions</Text> and <Text style={{ color: '#002754', textDecorationLine: 'underline' }}>Privacy Policy</Text>.
-          </Text>
-        </TouchableOpacity>
+        )}
 
       </ScrollView>
 
-      {/* Profile Address Management & Add Address Modal */}
+      {/* Address Management Modal */}
       <Modal visible={isManageAddressModalOpen} animationType="slide" transparent>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
           <View style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '88%' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 20, fontWeight: '700', color: '#002754' }}>
-                {isAddingNewAddress ? 'Add New Address' : 'Profile Delivery Addresses'}
+                {isAddingNewAddress ? 'Add New Address' : 'Delivery Addresses'}
               </Text>
               <TouchableOpacity
-                onPress={() => {
-                  setIsManageAddressModalOpen(false);
-                  setIsAddingNewAddress(false);
-                }}
+                onPress={() => { setIsManageAddressModalOpen(false); setIsAddingNewAddress(false); }}
                 style={{ padding: 4 }}
               >
                 <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#737781' }}>Done</Text>
@@ -562,21 +1279,11 @@ export default function MobileCheckoutScreen() {
               <View style={{ gap: 14 }}>
                 <TouchableOpacity
                   onPress={() => setIsAddingNewAddress(true)}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    backgroundColor: '#EBF3FF',
-                    paddingVertical: 12,
-                    borderRadius: 14,
-                    borderWidth: 1,
-                    borderColor: '#002754',
-                  }}
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#EBF3FF', paddingVertical: 12, borderRadius: 14, borderWidth: 1, borderColor: '#002754' }}
                 >
                   <Plus size={18} color="#002754" />
                   <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 14, color: '#002754' }}>
-                    + Add New Profile Address
+                    + Add New Address
                   </Text>
                 </TouchableOpacity>
 
@@ -587,44 +1294,21 @@ export default function MobileCheckoutScreen() {
                       return (
                         <TouchableOpacity
                           key={addr.id}
-                          onPress={() => {
-                            setSelectedAddressId(addr.id || null); // updates last used address
-                            setIsManageAddressModalOpen(false);
-                          }}
-                          style={{
-                            backgroundColor: isSelected ? '#F0F5FF' : '#FFFFFF',
-                            borderRadius: 16,
-                            padding: 16,
-                            borderWidth: isSelected ? 2 : 1,
-                            borderColor: isSelected ? '#002754' : 'rgba(195, 198, 209, 0.3)',
-                            flexDirection: 'row',
-                            alignItems: 'flex-start',
-                            gap: 12,
-                          }}
+                          onPress={() => { setSelectedAddressId(addr.id || null); setIsManageAddressModalOpen(false); }}
+                          style={{ backgroundColor: isSelected ? '#F0F5FF' : '#FFFFFF', borderRadius: 16, padding: 16, borderWidth: isSelected ? 2 : 1, borderColor: isSelected ? '#002754' : 'rgba(195, 198, 209, 0.3)', flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}
                         >
                           <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: isSelected ? '#002754' : '#ECEEF0', justifyContent: 'center', alignItems: 'center', marginTop: 2 }}>
                             {isSelected ? <Check size={16} color="white" /> : <Home size={16} color="#737781" />}
                           </View>
                           <View style={{ flex: 1 }}>
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 14, color: '#191C1E' }}>{addr.firstName} {addr.lastName}</Text>
-                                <View style={{ backgroundColor: '#EBF3FF', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 }}>
-                                  <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#002754', fontSize: 9 }}>{addr.state}</Text>
-                                </View>
-                              </View>
-                              {isSelected && (
-                                <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 10, color: '#002754', textTransform: 'uppercase' }}>
-                                  ACTIVE
-                                </Text>
-                              )}
+                              <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 14, color: '#191C1E' }}>{addr.firstName} {addr.lastName}</Text>
+                              {isSelected && <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 10, color: '#002754', textTransform: 'uppercase' }}>ACTIVE</Text>}
                             </View>
                             <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 12, color: '#434750', lineHeight: 16 }}>
                               {addr.streetLine1}, {addr.streetLine2 ? addr.streetLine2 + ', ' : ''}{addr.city}, {addr.state} - {addr.postalCode}
                             </Text>
-                            <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 12, color: '#002754', marginTop: 4 }}>
-                              {addr.phone}
-                            </Text>
+                            <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 12, color: '#002754', marginTop: 4 }}>{addr.phone}</Text>
                           </View>
                         </TouchableOpacity>
                       );
@@ -633,44 +1317,21 @@ export default function MobileCheckoutScreen() {
                 </ScrollView>
               </View>
             ) : (
-              <ScrollView style={{ gap: 12 }}>
-                <TextInput
-                  placeholder="Full Name *"
-                  value={newAddress.name}
-                  onChangeText={(text) => setNewAddress({ ...newAddress, name: text })}
-                  style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, marginBottom: 10 }}
-                />
-                <TextInput
-                  placeholder="Phone Number *"
-                  keyboardType="phone-pad"
-                  value={newAddress.phone}
-                  onChangeText={(text) => setNewAddress({ ...newAddress, phone: text })}
-                  style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, marginBottom: 10 }}
-                />
-                <TextInput
-                  placeholder="Address Line 1 *"
-                  value={newAddress.addressLine1}
-                  onChangeText={(text) => setNewAddress({ ...newAddress, addressLine1: text })}
-                  style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, marginBottom: 10 }}
-                />
-                <TextInput
-                  placeholder="Address Line 2"
-                  value={newAddress.addressLine2}
-                  onChangeText={(text) => setNewAddress({ ...newAddress, addressLine2: text })}
-                  style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, marginBottom: 10 }}
-                />
-                <TextInput
-                  placeholder="City *"
-                  value={newAddress.city}
-                  onChangeText={(text) => setNewAddress({ ...newAddress, city: text })}
-                  style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, marginBottom: 10 }}
-                />
+              <ScrollView style={{ gap: 10 }}>
+                <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#002754', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>Recipient Contact Details</Text>
+                <TextInput placeholder="Full Name *" value={newAddress.name} onChangeText={(text: string) => setNewAddress({ ...newAddress, name: text })} style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, marginBottom: 8 }} />
+                <TextInput placeholder="10-Digit Mobile Number *" keyboardType="phone-pad" value={newAddress.phone} onChangeText={(text: string) => setNewAddress({ ...newAddress, phone: text })} style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, marginBottom: 12 }} />
 
-                {/* State Dropdown Selector */}
-                <TouchableOpacity
-                  onPress={() => setIsStateDropdownOpen(!isStateDropdownOpen)}
-                  style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#002754', borderRadius: 12, padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}
-                >
+                <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#002754', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>Address &amp; Location Details</Text>
+                <TextInput placeholder="House No. / Building / Flat Name *" value={newAddress.addressLine1} onChangeText={(text: string) => setNewAddress({ ...newAddress, addressLine1: text })} style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, marginBottom: 8 }} />
+                <TextInput placeholder="Road Name / Area / Colony / Street *" value={newAddress.addressLine2} onChangeText={(text: string) => setNewAddress({ ...newAddress, addressLine2: text })} style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, marginBottom: 8 }} />
+                
+                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 8 }}>
+                  <TextInput placeholder="6-Digit Pincode *" keyboardType="number-pad" value={newAddress.pincode} onChangeText={(text: string) => setNewAddress({ ...newAddress, pincode: text })} style={{ flex: 1, backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14 }} />
+                  <TextInput placeholder="City / District *" value={newAddress.city} onChangeText={(text: string) => setNewAddress({ ...newAddress, city: text })} style={{ flex: 1, backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14 }} />
+                </View>
+
+                <TouchableOpacity onPress={() => setIsStateDropdownOpen(!isStateDropdownOpen)} style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#002754', borderRadius: 12, padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <View>
                     <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 10, color: '#737781' }}>State *</Text>
                     <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 14, color: '#002754' }}>{newAddress.state || 'Select State'}</Text>
@@ -679,17 +1340,10 @@ export default function MobileCheckoutScreen() {
                 </TouchableOpacity>
 
                 {isStateDropdownOpen && (
-                  <View style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#002754', borderRadius: 12, maxHeight: 180, marginBottom: 10 }}>
+                  <View style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#002754', borderRadius: 12, maxHeight: 180, marginBottom: 8 }}>
                     <ScrollView nestedScrollEnabled>
                       {ALL_INDIAN_STATES.map((st) => (
-                        <TouchableOpacity
-                          key={st}
-                          onPress={() => {
-                            setNewAddress({ ...newAddress, state: st });
-                            setIsStateDropdownOpen(false);
-                          }}
-                          style={{ padding: 10, borderBottomWidth: 1, borderBottomColor: '#F0F2F5' }}
-                        >
+                        <TouchableOpacity key={st} onPress={() => { setNewAddress({ ...newAddress, state: st }); setIsStateDropdownOpen(false); }} style={{ padding: 10, borderBottomWidth: 1, borderBottomColor: '#F0F2F5' }}>
                           <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 13, color: '#002754' }}>{st}</Text>
                         </TouchableOpacity>
                       ))}
@@ -697,26 +1351,29 @@ export default function MobileCheckoutScreen() {
                   </View>
                 )}
 
-                <TextInput
-                  placeholder="Pincode *"
-                  keyboardType="number-pad"
-                  value={newAddress.pincode}
-                  onChangeText={(text) => setNewAddress({ ...newAddress, pincode: text })}
-                  style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, marginBottom: 14 }}
-                />
+                <TextInput placeholder="Nearby Landmark (Optional e.g. Near City Hospital)" value={(newAddress as any).landmark || ''} onChangeText={(text: string) => setNewAddress({ ...newAddress, [ 'landmark' as any]: text })} style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, marginBottom: 12 }} />
+
+                <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#002754', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Save Address As</Text>
+                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
+                  {['Home', 'Work', 'Other'].map((tag) => {
+                    const isSel = (newAddress.type || 'Home') === tag;
+                    return (
+                      <TouchableOpacity
+                        key={tag}
+                        onPress={() => setNewAddress({ ...newAddress, type: tag })}
+                        style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: isSel ? '#002754' : '#F2F4F6', borderWidth: 1, borderColor: isSel ? '#002754' : '#C3C6D1' }}
+                      >
+                        <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: isSel ? 'white' : '#434750' }}>{tag}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
 
                 <View style={{ flexDirection: 'row', gap: 10 }}>
-                  <TouchableOpacity
-                    onPress={() => setIsAddingNewAddress(false)}
-                    style={{ flex: 1, backgroundColor: '#ECEEF0', paddingVertical: 14, borderRadius: 16, alignItems: 'center' }}
-                  >
-                    <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#434750', fontSize: 14 }}>Back to List</Text>
+                  <TouchableOpacity onPress={() => setIsAddingNewAddress(false)} style={{ flex: 1, backgroundColor: '#ECEEF0', paddingVertical: 14, borderRadius: 16, alignItems: 'center' }}>
+                    <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#434750', fontSize: 14 }}>Back</Text>
                   </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={handleSaveNewAddress}
-                    style={{ flex: 1, backgroundColor: '#002754', paddingVertical: 14, borderRadius: 16, alignItems: 'center' }}
-                  >
+                  <TouchableOpacity onPress={handleSaveNewAddress} style={{ flex: 1, backgroundColor: '#002754', paddingVertical: 14, borderRadius: 16, alignItems: 'center' }}>
                     <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', fontSize: 14 }}>Save &amp; Select</Text>
                   </TouchableOpacity>
                 </View>
@@ -726,19 +1383,70 @@ export default function MobileCheckoutScreen() {
         </View>
       </Modal>
 
-      {/* 8. Sticky Bottom Action Bar */}
+      {/* Native Razorpay Checkout Modal (Android / iOS / Expo Go) */}
+      {Platform.OS !== 'web' && nativeRazorpayState.isOpen && (
+        <Modal
+          visible={nativeRazorpayState.isOpen}
+          animationType="slide"
+          onRequestClose={() => {
+            setNativeRazorpayState((prev) => ({ ...prev, isOpen: false }));
+            setIsProcessing(false);
+          }}
+        >
+          <SafeAreaView style={{ flex: 1, backgroundColor: '#040C18' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#002754', borderBottomWidth: 1, borderBottomColor: '#C5A880' }}>
+              <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>
+                CINMAX Secure Razorpay Payment
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setNativeRazorpayState((prev) => ({ ...prev, isOpen: false }));
+                  setIsProcessing(false);
+                }}
+                style={{ padding: 4 }}
+              >
+                <X size={22} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+            <WebView
+              originWhitelist={['*']}
+              source={{ html: nativeRazorpayState.html }}
+              onMessage={handleNativeRazorpayMessage}
+              javaScriptEnabled={true}
+              domStorageEnabled={true}
+              style={{ flex: 1 }}
+            />
+          </SafeAreaView>
+        </Modal>
+      )}
+
+      {/* 10. Sticky Bottom Action Bar */}
       <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#FFFFFF', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: CONTAINER_PADDING, paddingVertical: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: 'rgba(195, 198, 209, 0.3)', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.08, shadowRadius: 20, zIndex: 100 }}>
         <View>
           <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 10, fontWeight: '700', color: '#737781', textTransform: 'uppercase', letterSpacing: 0.8 }}>Grand Total</Text>
           <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 24, fontWeight: '700', color: '#002754' }}>₹{grandTotal}</Text>
         </View>
         <TouchableOpacity
-          onPress={handlePlaceOrder}
-          disabled={isProcessing}
-          style={{ flex: 1, marginLeft: 20, backgroundColor: isProcessing ? '#434750' : '#002754', paddingVertical: 14, borderRadius: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, shadowColor: '#002754', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8 }}
+          onPress={() => {
+            if (activeStep < 4) {
+              setActiveStep(activeStep + 1);
+            } else {
+              handlePlaceOrder();
+            }
+          }}
+          disabled={activeStep === 4 && (isProcessing || !isTermsAccepted)}
+          style={{ flex: 1, marginLeft: 20, backgroundColor: activeStep === 4 && (isProcessing || !isTermsAccepted) ? '#434750' : '#002754', paddingVertical: 14, borderRadius: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, shadowColor: '#002754', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8 }}
         >
           <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', fontSize: 14, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 }}>
-            {isProcessing ? 'Processing...' : 'Pay with Razorpay'}
+            {activeStep === 1
+              ? 'Continue to Delivery'
+              : activeStep === 2
+              ? 'Continue to Payment'
+              : activeStep === 3
+              ? 'Review Order'
+              : isProcessing
+              ? 'Processing...'
+              : 'Pay with Razorpay'}
           </Text>
           <ArrowRight size={18} color="white" />
         </TouchableOpacity>

@@ -1,6 +1,12 @@
 import React from 'react';
+import { Platform, Text } from 'react-native';
 import { Tabs } from 'expo-router';
-import { Home, Store, Heart, Package, User } from 'lucide-react-native';
+import { Home, Store, Video, Package, User } from 'lucide-react-native';
+
+const FONT_SANS_BOLD = Platform.select({
+  web: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif",
+  default: 'PlusJakartaSans_700Bold',
+});
 
 export default function TabLayout() {
   const TabsNavigator = Tabs as any;
@@ -28,7 +34,8 @@ export default function TabLayout() {
         tabBarActiveTintColor: '#002754',
         tabBarInactiveTintColor: '#737781',
         tabBarLabelStyle: {
-          fontSize: 10,
+          fontSize: 11,
+          fontFamily: FONT_SANS_BOLD,
           fontWeight: '700',
           marginTop: 2,
         },
@@ -38,8 +45,13 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
-            <Home size={20} color={color} fill={focused ? '#002754' : 'none'} />
+          tabBarLabel: ({ color }: { color: any }) => (
+            <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 11, fontWeight: '700', color: color as string, marginTop: 2 }}>
+              Home
+            </Text>
+          ),
+          tabBarIcon: ({ color, focused }: { color: any; focused: boolean }) => (
+            <Home size={20} color={color as string} fill={focused ? '#002754' : 'none'} />
           ),
         }}
       />
@@ -47,17 +59,27 @@ export default function TabLayout() {
         name="shop"
         options={{
           title: 'Shop',
-          tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
-            <Store size={20} color={color} fill={focused ? '#002754' : 'none'} />
+          tabBarLabel: ({ color }: { color: any }) => (
+            <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 11, fontWeight: '700', color: color as string, marginTop: 2 }}>
+              Shop
+            </Text>
+          ),
+          tabBarIcon: ({ color, focused }: { color: any; focused: boolean }) => (
+            <Store size={20} color={color as string} fill={focused ? '#002754' : 'none'} />
           ),
         }}
       />
       <Tabs.Screen
-        name="wishlist"
+        name="videos"
         options={{
-          title: 'Wishlist',
-          tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
-            <Heart size={20} color={color} fill={focused ? '#002754' : 'none'} />
+          title: 'Classes',
+          tabBarLabel: ({ color }: { color: any }) => (
+            <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 11, fontWeight: '700', color: color as string, marginTop: 2 }}>
+              Classes
+            </Text>
+          ),
+          tabBarIcon: ({ color, focused }: { color: any; focused: boolean }) => (
+            <Video size={20} color={color as string} fill={focused ? '#002754' : 'none'} />
           ),
         }}
       />
@@ -65,8 +87,13 @@ export default function TabLayout() {
         name="orders"
         options={{
           title: 'Orders',
-          tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
-            <Package size={20} color={color} fill={focused ? '#002754' : 'none'} />
+          tabBarLabel: ({ color }: { color: any }) => (
+            <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 11, fontWeight: '700', color: color as string, marginTop: 2 }}>
+              Orders
+            </Text>
+          ),
+          tabBarIcon: ({ color, focused }: { color: any; focused: boolean }) => (
+            <Package size={20} color={color as string} fill={focused ? '#002754' : 'none'} />
           ),
         }}
       />
@@ -74,9 +101,20 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
-            <User size={20} color={color} fill={focused ? '#002754' : 'none'} />
+          tabBarLabel: ({ color }: { color: any }) => (
+            <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 11, fontWeight: '700', color: color as string, marginTop: 2 }}>
+              Profile
+            </Text>
           ),
+          tabBarIcon: ({ color, focused }: { color: any; focused: boolean }) => (
+            <User size={20} color={color as string} fill={focused ? '#002754' : 'none'} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="wishlist"
+        options={{
+          href: null,
         }}
       />
     </TabsNavigator>

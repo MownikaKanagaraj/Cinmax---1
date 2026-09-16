@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ProductCard } from '../../components/ProductCard';
-import { useCartStore, useWishlistStore, useProductsQuery, useCategoriesQuery, useHomeMarketingQuery } from '@cinmax/hooks';
+import { useCartStore, useWishlistStore, useProductsQuery, useCategoriesQuery, useHomeMarketingQuery, useUser } from '@cinmax/hooks';
 import { parseYouTubeEmbedUrl } from '@cinmax/utils';
 import type { Product } from '@cinmax/types';
 import {
@@ -23,11 +23,17 @@ import {
   Search,
   PlayCircle,
   Star,
+  GraduationCap,
   Leaf,
   ShieldCheck,
   Award,
   FlaskConical,
   CheckCircle,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
+  ArrowRight,
+  User,
 } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -61,35 +67,58 @@ const FONT_SANS_BOLD = Platform.select({
 export default function MobileHomeScreen() {
   const router = useRouter();
   const { addItem, items: cartItems } = useCartStore();
-  const { toggleItem, isWishlisted } = useWishlistStore();
+  const totalCartCount = cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
+  const { toggleItem, isWishlisted, items: wishlistItems } = useWishlistStore();
+  const { isAuthenticated } = useUser();
+
   const { data: categories = [] } = useCategoriesQuery();
   const { data: productsData } = useProductsQuery();
   const { data: homeMarketingData } = useHomeMarketingQuery();
   const products: Product[] = productsData?.items || [];
 
-  const topOffers = homeMarketingData?.topOffers || [
-    'Free Shipping above ₹499',
-    'Buy 2 Get 1 Free',
-    'New Launch: Charcoal Series',
-  ];
+  const activeOffers = React.useMemo(() => {
+    const rawOffers = homeMarketingData?.topOffers || [
+      { id: 'def_1', text: 'Free Shipping above ₹499', linkUrl: '/shop', offerType: 'free_shipping', isActive: true },
+    ];
 
-  const activeBanners = (homeMarketingData?.heroBanners || []).filter(b => b.isActive).map(b => ({
+    return rawOffers
+      .map((item, idx) => {
+        if (typeof item === 'string') {
+          return {
+            id: `off_${idx}`,
+            text: item,
+            linkUrl: '/shop',
+            code: '',
+            isActive: true,
+          };
+        }
+        return item;
+      })
+      .filter((item) => item.isActive !== false && item.text && item.text.trim() !== '');
+  }, [homeMarketingData?.topOffers]);
+
+  interface HeroSlideItem {
+    id: string;
+    kicker?: string;
+    badgeText?: string;
+    title: string;
+    subtitle: string;
+    ctaText: string;
+    ctaLink: string;
+    secondaryCtaText?: string;
+    secondaryCtaLink?: string;
+    imageUrl: string;
+  }
+
+  const activeBanners: HeroSlideItem[] = (homeMarketingData?.heroBanners || []).filter(b => b.isActive).map(b => ({
     id: b.id,
     title: b.title,
     subtitle: b.subtitle,
     badgeText: b.badgeText || 'Featured',
+    kicker: b.badgeText || 'Featured',
     ctaText: b.buttonText,
     ctaLink: b.linkUrl,
     imageUrl: b.imageUrl,
-  }));
-
-  const watchShopVideos = (homeMarketingData?.watchShopVideos || []).map(v => ({
-    id: v.id,
-    slug: v.slug || 'product',
-    title: v.title,
-    price: v.productPrice,
-    thumb: v.productImage,
-    videoBg: v.productImage,
   }));
 
   const midBanner = homeMarketingData?.midBanner || {
@@ -98,7 +127,7 @@ export default function MobileHomeScreen() {
     badgeText: 'LIMITED PERIOD OFFER',
     buttonText: 'Grab Now',
     linkUrl: '/shop',
-    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDF1LQEjxBq0OtLya_zBSJmrBZGcpIt5GSK2bjVJwv_OH2wEvIFvmkvPBOwrecHsjs_oyNThVL7ZH4AUdRer9JJTMlrFAnb8z4ralUPHUwN9WP4S-39GnkgDrqIEgWZw9RaJtY8iwvffsTZD_Popbvs_HN8VBfLLeWF7GtyAos2D-BFKUhivqRdo3aEuD_KXEEev5cHd6UEVnfdZhhC6iRO1kHJA_rMX0q8Z19vqu_okch2q5g6QKPu',
+    imageUrl: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=1000&auto=format&fit=crop&q=80',
   };
 
   const realResults = (homeMarketingData?.realResults || []).map(r => ({
@@ -119,18 +148,67 @@ export default function MobileHomeScreen() {
     subtitle: 'Our state-of-the-art facility ensures every bar meets global standards of purity.',
     buttonText: 'Learn More',
     linkUrl: '/about',
-    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCGE69IJlast_Ul6rXuCQSS3GH9L16poRY-l4l0iLBhoriu0C4LiZu3f7ZasTL9El20BxRnLTR3yhtY06Qyv2WRC2rkh3JMyHvdbriffqhNy4zqgJbeSfm_sQdZRfhBRJvCHtUEkCDdOoUFSDEUFRamWxTJs7vcGIUEWF00FZywN7h07CqZpCeqT6qRYsAmAO2bk5-APQk-HdqbqLMS5IQmGNzYH5WjPfz9gHlMpUg46Re6GavrK01c',
+    imageUrl: 'https://images.unsplash.com/photo-1607006482172-35891d9e1158?w=1000&auto=format&fit=crop&q=80',
   };
+
+  const cosmeticsHeroSlides: HeroSlideItem[] = [
+    {
+      id: 'slide-1',
+      kicker: 'DELIVERED PAN-INDIA • 100% ORGANIC BOTANICALS',
+      title: 'Artisanal skincare & beauty hampers, handed over in person.',
+      subtitle: 'Choose a handcrafted hamper or luxury botanical elixir, cured with pure organic alchemy.',
+      ctaText: 'Explore the collection',
+      ctaLink: '/shop',
+      secondaryCtaText: 'Browse Master Classes',
+      secondaryCtaLink: '/(tabs)/videos',
+      imageUrl: 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=1200&auto=format&fit=crop&q=80',
+    },
+    {
+      id: 'slide-2',
+      kicker: 'CURED 45 DAYS IN SMALL BATCHES',
+      title: 'Cold-process soap therapeutics, handed over with care.',
+      subtitle: 'Enriched with virgin coconut oil, cocoa butter, and pure aromatherapy essential oil blends.',
+      ctaText: 'Shop Handcrafted Soaps',
+      ctaLink: '/shop',
+      secondaryCtaText: 'View Ingredients',
+      secondaryCtaLink: '/shop',
+      imageUrl: 'https://images.unsplash.com/photo-1607006482172-35891d9e1158?w=1200&auto=format&fit=crop&q=80',
+    },
+    {
+      id: 'slide-3',
+      kicker: 'EXCLUSIVELY CURATED GIFTING',
+      title: 'Send a little joy today with luxury beauty hampers.',
+      subtitle: 'Thoughtfully curated gift sets, fresh botanical infusions, and custom greeting notes.',
+      ctaText: 'Explore Gift Hampers',
+      ctaLink: '/shop',
+      secondaryCtaText: 'Special Offers',
+      secondaryCtaLink: '/shop',
+      imageUrl: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=1200&auto=format&fit=crop&q=80',
+    },
+    {
+      id: 'slide-4',
+      kicker: 'BOTANICAL ACADEMY & WORKSHOPS',
+      title: 'Master artisanal soapmaking & skincare formulation.',
+      subtitle: 'Unlock paid video masterclasses taught by master formulation artisans with lifetime access.',
+      ctaText: 'Browse Master Classes',
+      ctaLink: '/(tabs)/videos',
+      secondaryCtaText: 'View Curriculum',
+      secondaryCtaLink: '/(tabs)/videos',
+      imageUrl: 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=1200&auto=format&fit=crop&q=80',
+    },
+  ];
+
+  const heroSlidesToDisplay = cosmeticsHeroSlides;
 
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
 
   React.useEffect(() => {
-    if (activeBanners.length <= 1) return;
+    if (heroSlidesToDisplay.length <= 1) return;
     const timer = setInterval(() => {
-      setActiveSlideIndex((prev) => (prev + 1) % activeBanners.length);
-    }, 4000);
+      setActiveSlideIndex((prev) => (prev + 1) % heroSlidesToDisplay.length);
+    }, 4500);
     return () => clearInterval(timer);
-  }, [activeBanners.length]);
+  }, [heroSlidesToDisplay.length]);
 
   const scrollViewRef = React.useRef<ScrollView>(null);
 
@@ -142,13 +220,43 @@ export default function MobileHomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedVideoUrl, setSelectedVideoUrl] = useState<string | null>(null);
 
+  const watchShopVideos = [
+    {
+      id: 'v1',
+      slug: 'charcoal-detox-soap',
+      title: 'Charcoal Detox Soap Batch Curing',
+      price: '₹299',
+      thumb: 'https://images.unsplash.com/photo-1607006482172-35891d9e1158?w=400&auto=format&fit=crop&q=80',
+      videoBg: 'https://images.unsplash.com/photo-1607006482172-35891d9e1158?w=600&auto=format&fit=crop&q=80',
+      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    },
+    {
+      id: 'v2',
+      slug: 'rose-hip-glow-serum',
+      title: 'Rosehip Botanical Glow Oil Formulation',
+      price: '₹499',
+      thumb: 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=400&auto=format&fit=crop&q=80',
+      videoBg: 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=600&auto=format&fit=crop&q=80',
+      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    },
+    {
+      id: 'v3',
+      slug: 'monsoon-hydration-butter',
+      title: 'Shea Butter Saponification Workshop',
+      price: '₹399',
+      thumb: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=400&auto=format&fit=crop&q=80',
+      videoBg: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=600&auto=format&fit=crop&q=80',
+      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    },
+  ];
+
   const categoryAvatars = [
-    { title: 'Bath Soap', slug: 'bath-soap', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDpIoHGNt8K2IwZW-F7gzPobXAQUkVIt2KYkxhO1eSWplJXLrQKYGRddfIymkCSroyFXB8-bWWemt7g5oMW-QpG6401-FXIeIHBY5gdDUSwpqyUX9ASwRH9i_EYGp8sS3wtlDGrTKjSkj3P3ZuMLYr191TC1dCtJdFHUe9t5dST4XtFX8ZQtpfJMtLfqCqL4lYC59QY4ctPuIn07bfFJ2AkLFiqAmf5m7wg_Ldo1bT2_Rp9HgNvu7ZA' },
-    { title: 'Herbal Soap', slug: 'herbal-soap', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAa4yv0gYZBUd0SEVtTlVkMcGNANs-fgctuNM7SEzJYRxMxlkKJaT71DPF-EfhUVwQEzMftaBRYvstM11GaElv3osNZTKJJjEvMhzYBcGPk9efj5Gm-4Wp01Zh5tXW62PxsReysnnieVjiZUVbyRSWHEA2vS72W5wQb8LDdGHq5A79LxgeeDpkDn9c7KZpMl2BQ8MaYGO6KlOxhOgDt6PxHmj5Cug4uIJBKl-9VtVLaYV7vbS2Y8c6a' },
-    { title: 'Face Care', slug: 'face-care', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDoRsDMNvc9hgexWVqa6dtEaFl6nN2xCiF5iV-T5gl46JoAnOu5AOcZVfxL9hm_305zBiYjSitTmh6CRwDk51PB-8Df_pnQe40YxDitX72iQeZBpAAO1XnjsIptJ49nlYqnJwTojbIFo8vNtTfc5JczIdvDP2BXDEXZ2bP1Q1F_keOYHZBudHhE6aq_uWSDGEfXUPHwbT-Juuf3giE7gZrvYHwU9KjCJ6nk_A4BEEPadfPeSazwudst' },
-    { title: 'Body Care', slug: 'body-care', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB9lubmr39J6fZHpoItlXf_vE7Bt7g6eAd8NLC8ETl92RmQDIJBDBkLOuLbRoUEqrQfaJNP_bii3VO1DgAp9db1R-jRWQZVjvb6fU-1ol1kFRS_x95uIcyFDPiYZcrMCRgekQJwOet1HRiKwlVPeduydGDOAr5-saKjPVmo60e2NpXEdgW-Fx3Dm6cGMkvatrS4e2r_raXj_I_cn-RPyrTVo47B71tY4cqSDuxf0XSWQaT4lsWufVlk' },
-    { title: 'Hair Care', slug: 'hair-care', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDraVE7daOdNCK2xnaJeAdZY2woblVfcS9rPgNefx3K2TiDXuvlWmiVrSSpeHDAHTMhkvGZ-O-E13eY581zZpfpskz6Pf8dIVqFcwgZlLbNTfoy1MojHODIOgFfB5-T0LGfkprN3RI-vp4y-5onqnuatv5Vnlp2qvHwqcG8wsgcicy24HiQM34fOWXv8H6H70V7fMLoPCK37_O2JIzLgB3Qk4x6vtLBWPuW5zJjBoC-X9ExblUanHfd' },
-    { title: 'Gift Sets', slug: 'gift-sets', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAcZZWrp5hww_VPAwl39MRLYADlGq40ikgeByV0ShCSdwukE1M-0aSyIT-bPuQjX_4vZD8emKVM2DUnDENsUEfebjJszH3gEzzLdmzCt7al9id7-iq9xrW35wpa2Cef7YAGrttP91IpoTjst02TV7IeWekbi4rPgTdgJBYnT9iFt-B8eQCRor6WUabNr17n5HnRRBbHR3gS6REGi72jNv7evGuHKYi6QeFs9DHcHu40iMzej5u4PtFe' },
+    { title: 'Bath Soap', slug: 'bath-soap', image: 'https://images.unsplash.com/photo-1607006482172-35891d9e1158?w=300&auto=format&fit=crop&q=80' },
+    { title: 'Herbal Soap', slug: 'herbal-soap', image: 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=300&auto=format&fit=crop&q=80' },
+    { title: 'Face Care', slug: 'face-care', image: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=300&auto=format&fit=crop&q=80' },
+    { title: 'Body Care', slug: 'body-care', image: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=300&auto=format&fit=crop&q=80' },
+    { title: 'Hair Care', slug: 'hair-care', image: 'https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?w=300&auto=format&fit=crop&q=80' },
+    { title: 'Gift Sets', slug: 'gift-sets', image: 'https://images.unsplash.com/photo-1512290900676-26c2a48f4134?w=300&auto=format&fit=crop&q=80' },
   ];
 
   const concerns = ['Dry Skin', 'Acne Prone', 'Sensitive Skin', 'Anti-Aging', 'Glowing Skin'];
@@ -166,7 +274,7 @@ export default function MobileHomeScreen() {
       borderColor: 'rgba(0, 39, 84, 0.12)',
       badgeBg: '#002754',
       badgeText: 'white',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDfLmv-8PIhmABGo3DodM11iE1jbnlcba8OLYEYvLDtfPFpvtgtgYb9fDv3R95xfRWjqulbf_d5LzBLCS5Zyg9LHaRZUVu6W6r0eylmUfK11ybPuURiqx-uqsIQA_cNRlWyGNS71a9PtOaKJ1w-f-qla6hCy_mLiHC8K5HICAUBIS5jz9JDt7XciJsCne58yMImQhdMmnCHsSQ3bRdoSEou7JqLyUkoBmKgO1yCzRIJh78Qxg3Vfj6A',
+      image: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=500&auto=format&fit=crop&q=80',
     },
     {
       id: 'c2',
@@ -180,7 +288,7 @@ export default function MobileHomeScreen() {
       borderColor: 'rgba(70, 95, 138, 0.12)',
       badgeBg: '#465F8A',
       badgeText: 'white',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDRE-BdrdvvX-gKkNKLk2AdESMknnwxISYNAUvYdKV0pPR6emM4ZYz7PR2CWQOL1erXhKEY8dgfxcbiqKLAn8v0z75CluFjK5do19sCwsdo41knnwFXIeQ17tGbq5EWBrjsrx8U98LsT50EVmiHDDoHMnt0elhIYnt4iMJ3P21TSXKFX5ojGeDcV8CjOQn3gYETWI3b38DvREcXL8unyffzPR84ZLZNAvDnAc6YOouF615IKYNC3rrC',
+      image: 'https://images.unsplash.com/photo-1607006314147-759088fd21c2?w=500&auto=format&fit=crop&q=80',
     },
   ];
 
@@ -192,50 +300,216 @@ export default function MobileHomeScreen() {
         <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 24, fontWeight: '700', color: '#002754', letterSpacing: -0.5 }}>
           CINMAX
         </Text>
-        <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/wishlist' as any)} style={{ padding: 4 }}>
-            <Heart size={22} color="#002754" />
+        <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
+          <TouchableOpacity onPress={() => router.push('/wishlist' as any)} style={{ padding: 4, position: 'relative' }}>
+            <Heart size={22} color={wishlistItems.length > 0 ? '#DC2626' : '#002754'} fill={wishlistItems.length > 0 ? '#DC2626' : 'none'} />
+            {wishlistItems.length > 0 && (
+              <View style={{ position: 'absolute', top: -2, right: -6, backgroundColor: '#DC2626', borderRadius: 8, width: 16, height: 16, justifyContent: 'center', alignItems: 'center' }}>
+                <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', fontSize: 10, fontWeight: '700' }}>{wishlistItems.length}</Text>
+              </View>
+            )}
           </TouchableOpacity>
+
           <TouchableOpacity onPress={() => router.push('/cart' as any)} style={{ padding: 4, position: 'relative' }}>
             <ShoppingBag size={22} color="#002754" />
-            <View style={{ position: 'absolute', top: -2, right: -6, backgroundColor: '#BA1A1A', borderRadius: 8, width: 16, height: 16, justifyContent: 'center', alignItems: 'center' }}>
-              <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', fontSize: 10, fontWeight: '700' }}>{cartItems.length || 2}</Text>
-            </View>
+            {totalCartCount > 0 && (
+              <View style={{ position: 'absolute', top: -2, right: -6, backgroundColor: '#BA1A1A', borderRadius: 8, width: 16, height: 16, justifyContent: 'center', alignItems: 'center' }}>
+                <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', fontSize: 10, fontWeight: '700' }}>{totalCartCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
+
+          {!isAuthenticated ? (
+            <TouchableOpacity
+              onPress={() => router.push('/(auth)/login' as any)}
+              style={{
+                backgroundColor: '#002754',
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+                borderRadius: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+              }}
+            >
+              <User size={15} color="#FFFFFF" />
+              <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
+                Sign In
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              onPress={() => router.push('/(tabs)/profile' as any)}
+              style={{ padding: 4 }}
+            >
+              <User size={22} color="#002754" />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
       <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
 
-        {/* 2. Search & Announcement */}
-        <View style={{ paddingHorizontal: CONTAINER_PADDING, paddingTop: 16, gap: 14 }}>
-          <View style={{ backgroundColor: '#F2F4F6', borderRadius: 25, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 48, borderWidth: 1, borderColor: 'rgba(195, 198, 209, 0.3)' }}>
-            <Search size={18} color="#737781" style={{ marginRight: 10 }} />
-            <TextInput
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              onSubmitEditing={() => router.push('/search' as any)}
-              placeholder="Search soaps, skincare and body care..."
-              placeholderTextColor="#737781"
-              style={{ fontFamily: FONT_SANS_REGULAR, flex: 1, fontSize: 14, color: '#191C1E' }}
-            />
+        {/* INTEGRATED SOFT LUXURY COSMETICS HERO REGION */}
+        <View style={{ backgroundColor: '#FAF7F2', paddingTop: 16, paddingBottom: 24, borderBottomLeftRadius: 32, borderBottomRightRadius: 32, borderWidth: 1, borderColor: 'rgba(197, 168, 128, 0.25)', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.05, shadowRadius: 16 }}>
+
+          {/* 1. Search Bar & Announcement Chips */}
+          <View style={{ paddingHorizontal: CONTAINER_PADDING, gap: 14 }}>
+            <View style={{ backgroundColor: 'white', borderRadius: 25, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 48, borderWidth: 1, borderColor: 'rgba(195, 198, 209, 0.35)', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6 }}>
+              <Search size={18} color="#737781" style={{ marginRight: 10 }} />
+              <TextInput
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                onSubmitEditing={() => router.push('/search' as any)}
+                placeholder="Search soaps, skincare and body care..."
+                placeholderTextColor="#737781"
+                style={{ fontFamily: FONT_SANS_REGULAR, flex: 1, fontSize: 14, color: '#191C1E' }}
+              />
+            </View>
+
+            {activeOffers.length > 0 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+                {activeOffers.map((offer: any, idx: number) => {
+                  const bgStyles = [
+                    { bg: 'rgba(0, 39, 84, 0.08)', border: 'rgba(0, 39, 84, 0.12)', text: '#002754' },
+                    { bg: 'rgba(197, 168, 128, 0.2)', border: 'rgba(197, 168, 128, 0.3)', text: '#002754' },
+                    { bg: '#DAE3F4', border: 'rgba(0, 39, 84, 0.1)', text: '#131C28' },
+                  ];
+                  const styleScheme = bgStyles[idx % bgStyles.length];
+
+                  return (
+                    <TouchableOpacity
+                      key={offer.id || idx}
+                      onPress={() => {
+                        if (offer.linkUrl) {
+                          router.push(offer.linkUrl as any);
+                        }
+                      }}
+                      activeOpacity={0.7}
+                      style={{
+                        backgroundColor: styleScheme.bg,
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 20,
+                        borderWidth: 1,
+                        borderColor: styleScheme.border,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                      }}
+                    >
+                      <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, color: styleScheme.text, fontSize: 12, fontWeight: '600' }}>
+                        {offer.text}
+                      </Text>
+                      {offer.code ? (
+                        <View style={{ backgroundColor: 'rgba(0, 39, 84, 0.12)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                          <Text style={{ fontFamily: FONT_SANS_BOLD, color: styleScheme.text, fontSize: 10 }}>{offer.code}</Text>
+                        </View>
+                      ) : null}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            )}
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
-            <View style={{ backgroundColor: 'rgba(0, 39, 84, 0.1)', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(0, 39, 84, 0.1)' }}>
-              <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, color: '#002754', fontSize: 12, fontWeight: '500' }}>Free Shipping above ₹499</Text>
-            </View>
-            <View style={{ backgroundColor: 'rgba(70, 95, 138, 0.2)', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(70, 95, 138, 0.1)' }}>
-              <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, color: '#465F8A', fontSize: 12, fontWeight: '500' }}>Buy 2 Get 1 Free</Text>
-            </View>
-            <View style={{ backgroundColor: '#DAE3F4', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 }}>
-              <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, color: '#131C28', fontSize: 12, fontWeight: '500' }}>New Launch: Charcoal Series</Text>
-            </View>
-          </ScrollView>
+          {/* 2. Visual Blended Hero Slideshow Card */}
+          {heroSlidesToDisplay.length > 0 && (() => {
+            const currentSlide = heroSlidesToDisplay[activeSlideIndex % heroSlidesToDisplay.length];
+            const handlePrevSlide = () => {
+              setActiveSlideIndex((prev) => (prev === 0 ? heroSlidesToDisplay.length - 1 : prev - 1));
+            };
+            const handleNextSlide = () => {
+              setActiveSlideIndex((prev) => (prev + 1) % heroSlidesToDisplay.length);
+            };
+
+            return (
+              <View style={{ marginHorizontal: CONTAINER_PADDING, marginTop: 18, borderRadius: 26, overflow: 'hidden', height: 370, backgroundColor: '#002754', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.16, shadowRadius: 22, position: 'relative', borderWidth: 1, borderColor: 'rgba(197, 168, 128, 0.4)' }}>
+                <Image
+                  key={currentSlide.id || activeSlideIndex}
+                  source={{ uri: currentSlide.imageUrl }}
+                  style={{ width: '100%', height: '100%' }}
+                  resizeMode="cover"
+                />
+                {/* Soft Ambient Overlay */}
+                <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0, 31, 68, 0.45)' }} />
+
+                {/* Prev / Next Controls */}
+                <TouchableOpacity
+                  onPress={handlePrevSlide}
+                  style={{ position: 'absolute', left: 12, top: '46%', width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0, 39, 84, 0.6)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.3)', zIndex: 10 }}
+                >
+                  <ChevronLeft size={20} color="#C5A880" />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={handleNextSlide}
+                  style={{ position: 'absolute', right: 12, top: '46%', width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0, 39, 84, 0.6)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.3)', zIndex: 10 }}
+                >
+                  <ChevronRight size={20} color="#C5A880" />
+                </TouchableOpacity>
+
+                {/* Card Content Overlay */}
+                <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 22, alignItems: 'center', backgroundColor: 'rgba(0, 24, 52, 0.52)' }}>
+                  {currentSlide.kicker || currentSlide.badgeText ? (
+                    <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#C5A880', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 6, textAlign: 'center' }}>
+                      {currentSlide.kicker || currentSlide.badgeText}
+                    </Text>
+                  ) : null}
+
+                  <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 22, fontWeight: '700', color: 'white', textAlign: 'center', marginBottom: 8, lineHeight: 28, textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 }}>
+                    {currentSlide.title}
+                  </Text>
+                  <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 12, color: 'rgba(255, 255, 255, 0.94)', textAlign: 'center', marginBottom: 16, lineHeight: 18 }} numberOfLines={2}>
+                    {currentSlide.subtitle}
+                  </Text>
+
+                  <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+                    <TouchableOpacity
+                      onPress={() => router.push((currentSlide.ctaLink || '/shop') as any)}
+                      style={{ backgroundColor: '#C5A880', paddingHorizontal: 22, paddingVertical: 10, borderRadius: 22, flexDirection: 'row', alignItems: 'center', gap: 6, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.18, shadowRadius: 8 }}
+                    >
+                      <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#002754', fontWeight: '700', fontSize: 12 }}>
+                        {currentSlide.ctaText || 'Explore the collection'}
+                      </Text>
+                      <ArrowRight size={14} color="#002754" />
+                    </TouchableOpacity>
+
+                    {currentSlide.secondaryCtaText ? (
+                      <TouchableOpacity
+                        onPress={() => router.push((currentSlide.secondaryCtaLink || '/shop') as any)}
+                        style={{ backgroundColor: 'rgba(255, 255, 255, 0.18)', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.45)', paddingHorizontal: 18, paddingVertical: 10, borderRadius: 22, alignItems: 'center' }}
+                      >
+                        <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', fontWeight: '700', fontSize: 12 }}>
+                          {currentSlide.secondaryCtaText}
+                        </Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+
+                  {/* Dynamic Indicator Dots */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 14 }}>
+                    {heroSlidesToDisplay.map((_, idx) => (
+                      <TouchableOpacity
+                        key={idx}
+                        onPress={() => setActiveSlideIndex(idx)}
+                        style={{
+                          width: activeSlideIndex === idx ? 22 : 6,
+                          height: 6,
+                          borderRadius: 3,
+                          backgroundColor: activeSlideIndex === idx ? '#C5A880' : 'rgba(255, 255, 255, 0.45)',
+                        }}
+                      />
+                    ))}
+                  </View>
+                </View>
+              </View>
+            );
+          })()}
         </View>
 
         {/* 3. Shop By Category */}
-        <View style={{ marginTop: 28, paddingHorizontal: CONTAINER_PADDING }}>
+        <View style={{ marginTop: 24, paddingHorizontal: CONTAINER_PADDING }}>
           <Text style={{ fontFamily: FONT_SERIF_SEMIBOLD, fontSize: 22, fontWeight: '500', color: '#002754', marginBottom: 14 }}>
             Shop By Category
           </Text>
@@ -250,64 +524,6 @@ export default function MobileHomeScreen() {
             ))}
           </ScrollView>
         </View>
-
-        {/* 4. Dynamic Auto-Sliding Hero Carousel Banner */}
-        {activeBanners.length > 0 && (() => {
-          const currentBanner = activeBanners[activeSlideIndex % activeBanners.length];
-          return (
-            <View style={{ marginHorizontal: CONTAINER_PADDING, marginTop: 28, borderRadius: 24, overflow: 'hidden', height: 320, backgroundColor: '#002754', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 15, position: 'relative' }}>
-              <Image
-                key={currentBanner.id || activeSlideIndex}
-                source={{ uri: currentBanner.imageUrl }}
-                style={{ width: '100%', height: '100%' }}
-                resizeMode="cover"
-              />
-              <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0, 39, 84, 0.45)' }} />
-
-              <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 20, alignItems: 'center' }}>
-                {currentBanner.badgeText ? (
-                  <View style={{ backgroundColor: '#C5A880', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12, marginBottom: 8 }}>
-                    <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#002754', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                      {currentBanner.badgeText}
-                    </Text>
-                  </View>
-                ) : null}
-
-                <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 24, fontWeight: '700', color: 'white', textAlign: 'center', marginBottom: 6, lineHeight: 30 }}>
-                  {currentBanner.title}
-                </Text>
-                <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 13, color: 'rgba(255, 255, 255, 0.9)', textAlign: 'center', marginBottom: 16, lineHeight: 18 }} numberOfLines={2}>
-                  {currentBanner.subtitle}
-                </Text>
-
-                <TouchableOpacity
-                  onPress={() => router.push((currentBanner.ctaLink || '/shop') as any)}
-                  style={{ backgroundColor: '#0A3D78', paddingHorizontal: 28, paddingVertical: 10, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' }}
-                >
-                  <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, color: 'white', fontWeight: '600', fontSize: 13 }}>
-                    {currentBanner.ctaText || 'Shop Collection'}
-                  </Text>
-                </TouchableOpacity>
-
-                {/* Dynamic Indicator Dots */}
-                <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 16 }}>
-                  {activeBanners.map((_, idx) => (
-                    <TouchableOpacity
-                      key={idx}
-                      onPress={() => setActiveSlideIndex(idx)}
-                      style={{
-                        width: activeSlideIndex === idx ? 20 : 6,
-                        height: 6,
-                        borderRadius: 3,
-                        backgroundColor: activeSlideIndex === idx ? '#FFFFFF' : 'rgba(255, 255, 255, 0.4)',
-                      }}
-                    />
-                  ))}
-                </View>
-              </View>
-            </View>
-          );
-        })()}
 
         {/* 5. Watch & Shop */}
         <View style={{ marginTop: 28, paddingHorizontal: CONTAINER_PADDING }}>
@@ -369,7 +585,7 @@ export default function MobileHomeScreen() {
             </TouchableOpacity>
           </View>
 
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, justifyContent: 'space-between' }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
             {products.map((prod) => (
               <ProductCard
                 key={prod.id}
@@ -377,7 +593,7 @@ export default function MobileHomeScreen() {
                 title={prod.title}
                 slug={prod.slug}
                 price={prod.basePrice}
-                originalPrice={prod.compareAtPrice}
+                originalPrice={prod.compareAtPrice ?? undefined}
                 image={typeof prod.images?.[0] === 'string' ? prod.images[0] : prod.images?.[0]?.url || 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=400&auto=format&fit=crop&q=80'}
                 rating={prod.averageRating?.toString() || '4.95'}
                 reviewCount={prod.reviewCount?.toString() || '128'}
@@ -391,7 +607,7 @@ export default function MobileHomeScreen() {
         {/* 8. Promotional Banner */}
         <View style={{ marginHorizontal: CONTAINER_PADDING, marginTop: 28, borderRadius: 18, overflow: 'hidden', height: 150, backgroundColor: '#002754', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 10 }}>
           <Image
-            source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDF1LQEjxBq0OtLya_zBSJmrBZGcpIt5GSK2bjVJwv_OH2wEvIFvmkvPBOwrecHsjs_oyNThVL7ZH4AUdRer9JJTMlrFAnb8z4ralUPHUwN9WP4S-39GnkgDrqIEgWZw9RaJtY8iwvffsTZD_Popbvs_HN8VBfLLeWF7GtyAos2D-BFKUhivqRdo3aEuD_KXEEev5cHd6UEVnfdZhhC6iRO1kHJA_rMX0q8Z19vqu_okch2q5g6QKPu' }}
+            source={{ uri: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=1000&auto=format&fit=crop&q=80' }}
             style={{ width: '100%', height: '100%', opacity: 0.6 }}
           />
           <View style={{ position: 'absolute', inset: 0, justifyContent: 'center', alignItems: 'center', padding: 14 }}>
@@ -512,7 +728,7 @@ export default function MobileHomeScreen() {
         {/* 13. Manufacturing Banner */}
         <View style={{ marginHorizontal: CONTAINER_PADDING, marginTop: 28, borderRadius: 18, overflow: 'hidden', height: 230, backgroundColor: '#002754', position: 'relative' }}>
           <Image
-            source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCGE69IJlast_Ul6rXuCQSS3GH9L16poRY-l4l0iLBhoriu0C4LiZu3f7ZasTL9El20BxRnLTR3yhtY06Qyv2WRC2rkh3JMyHvdbriffqhNy4zqgJbeSfm_sQdZRfhBRJvCHtUEkCDdOoUFSDEUFRamWxTJs7vcGIUEWF00FZywN7h07CqZpCeqT6qRYsAmAO2bk5-APQk-HdqbqLMS5IQmGNzYH5WjPfz9gHlMpUg46Re6GavrK01c' }}
+            source={{ uri: 'https://images.unsplash.com/photo-1607006482172-35891d9e1158?w=1000&auto=format&fit=crop&q=80' }}
             style={{ width: '100%', height: '100%' }}
           />
           <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0, 39, 84, 0.4)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>

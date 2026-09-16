@@ -3,7 +3,9 @@
     "name": "CINMAX",
     "slug": "cinmax-mobile",
     "version": "1.0.0",
+    "sdkVersion": "57.0.0",
     "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
     "web": {
       "bundler": "metro",
       "output": "single"
@@ -15,10 +17,36 @@
         {
           "faceIDPermission": "Allow CINMAX to use Face ID for biometric authentication."
         }
+      ],
+      "expo-font",
+      "expo-splash-screen",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "newArchEnabled": true,
+            "jsEngine": "jsc",
+            "enableProguardInReleaseBuilds": false,
+            "enableShrinkResourcesInReleaseBuilds": false
+          }
+        }
       ]
     ],
+    "android": {
+      "package": "com.cinmax.mobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#040c18"
+      }
+    },
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "61641def-6bfd-45d9-8ab1-fb504ee3e21f"
+      }
+    },
+    "owner": "mownikakanagaraj"
   }
 }

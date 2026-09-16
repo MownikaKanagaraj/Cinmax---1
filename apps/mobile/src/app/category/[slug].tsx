@@ -55,7 +55,7 @@ export default function MobileCategoryScreen() {
                   {prod.title}
                 </Text>
                 <Text style={{ fontSize: 12, fontWeight: '800', color: '#0A3D78', marginTop: 4 }}>
-                  ${prod.variants?.[0]?.price?.toFixed(2) || prod.basePrice?.toFixed(2) || '18.00'}
+                  ₹{prod.variants?.[0]?.price || prod.basePrice || 199}
                 </Text>
               </View>
             </TouchableOpacity>
