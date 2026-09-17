@@ -202,7 +202,7 @@ export default function MobileShopScreen() {
 
         {/* 4. CATEGORY FILTER PILLS */}
         <View style={{ marginTop: 14 }}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: CONTAINER_PADDING }}>
+          <ScrollView horizontal nestedScrollEnabled={true} showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: CONTAINER_PADDING }}>
             {categoryPills.map((cat) => {
               const active = activeCategory === cat;
               return (
@@ -235,7 +235,7 @@ export default function MobileShopScreen() {
             Showing <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#002754' }}>{filteredProducts.length}</Text> items
           </Text>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+          <ScrollView horizontal nestedScrollEnabled={true} showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
             {[
               { label: 'Featured', value: 'featured' },
               { label: 'Price: Low-High', value: 'price_low' },

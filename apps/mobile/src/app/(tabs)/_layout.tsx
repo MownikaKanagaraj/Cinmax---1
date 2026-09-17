@@ -1,6 +1,7 @@
 import React from 'react';
 import { Platform, Text } from 'react-native';
 import { Tabs } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, Store, Video, Package, User } from 'lucide-react-native';
 
 const FONT_SANS_BOLD = Platform.select({
@@ -9,6 +10,7 @@ const FONT_SANS_BOLD = Platform.select({
 });
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
   const TabsNavigator = Tabs as any;
   return (
     <TabsNavigator
@@ -19,8 +21,8 @@ export default function TabLayout() {
           borderTopColor: 'rgba(195, 198, 209, 0.3)',
           borderTopLeftRadius: 20,
           borderTopRightRadius: 20,
-          height: 68,
-          paddingBottom: 10,
+          height: 60 + insets.bottom,
+          paddingBottom: Math.max(8, insets.bottom),
           paddingTop: 6,
           shadowColor: '#0A3D78',
           shadowOffset: { width: 0, height: -8 },

@@ -272,13 +272,16 @@ export default function MobileWishlistScreen() {
                       <TouchableOpacity
                         onPress={() =>
                           addItem({
-                            id: p.id,
+                            id: `ci_${p.id}`,
+                            cartId: 'c1',
                             productId: p.id,
-                            variantId: p.variants?.[0]?.id || p.id,
-                            quantity: 1,
                             unitPrice: itemPrice,
-                            productTitle: p.title,
-                            imageUrl: imgUri,
+                            totalPrice: itemPrice,
+                            quantity: 1,
+                            product: { id: p.id, title: p.title, slug: p.slug || 'product', images: [], processType: 'cold-process' },
+                            variant: { id: `v_${p.id}`, sku: `SKU-${p.id}`, title: 'Standard', price: itemPrice, weightGrams: 100, volumeMl: 0, options: {} },
+                            createdAt: new Date().toISOString(),
+                            updatedAt: new Date().toISOString(),
                           })
                         }
                         style={{ backgroundColor: '#002754', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14 }}

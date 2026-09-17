@@ -320,7 +320,7 @@ export default function MobileRegisterScreen() {
         <View style={{ marginTop: 24, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <ShieldCheck size={16} color="#C5A880" />
-            <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 11, color: '#64748B' }}>100% Encrypted Data</Text>
+            <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 11, color: '#64748B' }}>Secure Connection</Text>
           </View>
           <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#CBD5E1' }} />
           <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 11, color: '#64748B' }}>Official CINMAX Authenticated</Text>

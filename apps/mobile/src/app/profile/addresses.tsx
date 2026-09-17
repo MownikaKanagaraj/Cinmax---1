@@ -6,9 +6,10 @@ import {
   TouchableOpacity,
   TextInput,
   Modal,
-  Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
   useUser,
@@ -25,13 +26,13 @@ import {
   MapPin,
   Edit3,
   Trash2,
-  CheckCircle2,
   Home,
   ChevronDown,
 } from 'lucide-react-native';
 
 export default function MobileAddressesScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user } = useUser();
   const { data: addresses = [] } = useAddressesQuery(user?.id);
 
@@ -186,15 +187,15 @@ export default function MobileAddressesScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF7F2' }}>
       {/* Header Bar */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FAF7F2', borderBottomWidth: 1, borderBottomColor: 'rgba(195, 198, 209, 0.3)' }}>
-        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/profile' as any))} style={{ padding: 4 }}>
+      <View style={{ paddingTop: Math.max(12, insets.top), paddingBottom: 12, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', backgroundColor: '#FAF7F2', borderBottomWidth: 1, borderBottomColor: 'rgba(195, 198, 209, 0.3)' }}>
+        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/profile' as any))} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E0E3E5' }}>
           <ChevronLeft size={22} color="#002754" />
         </TouchableOpacity>
-        <Text style={{ fontFamily: 'NotoSerif_700Bold', fontSize: 20, color: '#002754', fontWeight: '700' }}>
-          Saved Addresses
+        <Text style={{ flex: 1, textAlign: 'center', fontFamily: 'NotoSerif_700Bold', fontSize: 18, color: '#002754', fontWeight: '700' }} numberOfLines={1}>
+          Saved Delivery Addresses
         </Text>
-        <TouchableOpacity onPress={handleOpenAddModal} style={{ padding: 4 }}>
-          <Plus size={22} color="#002754" />
+        <TouchableOpacity onPress={handleOpenAddModal} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#002754', alignItems: 'center', justifyContent: 'center' }}>
+          <Plus size={20} color="white" />
         </TouchableOpacity>
       </View>
 
@@ -277,70 +278,188 @@ export default function MobileAddressesScreen() {
 
       {/* Address Form Modal */}
       <Modal visible={isModalOpen} animationType="slide" transparent>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
-          <View style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '90%' }}>
+        <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '92%' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-              <Text style={{ fontSize: 18, fontWeight: '700', color: '#002754' }}>
-                {editingAddressId ? 'Edit Address' : 'Add New Address'}
+              <Text style={{ fontSize: 18, fontWeight: '700', color: '#191C1E' }}>
+                {editingAddressId ? 'Edit Delivery Address' : 'Add Delivery Address'}
               </Text>
-              <TouchableOpacity onPress={() => setIsModalOpen(false)} style={{ padding: 4 }}>
-                <Text style={{ fontWeight: '700', color: '#737781' }}>Cancel</Text>
+              <TouchableOpacity onPress={() => setIsModalOpen(false)} style={{ padding: 6 }}>
+                <Text style={{ fontWeight: '700', color: '#737781', fontSize: 14 }}>Cancel</Text>
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <View style={{ gap: 10 }}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#002754', textTransform: 'uppercase' }}>Recipient Details</Text>
-                <TextInput placeholder="Full Contact Name *" placeholderTextColor="#737781" value={formData.name} onChangeText={(t: string) => setFormData({ ...formData, name: t })} style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontSize: 14, color: '#191C1E' }} />
-                <TextInput placeholder="10-Digit Mobile Number *" placeholderTextColor="#737781" keyboardType="phone-pad" value={formData.phone} onChangeText={(t: string) => setFormData({ ...formData, phone: t })} style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontSize: 14, color: '#191C1E' }} />
-
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#002754', textTransform: 'uppercase', marginTop: 6 }}>Location &amp; House Details</Text>
-                <TextInput placeholder="House No. / Flat / Building Name *" placeholderTextColor="#737781" value={formData.addressLine1} onChangeText={(t: string) => setFormData({ ...formData, addressLine1: t })} style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontSize: 14, color: '#191C1E' }} />
-                <TextInput placeholder="Street / Road / Area / Locality *" placeholderTextColor="#737781" value={formData.addressLine2} onChangeText={(t: string) => setFormData({ ...formData, addressLine2: t })} style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontSize: 14, color: '#191C1E' }} />
-                <TextInput placeholder="Landmark (Optional e.g. Near Lotus Park)" placeholderTextColor="#737781" value={formData.landmark} onChangeText={(t: string) => setFormData({ ...formData, landmark: t })} style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontSize: 14, color: '#191C1E' }} />
-
-                <View style={{ flexDirection: 'row', gap: 10 }}>
-                  <TextInput placeholder="Pincode *" placeholderTextColor="#737781" keyboardType="number-pad" value={formData.pincode} onChangeText={(t: string) => setFormData({ ...formData, pincode: t })} style={{ flex: 1, backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontSize: 14, color: '#191C1E' }} />
-                  <TextInput placeholder="City *" placeholderTextColor="#737781" value={formData.city} onChangeText={(t: string) => setFormData({ ...formData, city: t })} style={{ flex: 1, backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontSize: 14, color: '#191C1E' }} />
+            <ScrollView showsVerticalScrollIndicator={true} keyboardShouldPersistTaps="handled" keyboardDismissMode="none" contentContainerStyle={{ paddingBottom: 250 }}>
+              <View style={{ gap: 14 }}>
+                {/* 1. RECIPIENT DETAILS */}
+                <View style={{ backgroundColor: '#FAF8F5', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: '#C3C6D1', gap: 12 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#002754', textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                    1. Recipient Details
+                  </Text>
+                  <View>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#191C1E', marginBottom: 4 }}>Full Name *</Text>
+                    <TextInput
+                      placeholder="e.g. Aanya Sharma"
+                      placeholderTextColor="#737781"
+                      selectionColor="#002754"
+                      cursorColor="#002754"
+                      underlineColorAndroid="transparent"
+                      value={formData.name}
+                      onChangeText={(t: string) => setFormData({ ...formData, name: t })}
+                      style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#191C1E', fontWeight: '400' }}
+                    />
+                  </View>
+                  <View>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#191C1E', marginBottom: 4 }}>10 digit mobile number *</Text>
+                    <TextInput
+                      placeholder="e.g. 9876543210"
+                      placeholderTextColor="#737781"
+                      selectionColor="#002754"
+                      cursorColor="#002754"
+                      underlineColorAndroid="transparent"
+                      keyboardType="number-pad"
+                      maxLength={10}
+                      value={formData.phone}
+                      onChangeText={(t: string) => setFormData({ ...formData, phone: t })}
+                      style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#191C1E', fontWeight: '400' }}
+                    />
+                  </View>
                 </View>
 
-                {/* State Dropdown */}
-                <TouchableOpacity onPress={() => setIsStateDropdownOpen(!isStateDropdownOpen)} style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#002754', borderRadius: 12, padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                {/* 2. ADDRESS DETAILS */}
+                <View style={{ backgroundColor: '#FAF8F5', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: '#C3C6D1', gap: 12 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#002754', textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                    2. Address Details
+                  </Text>
                   <View>
-                    <Text style={{ fontSize: 10, color: '#737781' }}>State (Shipping Tariff Basis)</Text>
-                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#002754' }}>{formData.state}</Text>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#191C1E', marginBottom: 4 }}>House / Flat / Door No. *</Text>
+                    <TextInput
+                      placeholder="e.g. Flat 402, Royal Enclave"
+                      placeholderTextColor="#737781"
+                      selectionColor="#002754"
+                      cursorColor="#002754"
+                      underlineColorAndroid="transparent"
+                      value={formData.addressLine1}
+                      onChangeText={(t: string) => setFormData({ ...formData, addressLine1: t })}
+                      style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#191C1E', fontWeight: '400' }}
+                    />
                   </View>
-                  <ChevronDown size={18} color="#002754" />
-                </TouchableOpacity>
+                  <View>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#191C1E', marginBottom: 4 }}>Street / Road / Area / Locality *</Text>
+                    <TextInput
+                      placeholder="e.g. 2nd Main Road, T. Nagar"
+                      placeholderTextColor="#737781"
+                      selectionColor="#002754"
+                      cursorColor="#002754"
+                      underlineColorAndroid="transparent"
+                      value={formData.addressLine2}
+                      onChangeText={(t: string) => setFormData({ ...formData, addressLine2: t })}
+                      style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#191C1E', fontWeight: '400' }}
+                    />
+                  </View>
+                  <View>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#191C1E', marginBottom: 4 }}>Landmark (Optional)</Text>
+                    <TextInput
+                      placeholder="e.g. Near Apollo Hospital"
+                      placeholderTextColor="#737781"
+                      selectionColor="#002754"
+                      cursorColor="#002754"
+                      underlineColorAndroid="transparent"
+                      value={formData.landmark}
+                      onChangeText={(t: string) => setFormData({ ...formData, landmark: t })}
+                      style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#191C1E', fontWeight: '400' }}
+                    />
+                  </View>
+                </View>
 
-                {isStateDropdownOpen && (
-                  <View style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#002754', borderRadius: 12, maxHeight: 160 }}>
-                    <ScrollView nestedScrollEnabled>
-                      {ALL_INDIAN_STATES.map((st) => (
-                        <TouchableOpacity
-                          key={st}
-                          onPress={() => { setFormData({ ...formData, state: st }); setIsStateDropdownOpen(false); }}
-                          style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: '#F0F2F5', backgroundColor: formData.state === st ? '#EBF3FF' : 'white' }}
-                        >
-                          <Text style={{ fontSize: 13, fontWeight: formData.state === st ? '700' : '400', color: '#002754' }}>{st}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
+                {/* 3. LOCATION DETAILS */}
+                <View style={{ backgroundColor: '#FAF8F5', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: '#C3C6D1', gap: 12 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#002754', textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                    3. Location Details
+                  </Text>
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#191C1E', marginBottom: 4 }}>City *</Text>
+                      <TextInput
+                        placeholder="e.g. Chennai"
+                        placeholderTextColor="#737781"
+                        selectionColor="#002754"
+                        cursorColor="#002754"
+                        underlineColorAndroid="transparent"
+                        value={formData.city}
+                        onChangeText={(t: string) => setFormData({ ...formData, city: t })}
+                        style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#191C1E', fontWeight: '400' }}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#191C1E', marginBottom: 4 }}>District (Optional)</Text>
+                      <TextInput
+                        placeholder="e.g. Chennai"
+                        placeholderTextColor="#737781"
+                        selectionColor="#002754"
+                        cursorColor="#002754"
+                        underlineColorAndroid="transparent"
+                        value={formData.district}
+                        onChangeText={(t: string) => setFormData({ ...formData, district: t })}
+                        style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#191C1E', fontWeight: '400' }}
+                      />
+                    </View>
                   </View>
-                )}
+
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#191C1E', marginBottom: 4 }}>Pincode *</Text>
+                      <TextInput
+                        placeholder="e.g. 600017"
+                        placeholderTextColor="#737781"
+                        selectionColor="#002754"
+                        cursorColor="#002754"
+                        underlineColorAndroid="transparent"
+                        keyboardType="number-pad"
+                        maxLength={6}
+                        value={formData.pincode}
+                        onChangeText={(t: string) => setFormData({ ...formData, pincode: t })}
+                        style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#191C1E', fontWeight: '400' }}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#191C1E', marginBottom: 4 }}>State *</Text>
+                      <TouchableOpacity onPress={() => setIsStateDropdownOpen(!isStateDropdownOpen)} style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#002754', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', height: 44 }}>
+                        <Text style={{ fontSize: 13, fontWeight: '700', color: '#191C1E' }} numberOfLines={1}>{formData.state}</Text>
+                        <ChevronDown size={16} color="#002754" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {isStateDropdownOpen && (
+                    <View style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#002754', borderRadius: 10, maxHeight: 160 }}>
+                      <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                        {ALL_INDIAN_STATES.map((st) => (
+                          <TouchableOpacity
+                            key={st}
+                            onPress={() => { setFormData({ ...formData, state: st }); setIsStateDropdownOpen(false); }}
+                            style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: '#F0F2F5', backgroundColor: formData.state === st ? '#EBF3FF' : 'white' }}
+                          >
+                            <Text style={{ fontSize: 13, fontWeight: formData.state === st ? '700' : '400', color: '#191C1E' }}>{st}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
 
                 <TouchableOpacity
                   onPress={handleSaveAddress}
-                  style={{ backgroundColor: '#002754', paddingVertical: 14, borderRadius: 14, alignItems: 'center', marginTop: 12 }}
+                  style={{ backgroundColor: '#002754', paddingVertical: 14, borderRadius: 14, alignItems: 'center', marginTop: 6, marginBottom: 20 }}
                 >
                   <Text style={{ color: 'white', fontWeight: '700', fontSize: 15 }}>
-                    {editingAddressId ? 'Update Address' : 'Save Delivery Address'}
+                    {editingAddressId ? 'Update Delivery Address' : 'Save Delivery Address'}
                   </Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

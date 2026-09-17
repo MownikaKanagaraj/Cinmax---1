@@ -12,8 +12,6 @@ const config = getDefaultConfig(projectRoot);
 // Disable pnpm symlink target resolution in Metro to prevent .pnpm SHA-1 file watcher errors
 config.resolver.unstable_enableSymlinks = false;
 config.resolver.unstable_enablePackageExports = false;
-
-// Compute SHA-1 on demand for monorepo and pnpm dependencies
 config.watcher.unstable_lazySha1 = true;
 
 // 1. Exclude non-mobile build artifacts from file-map crawling
@@ -30,6 +28,8 @@ config.resolver.blockList = [
 config.watchFolders = [
   monorepoRoot,
   projectRoot,
+  path.resolve(projectRoot, 'node_modules'),
+  path.resolve(monorepoRoot, 'node_modules'),
   path.resolve(monorepoRoot, 'node_modules/.pnpm'),
 ];
 
@@ -74,10 +74,10 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     moduleName.includes('empty-module') ||
     moduleName.includes('@supabase/ssr') ||
     moduleName === './client/server' ||
-    moduleName.includes('typeAliases') ||
+    (moduleName.includes('typeAliases') && !moduleName.includes('TypedArrays')) ||
     moduleName.includes('enumUtil') ||
     moduleName.includes('partialUtil') ||
-    (moduleName.includes('types') && context.originModulePath && context.originModulePath.includes('@supabase'))
+    (moduleName.includes('types') && !moduleName.includes('TypedArrays') && context.originModulePath && context.originModulePath.includes('@supabase'))
   ) {
     return {
       filePath: emptyModulePath,
@@ -120,13 +120,13 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
       const parts = res.filePath.split(/[\\/]node_modules[\\/]/);
       if (parts.length > 1) {
         const relPath = parts[parts.length - 1];
-        const mobileNmPath = path.resolve(projectRoot, 'node_modules', relPath);
         const rootNmPath = path.resolve(monorepoRoot, 'node_modules', relPath);
-        if (fs.existsSync(mobileNmPath)) {
-          return { ...res, filePath: mobileNmPath };
-        }
-        if (fs.existsSync(rootNmPath)) {
+        const mobileNmPath = path.resolve(projectRoot, 'node_modules', relPath);
+        if (fs.existsSync(rootNmPath) && fs.statSync(rootNmPath).isFile()) {
           return { ...res, filePath: rootNmPath };
+        }
+        if (fs.existsSync(mobileNmPath) && fs.statSync(mobileNmPath).isFile()) {
+          return { ...res, filePath: mobileNmPath };
         }
       }
     }
@@ -136,4 +136,3 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
 };
 
 module.exports = withNativeWind(config, { input: './global.css' });
-

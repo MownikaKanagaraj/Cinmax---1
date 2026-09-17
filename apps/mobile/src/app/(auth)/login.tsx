@@ -51,7 +51,7 @@ export default function MobileAuthScreen() {
 
   // Phone State
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
-  const [phoneNumber, setPhoneNumber] = useState('9876543210');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
   const [resendTimer, setResendTimer] = useState(30);
 
@@ -101,6 +101,7 @@ export default function MobileAuthScreen() {
   const handleSendOTP = async () => {
     setErrorMessage('');
     setSuccessMessage('');
+    setOtpDigits(['', '', '', '', '', '']);
     const cleanPhone = phoneNumber.replace(/[^0-9]/g, '');
     if (cleanPhone.length < 10) {
       setErrorMessage('Please enter a valid 10-digit mobile phone number');
@@ -111,13 +112,12 @@ export default function MobileAuthScreen() {
 
     try {
       await phoneLogin.mutateAsync(fullFormattedPhone);
-      setSuccessMessage(`Verification code dispatched to ${fullFormattedPhone}`);
+      setSuccessMessage(`Verification code sent via SMS to ${fullFormattedPhone}`);
       setStep('otp');
       startResendCountdown();
     } catch (err: any) {
-      setSuccessMessage(`Test OTP generated for ${fullFormattedPhone}: 123456`);
-      setStep('otp');
-      startResendCountdown();
+      console.error('Supabase Phone OTP Send Error:', err);
+      setErrorMessage(err.message || 'Failed to send OTP code via SMS. Please verify your phone number.');
     }
   };
 
@@ -169,29 +169,7 @@ export default function MobileAuthScreen() {
     const cleanPhone = phoneNumber.replace(/[^0-9]/g, '');
     const fullFormattedPhone = `+91${cleanPhone.slice(-10)}`;
 
-    const isDev = typeof __DEV__ !== 'undefined' ? __DEV__ : process.env.NODE_ENV !== 'production';
-
-    // Handle Development Test OTP 123456 using REAL Supabase authenticated customer account
-    if (code === '123456' && isDev) {
-      setErrorMessage('');
-      setSuccessMessage('Test OTP 123456 verified! Authenticating real customer session...');
-
-      try {
-        await emailLogin.mutateAsync({
-          email: 'customer@gmail.com',
-          password: 'Password@123',
-        });
-        setSuccessMessage('Welcome back to CINMAX! Authenticated successfully.');
-        setTimeout(() => {
-          router.replace(redirectTarget as any);
-        }, 500);
-      } catch (err: any) {
-        setErrorMessage(err.message || 'Failed to authenticate test customer session.');
-      }
-      return;
-    }
-
-    // Real Supabase SMS OTP verification for all other codes
+    // Real Supabase SMS OTP verification ONLY
     try {
       await verifyOTP.mutateAsync({
         phone: fullFormattedPhone,
@@ -202,7 +180,15 @@ export default function MobileAuthScreen() {
         router.replace(redirectTarget as any);
       }, 500);
     } catch (err: any) {
-      setErrorMessage(err.message || 'Invalid 6-digit OTP code.');
+      console.error('Supabase OTP Verification Error:', err);
+      const msg = (err.message || '').toLowerCase();
+      if (msg.includes('expired')) {
+        setErrorMessage('The OTP verification code has expired. Please tap "Resend OTP Code" to get a new code.');
+      } else if (msg.includes('invalid') || msg.includes('token')) {
+        setErrorMessage('Invalid 6-digit OTP code. Please check the code received via SMS and try again.');
+      } else {
+        setErrorMessage(err.message || 'OTP verification failed. Please try again.');
+      }
     }
   };
 
@@ -309,8 +295,11 @@ export default function MobileAuthScreen() {
                     keyboardType="email-address"
                     autoCapitalize="none"
                     placeholder="customer@gmail.com"
-                    placeholderTextColor="#94A3B8"
-                    style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 14, color: '#002754', flex: 1 }}
+                    placeholderTextColor="#737781"
+                    selectionColor="#002754"
+                    cursorColor="#002754"
+                    underlineColorAndroid="transparent"
+                    style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 14, color: '#191C1E', flex: 1 }}
                   />
                 </View>
               </View>
@@ -333,8 +322,11 @@ export default function MobileAuthScreen() {
                     onChangeText={setPassword}
                     secureTextEntry={!showPassword}
                     placeholder="Enter your password"
-                    placeholderTextColor="#94A3B8"
-                    style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 14, color: '#002754', flex: 1 }}
+                    placeholderTextColor="#737781"
+                    selectionColor="#002754"
+                    cursorColor="#002754"
+                    underlineColorAndroid="transparent"
+                    style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 14, color: '#191C1E', flex: 1 }}
                   />
                   <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
                     {showPassword ? <EyeOff size={18} color="#737781" /> : <Eye size={18} color="#737781" />}
@@ -346,13 +338,13 @@ export default function MobileAuthScreen() {
                 onPress={handleEmailLogin}
                 disabled={emailLogin.isPending}
                 activeOpacity={0.8}
-                style={{ backgroundColor: '#002754', borderRadius: 16, height: 50, justifyContent: 'center', alignItems: 'center', marginTop: 8, shadowColor: '#002754', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8 }}
+                style={{ backgroundColor: '#002754', borderRadius: 16, height: 50, justifyContent: 'center', alignItems: 'center', marginTop: 6 }}
               >
                 {emailLogin.isPending ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
                   <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>
-                    Sign In to Account →
+                    Sign In with Email →
                   </Text>
                 )}
               </TouchableOpacity>
@@ -386,17 +378,13 @@ export default function MobileAuthScreen() {
                       keyboardType="phone-pad"
                       maxLength={10}
                       placeholder="98765 43210"
-                      placeholderTextColor="#94A3B8"
-                      style={{ fontFamily: FONT_SANS_BOLD, fontSize: 15, color: '#002754', flex: 1 }}
+                      placeholderTextColor="#737781"
+                      selectionColor="#002754"
+                      cursorColor="#002754"
+                      underlineColorAndroid="transparent"
+                      style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 14, color: '#191C1E', flex: 1 }}
                     />
                   </View>
-                </View>
-
-                <View style={{ backgroundColor: 'rgba(197, 168, 128, 0.14)', borderWidth: 1, borderColor: 'rgba(197, 168, 128, 0.35)', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Sparkles size={16} color="#C5A880" />
-                  <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 12, color: '#002754', flex: 1, lineHeight: 16 }}>
-                    Test Mode: Use OTP <Text style={{ fontFamily: FONT_SANS_BOLD }}>123456</Text> to sign in immediately.
-                  </Text>
                 </View>
 
                 <TouchableOpacity
@@ -438,6 +426,9 @@ export default function MobileAuthScreen() {
                       keyboardType="number-pad"
                       maxLength={1}
                       selectTextOnFocus
+                      selectionColor="#002754"
+                      cursorColor="#002754"
+                      underlineColorAndroid="transparent"
                       style={{
                         width: 42,
                         height: 48,
@@ -448,7 +439,7 @@ export default function MobileAuthScreen() {
                         textAlign: 'center',
                         fontFamily: FONT_SANS_BOLD,
                         fontSize: 18,
-                        color: '#002754',
+                        color: '#191C1E',
                       }}
                     />
                   ))}
@@ -467,9 +458,6 @@ export default function MobileAuthScreen() {
                       </Text>
                     </TouchableOpacity>
                   )}
-                  <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 12, color: '#C5A880' }}>
-                    Test OTP: 123456
-                  </Text>
                 </View>
 
                 <TouchableOpacity
@@ -495,7 +483,7 @@ export default function MobileAuthScreen() {
         <View style={{ marginTop: 24, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <ShieldCheck size={16} color="#C5A880" />
-            <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 11, color: '#64748B' }}>100% Encrypted</Text>
+            <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 11, color: '#64748B' }}>Secure Connection</Text>
           </View>
           <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#CBD5E1' }} />
           <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 11, color: '#64748B' }}>Official CINMAX Authenticated</Text>

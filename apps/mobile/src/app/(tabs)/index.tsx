@@ -384,7 +384,7 @@ export default function MobileHomeScreen() {
             </View>
 
             {activeOffers.length > 0 && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+              <ScrollView horizontal nestedScrollEnabled={true} showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
                 {activeOffers.map((offer: any, idx: number) => {
                   const bgStyles = [
                     { bg: 'rgba(0, 39, 84, 0.08)', border: 'rgba(0, 39, 84, 0.12)', text: '#002754' },
@@ -529,7 +529,7 @@ export default function MobileHomeScreen() {
           <Text style={{ fontFamily: FONT_SERIF_SEMIBOLD, fontSize: 22, fontWeight: '500', color: '#002754', marginBottom: 14 }}>
             Shop By Category
           </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 20, paddingVertical: 4 }}>
+          <ScrollView horizontal nestedScrollEnabled={true} showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 20, paddingVertical: 4 }}>
             {(categories.length > 0 ? categories : categoryAvatars).map((cat: any, idx: number) => (
               <TouchableOpacity key={cat.id || idx} onPress={() => router.push(`/category/${cat.slug}` as any)} style={{ alignItems: 'center', gap: 6 }}>
                 <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: 'white', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(195, 198, 209, 0.2)', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10 }}>
@@ -546,7 +546,7 @@ export default function MobileHomeScreen() {
           <Text style={{ fontFamily: FONT_SERIF_SEMIBOLD, fontSize: 22, fontWeight: '500', color: '#002754', marginBottom: 14 }}>
             Watch &amp; Shop
           </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14 }}>
+          <ScrollView horizontal nestedScrollEnabled={true} showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14 }}>
             {watchShopVideos.map((vid) => (
               <TouchableOpacity key={vid.id} onPress={() => setSelectedVideoUrl((vid as any).videoUrl || vid.videoBg)} style={{ width: 170, height: 300, borderRadius: 18, overflow: 'hidden', backgroundColor: '#ECEEF0', position: 'relative' }}>
                 <Image source={{ uri: vid.videoBg }} style={{ width: '100%', height: '100%' }} />
@@ -572,7 +572,7 @@ export default function MobileHomeScreen() {
           <Text style={{ fontFamily: FONT_SERIF_SEMIBOLD, fontSize: 22, fontWeight: '500', color: '#002754', marginBottom: 14 }}>
             Shop By Concern
           </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+          <ScrollView horizontal nestedScrollEnabled={true} showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
             {concerns.map((c) => (
               <TouchableOpacity
                 key={c}
@@ -651,7 +651,7 @@ export default function MobileHomeScreen() {
             </TouchableOpacity>
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingBottom: 6 }}>
+          <ScrollView horizontal nestedScrollEnabled={true} showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingBottom: 6 }}>
             {products.map((item) => (
               <TouchableOpacity key={item.id} onPress={() => router.push(`/product/${item.slug}` as any)} style={{ width: 140, gap: 6 }}>
                 <View style={{ width: 140, height: 140, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(195, 198, 209, 0.3)' }}>
@@ -697,7 +697,7 @@ export default function MobileHomeScreen() {
           <Text style={{ fontFamily: FONT_SERIF_SEMIBOLD, fontSize: 22, fontWeight: '500', color: '#002754', marginBottom: 14 }}>
             Real Results
           </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14 }}>
+          <ScrollView horizontal nestedScrollEnabled={true} showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14 }}>
             {realResults.map((item) => (
               <View key={item.id} style={{ width: 240, backgroundColor: 'white', borderRadius: 16, padding: 10, borderWidth: 1, borderColor: 'rgba(195, 198, 209, 0.2)', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 10 }}>
                 <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>

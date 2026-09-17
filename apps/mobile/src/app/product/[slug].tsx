@@ -62,7 +62,10 @@ const FONT_SANS_BOLD = Platform.select({
   default: 'PlusJakartaSans_700Bold',
 });
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 export default function MobileProductDetailsScreen() {
+  const insets = useSafeAreaInsets();
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
   const { user, isAuthenticated } = useUser();
@@ -104,8 +107,18 @@ export default function MobileProductDetailsScreen() {
   const variantsList = productData?.variants && productData.variants.length > 0 ? productData.variants : null;
   const activeVariant = variantsList ? (variantsList[selectedVariantIndex] || variantsList[0]) : null;
 
-  const productPrice = activeVariant ? Number(activeVariant.price) : (productData?.basePrice ? Number(productData.basePrice) : 199);
-  const originalPrice = activeVariant?.compareAtPrice ? Number(activeVariant.compareAtPrice) : (productData?.compareAtPrice ? Number(productData.compareAtPrice) : null);
+  const baseProductPrice = productData?.basePrice ? Number(productData.basePrice) : 199;
+  const weightPrices: Record<string, number> = {
+    '50g': Math.round(baseProductPrice * 0.6),
+    '75g': Math.round(baseProductPrice * 0.8),
+    '100g': baseProductPrice,
+    '125g': Math.round(baseProductPrice * 1.25),
+    '200g': Math.round(baseProductPrice * 1.8),
+  };
+  const dynamicWeightPrice = weightPrices[selectedWeight] || baseProductPrice;
+
+  const productPrice = activeVariant ? Number(activeVariant.price) : dynamicWeightPrice;
+  const originalPrice = activeVariant?.compareAtPrice ? Number(activeVariant.compareAtPrice) : Math.round(productPrice * 1.25);
   const discountPercent = originalPrice && originalPrice > productPrice ? Math.round(((originalPrice - productPrice) / originalPrice) * 100) : 0;
   const savings = originalPrice && originalPrice > productPrice ? originalPrice - productPrice : 0;
 
@@ -254,7 +267,7 @@ export default function MobileProductDetailsScreen() {
           </View>
 
           {/* Horizontal Thumbnails */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, marginTop: 12, paddingBottom: 4 }}>
+          <ScrollView horizontal nestedScrollEnabled={true} showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, marginTop: 12, paddingBottom: 4 }}>
             {productImages.map((img: string, idx: number) => (
               <TouchableOpacity
                 key={idx}
@@ -340,7 +353,7 @@ export default function MobileProductDetailsScreen() {
             <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 14, fontWeight: '700', color: '#191C1E', marginBottom: 10 }}>
               {variantsList ? 'Select Size / Variant' : 'Weight'}
             </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+            <ScrollView horizontal nestedScrollEnabled={true} showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
               {variantsList
                 ? variantsList.map((v, idx) => {
                     const isSelected = selectedVariantIndex === idx;
@@ -370,7 +383,7 @@ export default function MobileProductDetailsScreen() {
                       </TouchableOpacity>
                     );
                   })
-                : ['75g', '100g', '125g'].map((w) => (
+                : ['50g', '75g', '100g', '125g', '200g'].map((w) => (
                     <TouchableOpacity
                       key={w}
                       onPress={() => setSelectedWeight(w)}
@@ -401,7 +414,26 @@ export default function MobileProductDetailsScreen() {
                 <Minus size={16} color="#434750" />
               </TouchableOpacity>
               <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 15, color: '#191C1E' }}>{quantity}</Text>
+                <TextInput
+                  value={String(quantity)}
+                  onChangeText={(text) => {
+                    const num = parseInt(text.replace(/[^0-9]/g, ''), 10);
+                    if (!isNaN(num)) {
+                      setQuantity(Math.max(1, Math.min(99, num)));
+                    } else if (text === '') {
+                      setQuantity(1);
+                    }
+                  }}
+                  keyboardType="number-pad"
+                  style={{
+                    fontFamily: FONT_SANS_BOLD,
+                    fontSize: 15,
+                    color: '#191C1E',
+                    textAlign: 'center',
+                    width: '100%',
+                    padding: 0,
+                  }}
+                />
               </View>
               <TouchableOpacity onPress={() => setQuantity(quantity + 1)} style={{ width: 40, height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: '#F2F4F6' }}>
                 <Plus size={16} color="#434750" />
@@ -663,7 +695,7 @@ export default function MobileProductDetailsScreen() {
           <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 22, fontWeight: '700', color: '#002754', marginBottom: 16 }}>
             Complete Your Ritual
           </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingBottom: 6 }}>
+          <ScrollView horizontal nestedScrollEnabled={true} showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingBottom: 6 }}>
             {relatedProducts.map((rel) => (
               <ProductCard
                 key={rel.id}
@@ -684,7 +716,7 @@ export default function MobileProductDetailsScreen() {
       </ScrollView>
 
       {/* 11. DOCKED STICKY BOTTOM ACTION BAR (Replaces Bottom Navigation Bar) */}
-      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 68, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: 'rgba(195, 198, 209, 0.3)', flexDirection: 'row', zIndex: 100, paddingVertical: 10, paddingHorizontal: 16, gap: 12, shadowColor: '#0A3D78', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.08, shadowRadius: 15, alignItems: 'center' }}>
+      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 60 + insets.bottom, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: 'rgba(195, 198, 209, 0.3)', flexDirection: 'row', zIndex: 100, paddingTop: 10, paddingBottom: Math.max(10, insets.bottom), paddingHorizontal: 16, gap: 12, shadowColor: '#0A3D78', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.08, shadowRadius: 15, alignItems: 'center' }}>
         <TouchableOpacity
           onPress={handleAddToCart}
           style={{ flex: 1, backgroundColor: '#B4CDFE', justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 8, height: 48, borderRadius: 16, shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.06, shadowRadius: 8 }}

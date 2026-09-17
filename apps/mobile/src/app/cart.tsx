@@ -10,8 +10,9 @@ import {
   Platform,
   Modal,
   ActivityIndicator,
+  KeyboardAvoidingView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
   useCartStore,
@@ -65,6 +66,7 @@ const FONT_SANS_BOLD = Platform.select({
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=400&auto=format&fit=crop&q=80';
 
 export default function MobileCartScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user, isAuthenticated } = useUser();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -366,7 +368,7 @@ export default function MobileCartScreen() {
         </View>
       ) : (
         <>
-        <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
+        <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 + insets.bottom }}>
 
           {/* 2. Cart Summary Header Card */}
           <View style={{ marginHorizontal: CONTAINER_PADDING, marginTop: 16, backgroundColor: '#FFFFFF', borderRadius: 20, padding: 18, shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 10, borderWidth: 1, borderColor: 'rgba(195, 198, 209, 0.25)' }}>
@@ -443,9 +445,25 @@ export default function MobileCartScreen() {
                       >
                         <Minus size={12} color="#002754" />
                       </TouchableOpacity>
-                      <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 13, color: '#002754', paddingHorizontal: 10 }}>
-                        {item.quantity}
-                      </Text>
+                      <TextInput
+                        value={String(item.quantity)}
+                        onChangeText={(text) => {
+                          const num = parseInt(text.replace(/[^0-9]/g, ''), 10);
+                          if (!isNaN(num) && num > 0) {
+                            updateQuantity(item.id, num);
+                          }
+                        }}
+                        keyboardType="number-pad"
+                        style={{
+                          fontFamily: FONT_SANS_BOLD,
+                          fontSize: 13,
+                          color: '#002754',
+                          paddingHorizontal: 4,
+                          textAlign: 'center',
+                          minWidth: 24,
+                          paddingVertical: 0,
+                        }}
+                      />
                       <TouchableOpacity
                         onPress={() => updateQuantity(item.id, item.quantity + 1)}
                         style={{ width: 24, height: 24, borderRadius: 12, justifyContent: 'center', alignItems: 'center' }}
@@ -622,7 +640,7 @@ export default function MobileCartScreen() {
         </ScrollView>
 
         {/* Sticky Bottom Checkout CTA */}
-        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#FFFFFF', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: CONTAINER_PADDING, paddingVertical: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: 'rgba(195, 198, 209, 0.3)', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.08, shadowRadius: 20, zIndex: 100 }}>
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#FFFFFF', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: CONTAINER_PADDING, paddingTop: 14, paddingBottom: Math.max(14, insets.bottom), flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: 'rgba(195, 198, 209, 0.3)', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.08, shadowRadius: 20, zIndex: 100 }}>
           <View>
             <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 11, color: '#737781', textTransform: 'uppercase' }}>Total Amount</Text>
             <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 20, color: '#002754', fontWeight: '700' }}>₹{grandTotal}</Text>
@@ -635,7 +653,6 @@ export default function MobileCartScreen() {
             <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', fontSize: 14, textTransform: 'uppercase', letterSpacing: 0.5 }}>
               Proceed to Checkout
             </Text>
-            <ArrowRight size={18} color="white" />
           </TouchableOpacity>
         </View>
         </>
@@ -643,7 +660,7 @@ export default function MobileCartScreen() {
 
       {/* MANAGE / EDIT ADDRESS MODAL */}
       <Modal visible={isManageAddressModalOpen} animationType="slide" transparent>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+        <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
           <View style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '90%' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 20, fontWeight: '700', color: '#002754' }}>
@@ -696,41 +713,62 @@ export default function MobileCartScreen() {
                 </ScrollView>
               </View>
             ) : (
-              <ScrollView style={{ gap: 10 }}>
-                <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#002754', textTransform: 'uppercase', letterSpacing: 0.5 }}>Recipient Contact Details</Text>
-                <TextInput placeholder="Full Name *" value={newAddress.name} onChangeText={(text) => setNewAddress({ ...newAddress, name: text })} style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, marginBottom: 8 }} />
-                <TextInput placeholder="10-Digit Mobile Number *" keyboardType="phone-pad" value={newAddress.phone} onChangeText={(text) => setNewAddress({ ...newAddress, phone: text })} style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, marginBottom: 12 }} />
-
-                <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#002754', textTransform: 'uppercase', letterSpacing: 0.5 }}>Location &amp; Street Address</Text>
-                <TextInput placeholder="House No. / Building / Flat Name *" value={newAddress.houseNo} onChangeText={(text) => setNewAddress({ ...newAddress, houseNo: text })} style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, marginBottom: 8 }} />
-                <TextInput placeholder="Road Name / Area / Colony / Street *" value={newAddress.street} onChangeText={(text) => setNewAddress({ ...newAddress, street: text })} style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, marginBottom: 8 }} />
-                
-                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 8 }}>
-                  <TextInput placeholder="6-Digit Pincode *" keyboardType="number-pad" value={newAddress.pincode} onChangeText={(text) => setNewAddress({ ...newAddress, pincode: text })} style={{ flex: 1, backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14 }} />
-                  <TextInput placeholder="City / District *" value={newAddress.city} onChangeText={(text) => setNewAddress({ ...newAddress, city: text })} style={{ flex: 1, backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14 }} />
+              <ScrollView showsVerticalScrollIndicator={true} keyboardShouldPersistTaps="handled" keyboardDismissMode="none" contentContainerStyle={{ paddingBottom: 250 }}>
+                <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#002754', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>1. Recipient Contact Details</Text>
+                <View style={{ marginBottom: 8 }}>
+                  <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#191C1E', marginBottom: 4 }}>Full Name *</Text>
+                  <TextInput placeholder="e.g. Aanya Sharma" placeholderTextColor="#737781" selectionColor="#002754" cursorColor="#002754" underlineColorAndroid="transparent" value={newAddress.name} onChangeText={(text) => setNewAddress({ ...newAddress, name: text })} style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#191C1E' }} />
+                </View>
+                <View style={{ marginBottom: 12 }}>
+                  <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#191C1E', marginBottom: 4 }}>10 digit mobile number *</Text>
+                  <TextInput placeholder="e.g. 9876543210" placeholderTextColor="#737781" selectionColor="#002754" cursorColor="#002754" underlineColorAndroid="transparent" keyboardType="phone-pad" maxLength={10} value={newAddress.phone} onChangeText={(text) => setNewAddress({ ...newAddress, phone: text })} style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#191C1E' }} />
                 </View>
 
-                <TouchableOpacity onPress={() => setIsStateDropdownOpen(!isStateDropdownOpen)} style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#002754', borderRadius: 12, padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <View>
-                    <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 10, color: '#737781' }}>State *</Text>
-                    <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 14, color: '#002754' }}>{newAddress.state}</Text>
+                <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#002754', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>2. Location &amp; Street Address</Text>
+                <View style={{ marginBottom: 8 }}>
+                  <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#191C1E', marginBottom: 4 }}>House / Flat / Door No. *</Text>
+                  <TextInput placeholder="e.g. Flat 402, Royal Enclave" placeholderTextColor="#737781" selectionColor="#002754" cursorColor="#002754" underlineColorAndroid="transparent" value={newAddress.houseNo} onChangeText={(text) => setNewAddress({ ...newAddress, houseNo: text })} style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#191C1E' }} />
+                </View>
+                <View style={{ marginBottom: 8 }}>
+                  <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#191C1E', marginBottom: 4 }}>Street / Road / Area / Locality *</Text>
+                  <TextInput placeholder="e.g. 2nd Main Road, T. Nagar" placeholderTextColor="#737781" selectionColor="#002754" cursorColor="#002754" underlineColorAndroid="transparent" value={newAddress.street} onChangeText={(text) => setNewAddress({ ...newAddress, street: text })} style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#191C1E' }} />
+                </View>
+                
+                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 8 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#191C1E', marginBottom: 4 }}>Pincode *</Text>
+                    <TextInput placeholder="e.g. 600017" placeholderTextColor="#737781" selectionColor="#002754" cursorColor="#002754" underlineColorAndroid="transparent" keyboardType="number-pad" maxLength={6} value={newAddress.pincode} onChangeText={(text) => setNewAddress({ ...newAddress, pincode: text })} style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#191C1E' }} />
                   </View>
-                  <ChevronDown size={18} color="#002754" />
-                </TouchableOpacity>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#191C1E', marginBottom: 4 }}>City *</Text>
+                    <TextInput placeholder="e.g. Chennai" placeholderTextColor="#737781" selectionColor="#002754" cursorColor="#002754" underlineColorAndroid="transparent" value={newAddress.city} onChangeText={(text) => setNewAddress({ ...newAddress, city: text })} style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#191C1E' }} />
+                  </View>
+                </View>
+
+                <View style={{ marginBottom: 8 }}>
+                  <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#191C1E', marginBottom: 4 }}>State *</Text>
+                  <TouchableOpacity onPress={() => setIsStateDropdownOpen(!isStateDropdownOpen)} style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#002754', borderRadius: 12, padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 14, color: '#191C1E' }}>{newAddress.state || 'Select State'}</Text>
+                    <ChevronDown size={18} color="#002754" />
+                  </TouchableOpacity>
+                </View>
 
                 {isStateDropdownOpen && (
                   <View style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#002754', borderRadius: 12, maxHeight: 180, marginBottom: 8 }}>
                     <ScrollView nestedScrollEnabled>
                       {ALL_INDIAN_STATES.map((st) => (
-                        <TouchableOpacity key={st} onPress={() => { setNewAddress({ ...newAddress, state: st }); setIsStateDropdownOpen(false); }} style={{ padding: 10, borderBottomWidth: 1, borderBottomColor: '#F0F2F5' }}>
-                          <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 13, color: '#002754' }}>{st}</Text>
+                        <TouchableOpacity key={st} onPress={() => { setNewAddress({ ...newAddress, state: st }); setIsStateDropdownOpen(false); }} style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: '#F0F2F5' }}>
+                          <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 13, color: '#191C1E' }}>{st}</Text>
                         </TouchableOpacity>
                       ))}
                     </ScrollView>
                   </View>
                 )}
 
-                <TextInput placeholder="Nearby Landmark (Optional e.g. Near City Hospital)" value={newAddress.landmark} onChangeText={(text) => setNewAddress({ ...newAddress, landmark: text })} style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, marginBottom: 12 }} />
+                <View style={{ marginBottom: 12 }}>
+                  <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#191C1E', marginBottom: 4 }}>Landmark (Optional)</Text>
+                  <TextInput placeholder="Nearby Landmark (e.g. Near City Hospital)" placeholderTextColor="#737781" selectionColor="#002754" cursorColor="#002754" underlineColorAndroid="transparent" value={newAddress.landmark} onChangeText={(text) => setNewAddress({ ...newAddress, landmark: text })} style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#191C1E' }} />
+                </View>
 
                 <View style={{ flexDirection: 'row', gap: 10 }}>
                   <TouchableOpacity onPress={() => setIsAddingNewAddress(false)} style={{ flex: 1, backgroundColor: '#ECEEF0', paddingVertical: 14, borderRadius: 16, alignItems: 'center' }}>
@@ -743,7 +781,7 @@ export default function MobileCartScreen() {
               </ScrollView>
             )}
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* LOGIN REQUIRED MODAL */}

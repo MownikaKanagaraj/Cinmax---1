@@ -11,8 +11,9 @@ import {
   Modal,
   Animated,
   BackHandler,
+  KeyboardAvoidingView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
 import { WebView } from 'react-native-webview';
@@ -178,6 +179,7 @@ function MobileConfettiCannon({ isVisible }: { isVisible: boolean }) {
 }
 
 export default function MobileCheckoutScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { items: cartStoreItems, clearCart, coupon, removeCoupon, savedLocalAddress, setSavedLocalAddress } = useCartStore();
@@ -221,13 +223,20 @@ export default function MobileCheckoutScreen() {
   });
 
   const getApiBaseUrl = () => {
-    if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
-    const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest?.debuggerHost || '';
-    const hostIp = hostUri ? hostUri.split(':')[0] : 'localhost';
-    if (hostIp && hostIp !== 'localhost') {
-      return `http://${hostIp}:3000/api`;
+    let url = process.env.EXPO_PUBLIC_API_URL || '';
+    const isLocal = !url || url.includes('localhost') || url.includes('127.0.0.1');
+
+    if (isLocal) {
+      if (__DEV__) {
+        const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest?.debuggerHost || '';
+        const hostIp = hostUri ? hostUri.split(':')[0] : '';
+        if (hostIp && hostIp !== 'localhost' && hostIp !== '127.0.0.1') {
+          return `http://${hostIp}:3000/api`;
+        }
+      }
+      return 'https://cinmax-website.vercel.app/api';
     }
-    return 'https://cinmax-website.vercel.app/api';
+    return url;
   };
 
   useEffect(() => {
@@ -543,89 +552,20 @@ export default function MobileCheckoutScreen() {
           postalCode: '600001',
         };
 
-    const createOrderRecord = async (paymentId: string) => {
-      const orderNumber = `CGP2026${Math.floor(100000 + Math.random() * 900000)}`;
-      if (!user?.id) {
-        alert('Authentication Required: Please log in to your account.');
-        router.replace('/(auth)/login' as any);
-        return;
-      }
-      const targetUserId = user.id;
-
-      try {
-        await createOrderMutation.mutateAsync({
-          userId: targetUserId,
-          orderNumber,
-          status: 'paid',
-          paymentStatus: 'paid',
-          paymentMethod: 'razorpay',
-          paymentId,
-          subtotal,
-          discountTotal: couponDiscount + loyaltyRedemption,
-          taxTotal: includedGst,
-          shippingTotal: deliveryCharge,
-          grandTotal,
-          currency: 'INR',
-          shippingAddress: activeAddress,
-          items: cartStoreItems.map((item) => ({
-            productId: item.productId,
-            productTitle: item.product?.title || 'CINMAX Product',
-            variantTitle: item.variant?.title || 'Standard',
-            unitPrice: item.unitPrice,
-            quantity: item.quantity,
-            totalPrice: item.unitPrice * item.quantity,
-          })),
-        });
-      } catch (dbErr) {
-        console.warn('DB Order Record Warning:', dbErr);
-      }
-
-      clearCart();
-      setIsProcessing(false);
-
-      const ptsEarned = Math.round(grandTotal * 0.05);
-
-      // IMMEDIATELY TRIGGER GRAND CELEBRATION POPUP IN-PLACE (ZERO INTERMEDIATE PAGE)
-      setCelebrationData({
-        isOpen: true,
-        orderNumber: orderNumber,
-        paymentId,
-        pointsEarned: ptsEarned,
-      });
-    };
-
-  const handlePlaceOrder = async () => {
-    if (!user) {
-      alert('Authentication Required: Please log in to your account to place an order.');
-      router.push('/(auth)/login' as any);
-      return;
-    }
-
-    setIsProcessing(true);
-
-    const activeAddress = (dbAddresses && dbAddresses.length > 0 && currentAddress?.id)
-      ? currentAddress
-      : {
-          id: `addr_${Date.now()}`,
-          firstName: user?.firstName || 'Valued',
-          lastName: user?.lastName || 'Customer',
-          phone: user?.phone || '+91 98765 43210',
-          streetLine1: 'Main Street, Sector 4',
-          streetLine2: '',
-          city: 'Chennai',
-          state: currentAddress?.state || 'Tamil Nadu',
-          postalCode: '600001',
-        };
-
     try {
       const apiBase = getApiBaseUrl();
       const baseUrl = apiBase.replace(/\/$/, '').replace(/\/verify-payment$/, '').replace(/\/create-order$/, '');
 
       let orderData: any = null;
+      let createOrderErrorMsg = '';
+
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 12000);
         const createOrderRes = await fetch(`${baseUrl}/create-order`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
           body: JSON.stringify({
             amount: grandTotal,
             currency: 'INR',
@@ -636,18 +576,31 @@ export default function MobileCheckoutScreen() {
             userId: user?.id,
           }),
         });
+        clearTimeout(timeoutId);
 
         if (createOrderRes.ok) {
           orderData = await createOrderRes.json();
+        } else {
+          const errJson = await createOrderRes.json().catch(() => ({}));
+          createOrderErrorMsg = errJson.error || `Server returned status ${createOrderRes.status}`;
         }
-      } catch (e) {
-        console.warn('Backend create-order fetch error:', e);
+      } catch (e: any) {
+        console.warn('Backend create-order fetch error or timeout:', e);
+        createOrderErrorMsg = e.name === 'AbortError'
+          ? 'Connection timed out connecting to payment server.'
+          : (e.message || 'Unable to reach payment server. Please check your internet connection.');
       }
 
-      const realRazorpayOrderId = (orderData && (orderData.order_id || orderData.providerOrderId))
-        ? (orderData.order_id || orderData.providerOrderId)
-        : `order_test_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-      const keyId = (orderData && orderData.key_id) || process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_TX6kmNNGbn83QI';
+      // If backend order creation failed, alert user with exact reason and STOP.
+      // Never proceed with fake dummy order IDs on mobile.
+      const realRazorpayOrderId = orderData?.order_id || orderData?.providerOrderId;
+      if (!realRazorpayOrderId) {
+        alert(`Payment Initialization Failed: ${createOrderErrorMsg || 'Could not generate Razorpay Order ID. Please check network connection.'}`);
+        setIsProcessing(false);
+        return;
+      }
+
+      const keyId = orderData.key_id || process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_TX6kmNNGbn83QI';
       const cleanPhone = (activeAddress.phone || user?.phone || '9876543210').replace(/[^0-9]/g, '').slice(-10) || '9876543210';
       const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       const randNum = Math.floor(100000 + Math.random() * 900000);
@@ -683,9 +636,12 @@ export default function MobileCheckoutScreen() {
 
               (async () => {
                 try {
+                  const controller = new AbortController();
+                  const timeoutId = setTimeout(() => controller.abort(), 10000);
                   const verifyRes = await fetch(`${baseUrl}/verify-payment`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    signal: controller.signal,
                     body: JSON.stringify({
                       razorpay_order_id,
                       razorpay_payment_id,
@@ -701,6 +657,7 @@ export default function MobileCheckoutScreen() {
                       shippingAddress: activeAddress,
                     }),
                   });
+                  clearTimeout(timeoutId);
 
                   const verifyData = await verifyRes.json();
                   if (verifyData.success) {
@@ -759,34 +716,175 @@ export default function MobileCheckoutScreen() {
           <html>
           <head>
             <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-            <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
             <style>
-              body { background-color: #040c18; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; color: #ffffff; }
-              .loader { border: 4px solid rgba(197,168,128,0.2); border-left-color: #C5A880; border-radius: 50%; width: 44px; height: 44px; animation: spin 0.8s linear infinite; }
+              * { box-sizing: border-box; }
+              body {
+                background-color: #040c18;
+                margin: 0;
+                padding: 24px 20px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                color: #ffffff;
+                text-align: center;
+              }
+              .spinner {
+                border: 4px solid rgba(197, 168, 128, 0.2);
+                border-top-color: #C5A880;
+                border-radius: 50%;
+                width: 48px;
+                height: 48px;
+                animation: spin 0.8s linear infinite;
+                margin-bottom: 20px;
+              }
               @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-              p { margin-top: 16px; font-size: 14px; font-weight: 600; color: #C5A880; letter-spacing: 0.5px; }
+              .status-text {
+                font-size: 15px;
+                font-weight: 600;
+                color: #C5A880;
+                letter-spacing: 0.5px;
+                margin-bottom: 8px;
+              }
+              .sub-text {
+                font-size: 13px;
+                color: #94A3B8;
+              }
+              .error-card {
+                display: none;
+                background: #1E293B;
+                border: 1px solid #EF4444;
+                border-radius: 12px;
+                padding: 24px 20px;
+                max-width: 320px;
+                width: 100%;
+              }
+              .error-title {
+                color: #F87171;
+                font-size: 16px;
+                font-weight: 700;
+                margin-bottom: 8px;
+              }
+              .error-desc {
+                color: #CBD5E1;
+                font-size: 13px;
+                margin-bottom: 16px;
+                line-height: 1.4;
+              }
+              .btn-retry {
+                background-color: #002754;
+                color: #FFFFFF;
+                border: 1px solid #C5A880;
+                padding: 12px 24px;
+                border-radius: 8px;
+                font-weight: 600;
+                font-size: 14px;
+                cursor: pointer;
+              }
             </style>
           </head>
           <body>
-            <div class="loader"></div>
-            <p>Connecting to CINMAX Razorpay Gateway...</p>
+            <div id="loading-container">
+              <div class="spinner"></div>
+              <div class="status-text">Connecting to CINMAX Razorpay Gateway...</div>
+              <div class="sub-text">Please do not refresh or press back</div>
+            </div>
+
+            <div id="error-card" class="error-card">
+              <div class="error-title">Payment Gateway Error</div>
+              <div id="error-desc" class="error-desc">Unable to load Razorpay checkout SDK. Please check your internet connection.</div>
+              <button class="btn-retry" onclick="initRazorpay()">Try Again</button>
+            </div>
+
             <script>
-              var options = ${JSON.stringify(razorpayOptions)};
-              options.handler = function(response) {
-                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'PAYMENT_SUCCESS', payload: response }));
-              };
-              options.modal = {
-                ondismiss: function() {
-                  window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'PAYMENT_CANCELLED' }));
+              var razorpayOptions = ${JSON.stringify(razorpayOptions)};
+              var rzpInstance = null;
+
+              function postToRN(msg) {
+                if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+                  window.ReactNativeWebView.postMessage(JSON.stringify(msg));
                 }
-              };
-              var rzp = new Razorpay(options);
-              rzp.on('payment.failed', function(resp) {
-                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'PAYMENT_FAILED', payload: resp }));
-              });
-              window.onload = function() {
-                rzp.open();
-              };
+              }
+
+              function showError(message) {
+                document.getElementById('loading-container').style.display = 'none';
+                var errCard = document.getElementById('error-card');
+                document.getElementById('error-desc').innerText = message || 'Failed to initialize payment gateway.';
+                errCard.style.display = 'block';
+                postToRN({
+                  type: 'PAYMENT_FAILED',
+                  payload: { error: { description: message || 'Failed to initialize payment gateway.' } }
+                });
+              }
+
+              function openCheckout() {
+                try {
+                  if (typeof Razorpay === 'undefined') {
+                    showError('Razorpay Checkout SDK was not found.');
+                    return;
+                  }
+
+                  razorpayOptions.handler = function(response) {
+                    postToRN({ type: 'PAYMENT_SUCCESS', payload: response });
+                  };
+
+                  razorpayOptions.modal = {
+                    ondismiss: function() {
+                      postToRN({ type: 'PAYMENT_CANCELLED' });
+                    }
+                  };
+
+                  rzpInstance = new Razorpay(razorpayOptions);
+
+                  rzpInstance.on('payment.failed', function(resp) {
+                    postToRN({ type: 'PAYMENT_FAILED', payload: resp });
+                  });
+
+                  rzpInstance.open();
+                } catch (err) {
+                  showError('Razorpay Error: ' + (err.message || 'Initialization failed'));
+                }
+              }
+
+              function initRazorpay() {
+                document.getElementById('error-card').style.display = 'none';
+                document.getElementById('loading-container').style.display = 'flex';
+
+                if (typeof Razorpay !== 'undefined') {
+                  openCheckout();
+                  return;
+                }
+
+                var script = document.createElement('script');
+                script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+                script.async = true;
+
+                var loadTimeout = setTimeout(function() {
+                  if (typeof Razorpay === 'undefined') {
+                    showError('Connection timeout loading Razorpay Gateway script. Please check your internet.');
+                  }
+                }, 15000);
+
+                script.onload = function() {
+                  clearTimeout(loadTimeout);
+                  openCheckout();
+                };
+
+                script.onerror = function() {
+                  clearTimeout(loadTimeout);
+                  showError('Failed to load Razorpay SDK from server. Please check internet access.');
+                };
+
+                document.head.appendChild(script);
+              }
+
+              if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initRazorpay);
+              } else {
+                initRazorpay();
+              }
             </script>
           </body>
           </html>
@@ -806,7 +904,6 @@ export default function MobileCheckoutScreen() {
     } finally {
       setIsProcessing(false);
     }
-  };
   };
 
   return (
@@ -923,7 +1020,7 @@ export default function MobileCheckoutScreen() {
         </View>
       </View>
 
-      <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+      <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}>
 
         {/* 2. Checkout Progress Stepper */}
         <View style={{ marginHorizontal: CONTAINER_PADDING, marginTop: 20 }}>
@@ -1282,7 +1379,7 @@ export default function MobileCheckoutScreen() {
 
       {/* Address Management Modal */}
       <Modal visible={isManageAddressModalOpen} animationType="slide" transparent>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+        <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
           <View style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '88%' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 20, fontWeight: '700', color: '#002754' }}>
@@ -1338,41 +1435,62 @@ export default function MobileCheckoutScreen() {
                 </ScrollView>
               </View>
             ) : (
-              <ScrollView style={{ gap: 10 }}>
-                <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#002754', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>Recipient Contact Details</Text>
-                <TextInput placeholder="Full Name *" placeholderTextColor="#737781" value={newAddress.name} onChangeText={(text: string) => setNewAddress({ ...newAddress, name: text })} style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#191C1E', marginBottom: 8 }} />
-                <TextInput placeholder="10-Digit Mobile Number *" placeholderTextColor="#737781" keyboardType="phone-pad" value={newAddress.phone} onChangeText={(text: string) => setNewAddress({ ...newAddress, phone: text })} style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#191C1E', marginBottom: 12 }} />
-
-                <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#002754', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>Address &amp; Location Details</Text>
-                <TextInput placeholder="House No. / Building / Flat Name *" placeholderTextColor="#737781" value={newAddress.addressLine1} onChangeText={(text: string) => setNewAddress({ ...newAddress, addressLine1: text })} style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#191C1E', marginBottom: 8 }} />
-                <TextInput placeholder="Road Name / Area / Colony / Street *" placeholderTextColor="#737781" value={newAddress.addressLine2} onChangeText={(text: string) => setNewAddress({ ...newAddress, addressLine2: text })} style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#191C1E', marginBottom: 8 }} />
-                
-                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 8 }}>
-                  <TextInput placeholder="6-Digit Pincode *" placeholderTextColor="#737781" keyboardType="number-pad" value={newAddress.pincode} onChangeText={(text: string) => setNewAddress({ ...newAddress, pincode: text })} style={{ flex: 1, backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#191C1E' }} />
-                  <TextInput placeholder="City / District *" placeholderTextColor="#737781" value={newAddress.city} onChangeText={(text: string) => setNewAddress({ ...newAddress, city: text })} style={{ flex: 1, backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#191C1E' }} />
+              <ScrollView showsVerticalScrollIndicator={true} keyboardShouldPersistTaps="handled" keyboardDismissMode="none" contentContainerStyle={{ paddingBottom: 250 }}>
+                <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#002754', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>1. Recipient Contact Details</Text>
+                <View style={{ marginBottom: 8 }}>
+                  <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#191C1E', marginBottom: 4 }}>Full Name *</Text>
+                  <TextInput placeholder="e.g. Aanya Sharma" placeholderTextColor="#737781" selectionColor="#002754" cursorColor="#002754" underlineColorAndroid="transparent" value={newAddress.name} onChangeText={(text: string) => setNewAddress({ ...newAddress, name: text })} style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#191C1E' }} />
+                </View>
+                <View style={{ marginBottom: 12 }}>
+                  <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#191C1E', marginBottom: 4 }}>10 digit mobile number *</Text>
+                  <TextInput placeholder="e.g. 9876543210" placeholderTextColor="#737781" selectionColor="#002754" cursorColor="#002754" underlineColorAndroid="transparent" keyboardType="phone-pad" maxLength={10} value={newAddress.phone} onChangeText={(text: string) => setNewAddress({ ...newAddress, phone: text })} style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#191C1E' }} />
                 </View>
 
-                <TouchableOpacity onPress={() => setIsStateDropdownOpen(!isStateDropdownOpen)} style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#002754', borderRadius: 12, padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <View>
-                    <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 10, color: '#737781' }}>State *</Text>
-                    <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 14, color: '#002754' }}>{newAddress.state || 'Select State'}</Text>
+                <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#002754', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>2. Address &amp; Location Details</Text>
+                <View style={{ marginBottom: 8 }}>
+                  <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#191C1E', marginBottom: 4 }}>House / Flat / Door No. *</Text>
+                  <TextInput placeholder="e.g. Flat 402, Royal Enclave" placeholderTextColor="#737781" selectionColor="#002754" cursorColor="#002754" underlineColorAndroid="transparent" value={newAddress.addressLine1} onChangeText={(text: string) => setNewAddress({ ...newAddress, addressLine1: text })} style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#191C1E' }} />
+                </View>
+                <View style={{ marginBottom: 8 }}>
+                  <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#191C1E', marginBottom: 4 }}>Street / Road / Area / Locality *</Text>
+                  <TextInput placeholder="e.g. 2nd Main Road, T. Nagar" placeholderTextColor="#737781" selectionColor="#002754" cursorColor="#002754" underlineColorAndroid="transparent" value={newAddress.addressLine2} onChangeText={(text: string) => setNewAddress({ ...newAddress, addressLine2: text })} style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#191C1E' }} />
+                </View>
+                
+                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 8 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#191C1E', marginBottom: 4 }}>Pincode *</Text>
+                    <TextInput placeholder="e.g. 600017" placeholderTextColor="#737781" selectionColor="#002754" cursorColor="#002754" underlineColorAndroid="transparent" keyboardType="number-pad" maxLength={6} value={newAddress.pincode} onChangeText={(text: string) => setNewAddress({ ...newAddress, pincode: text })} style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#191C1E' }} />
                   </View>
-                  <ChevronDown size={18} color="#002754" />
-                </TouchableOpacity>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#191C1E', marginBottom: 4 }}>City *</Text>
+                    <TextInput placeholder="e.g. Chennai" placeholderTextColor="#737781" selectionColor="#002754" cursorColor="#002754" underlineColorAndroid="transparent" value={newAddress.city} onChangeText={(text: string) => setNewAddress({ ...newAddress, city: text })} style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#191C1E' }} />
+                  </View>
+                </View>
+
+                <View style={{ marginBottom: 8 }}>
+                  <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#191C1E', marginBottom: 4 }}>State *</Text>
+                  <TouchableOpacity onPress={() => setIsStateDropdownOpen(!isStateDropdownOpen)} style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#002754', borderRadius: 12, padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 14, color: '#191C1E' }}>{newAddress.state || 'Select State'}</Text>
+                    <ChevronDown size={18} color="#002754" />
+                  </TouchableOpacity>
+                </View>
 
                 {isStateDropdownOpen && (
                   <View style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#002754', borderRadius: 12, maxHeight: 180, marginBottom: 8 }}>
                     <ScrollView nestedScrollEnabled>
                       {ALL_INDIAN_STATES.map((st) => (
-                        <TouchableOpacity key={st} onPress={() => { setNewAddress({ ...newAddress, state: st }); setIsStateDropdownOpen(false); }} style={{ padding: 10, borderBottomWidth: 1, borderBottomColor: '#F0F2F5' }}>
-                          <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 13, color: '#002754' }}>{st}</Text>
+                        <TouchableOpacity key={st} onPress={() => { setNewAddress({ ...newAddress, state: st }); setIsStateDropdownOpen(false); }} style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: '#F0F2F5' }}>
+                          <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 13, color: '#191C1E' }}>{st}</Text>
                         </TouchableOpacity>
                       ))}
                     </ScrollView>
                   </View>
                 )}
 
-                <TextInput placeholder="Nearby Landmark (Optional e.g. Near City Hospital)" placeholderTextColor="#737781" value={(newAddress as any).landmark || ''} onChangeText={(text: string) => setNewAddress({ ...newAddress, [ 'landmark' as any]: text })} style={{ backgroundColor: '#F7F9FB', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#191C1E', marginBottom: 12 }} />
+                <View style={{ marginBottom: 12 }}>
+                  <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#191C1E', marginBottom: 4 }}>Landmark (Optional)</Text>
+                  <TextInput placeholder="Nearby Landmark (e.g. Near City Hospital)" placeholderTextColor="#737781" selectionColor="#002754" cursorColor="#002754" underlineColorAndroid="transparent" value={(newAddress as any).landmark || ''} onChangeText={(text: string) => setNewAddress({ ...newAddress, [ 'landmark' as any]: text })} style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, padding: 12, fontFamily: FONT_SANS_REGULAR, fontSize: 14, color: '#191C1E' }} />
+                </View>
 
                 <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: '#002754', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Save Address As</Text>
                 <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
@@ -1401,7 +1519,7 @@ export default function MobileCheckoutScreen() {
               </ScrollView>
             )}
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Native Razorpay Checkout Modal (Android / iOS / Expo Go) */}
@@ -1450,7 +1568,7 @@ export default function MobileCheckoutScreen() {
       )}
 
       {/* 10. Sticky Bottom Action Bar */}
-      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#FFFFFF', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: CONTAINER_PADDING, paddingVertical: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: 'rgba(195, 198, 209, 0.3)', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.08, shadowRadius: 20, zIndex: 100 }}>
+      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#FFFFFF', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: CONTAINER_PADDING, paddingTop: 14, paddingBottom: Math.max(14, insets.bottom), flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: 'rgba(195, 198, 209, 0.3)', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.08, shadowRadius: 20, zIndex: 100 }}>
         <View>
           <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 10, fontWeight: '700', color: '#737781', textTransform: 'uppercase', letterSpacing: 0.8 }}>Grand Total</Text>
           <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 24, fontWeight: '700', color: '#002754' }}>₹{grandTotal}</Text>

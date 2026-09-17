@@ -79,9 +79,21 @@ export const useWishlistStore = create<WishlistStoreState>()(
     }),
     {
       name: 'cinmax-wishlist-storage',
-      storage: createJSONStorage(() =>
-        typeof window !== 'undefined' ? window.localStorage : { getItem: () => null, setItem: () => {}, removeItem: () => {} }
-      ),
+      storage: createJSONStorage(() => {
+        try {
+          if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.getItem === 'function') {
+            return window.localStorage;
+          }
+        } catch (e) {
+          // Fallback on native or restricted environments
+        }
+        const memoryStore = new Map<string, string>();
+        return {
+          getItem: (key: string) => memoryStore.get(key) ?? null,
+          setItem: (key: string, value: string) => { memoryStore.set(key, value); },
+          removeItem: (key: string) => { memoryStore.delete(key); },
+        };
+      }),
     }
   )
 );
