@@ -1,4 +1,6 @@
-import * as React from 'react';
+'use client';
+
+import { useState } from 'react';
 import { Button, ButtonProps } from '../button';
 
 export interface RetryButtonProps extends ButtonProps {
@@ -13,7 +15,7 @@ export function RetryButton({
   size = 'sm',
   ...props
 }: RetryButtonProps) {
-  const [loading, setLoading] = React.useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleClick = async () => {
     try {

@@ -18,6 +18,10 @@ import { Award, CheckCircle2 } from 'lucide-react';
 
 export const revalidate = 120; // 2 min cache
 
+export async function generateStaticParams() {
+  return [{ slug: 'artisan-botanical-bar' }];
+}
+
 export default async function ProductDetailsPage(props: {
   params: Promise<{ slug: string }>;
 }) {

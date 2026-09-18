@@ -13,9 +13,10 @@ out/
 build/
 dist/
 
-# Cloudflare Pages / Wrangler
+# Cloudflare Pages / Wrangler / Vercel CLI
 .wrangler/
 .cloudflare/
+.vercel/
 
 # Expo / React Native
 .expo/

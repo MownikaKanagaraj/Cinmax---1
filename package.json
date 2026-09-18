@@ -34,6 +34,7 @@
     "overrides": {
       "@supabase/supabase-js": "2.48.1",
       "react": "19.2.3",
+      "react-dom": "19.2.3",
       "@types/react": "~18.3.12"
     }
   },

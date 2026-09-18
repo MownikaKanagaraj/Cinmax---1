@@ -10,6 +10,10 @@ import { LuxuryArrowRightIcon } from '../../../components/luxury-icons';
 
 export const revalidate = 120;
 
+export async function generateStaticParams() {
+  return [{ slug: 'cold-processed-soaps' }];
+}
+
 export default async function CategoryPage(props: {
   params: Promise<{ slug: string }>;
 }) {
@@ -52,10 +56,10 @@ export default async function CategoryPage(props: {
             Category Collection
           </span>
           <h1 className="font-serif text-3xl sm:text-4xl font-extrabold text-white">
-            {category.name}
+            {category?.name || 'Collection'}
           </h1>
           <p className="text-sm text-slate-300 mt-2 max-w-xl">
-            {category.description || 'Explore our hand-cured botanical soap bars, face care balms, and luxury cosmetic sets.'}
+            {category?.description || 'Explore our hand-cured botanical soap bars, face care balms, and luxury cosmetic sets.'}
           </p>
         </div>
 

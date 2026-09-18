@@ -1,5 +1,4 @@
 import Razorpay from 'razorpay';
-import crypto from 'crypto';
 import type {
   IPaymentProvider,
   CreatePaymentOrderPayload,
@@ -72,12 +71,20 @@ export class RazorpayProvider implements IPaymentProvider {
     }
 
     try {
-      // HMAC-SHA256(order_id + "|" + payment_id, KEY_SECRET)
+      // HMAC-SHA256 via Web Crypto API (works in Node.js, edge runtime, and Cloudflare Pages)
       const text = `${razorpayOrderId}|${razorpayPaymentId}`;
-      const generatedSignature = crypto
-        .createHmac('sha256', this.keySecret)
-        .update(text)
-        .digest('hex');
+      const enc = new TextEncoder();
+      const key = await crypto.subtle.importKey(
+        'raw',
+        enc.encode(this.keySecret),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign']
+      );
+      const sigBuffer = await crypto.subtle.sign('HMAC', key, enc.encode(text));
+      const generatedSignature = Array.from(new Uint8Array(sigBuffer))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
 
       return generatedSignature === razorpaySignature;
     } catch (error) {

@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
@@ -103,7 +105,7 @@ export async function POST(req: Request) {
 
       // 4. Convert File to ArrayBuffer/Buffer for Supabase upload
       const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
+      const buffer = new Uint8Array(arrayBuffer);
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from(bucket)
