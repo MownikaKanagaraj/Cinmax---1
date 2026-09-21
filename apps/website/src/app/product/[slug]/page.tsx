@@ -19,7 +19,19 @@ import { Award, CheckCircle2 } from 'lucide-react';
 export const revalidate = 120; // 2 min cache
 
 export async function generateStaticParams() {
-  return [{ slug: 'artisan-botanical-bar' }];
+  try {
+    const container = getContainer();
+    const res = await container.products.getProducts();
+    const items = res?.items || [];
+    if (Array.isArray(items) && items.length > 0) {
+      return items
+        .filter((item: any) => Boolean(item?.slug))
+        .map((item: any) => ({ slug: item.slug }));
+    }
+  } catch (err) {
+    console.warn('[generateStaticParams] Could not pre-fetch product slugs for static generation:', err);
+  }
+  return [];
 }
 
 export default async function ProductDetailsPage(props: {
@@ -35,11 +47,24 @@ export default async function ProductDetailsPage(props: {
     const rawProd = await container.products.getProductBySlug(slug);
     if (rawProd) {
       product = JSON.parse(JSON.stringify(rawProd));
-      const prodRes = await container.products.getProducts();
-      relatedProducts = JSON.parse(JSON.stringify((prodRes?.items || []).filter((p: any) => p.id !== product.id).slice(0, 4)));
+      try {
+        const prodRes = await container.products.getProducts();
+        relatedProducts = JSON.parse(
+          JSON.stringify((prodRes?.items || []).filter((p: any) => p.id !== product.id).slice(0, 4))
+        );
+      } catch {
+        relatedProducts = [];
+      }
     }
-  } catch (err) {
-    console.error('Error fetching Product details RSC data:', err);
+  } catch (err: any) {
+    const isNotFoundError =
+      err?.code === 'PRODUCT_NOT_FOUND' ||
+      err?.statusCode === 404 ||
+      err?.name === 'ProductNotFoundError';
+
+    if (!isNotFoundError) {
+      console.warn(`[ProductDetailsPage] Could not fetch details for slug "${slug}":`, err?.message || err);
+    }
   }
 
   if (!product) {
