@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getContainer } from '@cinmax/api';
 
+export const runtime = 'edge';
+
 export async function GET() {
   try {
     const container = getContainer();

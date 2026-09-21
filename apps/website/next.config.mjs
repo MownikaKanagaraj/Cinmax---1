@@ -33,12 +33,12 @@ const nextConfig = {
       },
     ],
   },
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, nextRuntime }) => {
     const builtinExternals = [
       'crypto', 'stream', 'fs', 'net', 'tls', 'dns',
       'http', 'https', 'zlib', 'util', 'path', 'os', 'child_process',
     ];
-    if (isServer) {
+    if (isServer && nextRuntime !== 'edge') {
       // Mark Node.js built-ins as externals so webpack doesn't try to bundle them.
       // On Cloudflare Pages these are provided by the nodejs_compat flag at runtime.
       const existingExternals = config.externals || [];

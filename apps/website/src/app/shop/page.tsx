@@ -7,6 +7,7 @@ import { ProductCard } from '../../components/product-card';
 import { getContainer } from '@cinmax/api';
 import { LuxurySearchIcon, LuxuryArrowRightIcon } from '../../components/luxury-icons';
 
+export const runtime = 'edge';
 export const revalidate = 60; // 1 min server cache
 
 export default async function ShopPage(props: {

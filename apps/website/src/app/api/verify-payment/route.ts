@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import { RazorpayProvider, RewardPointEngine } from '@cinmax/api';
 import { calculateDeliveryCharge } from '@cinmax/utils';
 
+export const runtime = 'edge';
+
 const supabaseUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://nthyavlzdgucrldtgjeo.supabase.co';
 const supabaseKey =
