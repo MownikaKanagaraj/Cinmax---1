@@ -80,12 +80,15 @@ export default function MobileProductDetailsScreen() {
 
   React.useEffect(() => {
     scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+    setQuantity(1);
+    setQuantityInput('1');
   }, [slug]);
 
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [selectedWeight, setSelectedWeight] = useState('100g');
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [quantityInput, setQuantityInput] = useState('1');
   const [pincode, setPincode] = useState('201301');
   const [isPincodeChecked, setIsPincodeChecked] = useState(false);
   const [openAccordion, setOpenAccordion] = useState<'specs' | 'shipping' | null>(null);
@@ -121,6 +124,8 @@ export default function MobileProductDetailsScreen() {
   const originalPrice = activeVariant?.compareAtPrice ? Number(activeVariant.compareAtPrice) : Math.round(productPrice * 1.25);
   const discountPercent = originalPrice && originalPrice > productPrice ? Math.round(((originalPrice - productPrice) / originalPrice) * 100) : 0;
   const savings = originalPrice && originalPrice > productPrice ? originalPrice - productPrice : 0;
+
+  const maxStock = Math.max(1, (activeVariant as any)?.inventoryQuantity ?? (productData as any)?.inventoryQuantity ?? 99);
 
   const relatedProducts = (productsData?.items || [])
     .filter((p) => p.slug !== slug)
@@ -160,6 +165,13 @@ export default function MobileProductDetailsScreen() {
   };
 
   const handleAddToCart = () => {
+    const rawParsed = parseInt(quantityInput, 10);
+    const validQty = !isNaN(rawParsed) && rawParsed >= 1 ? Math.min(maxStock, rawParsed) : Math.max(1, Math.min(maxStock, quantity));
+    if (validQty !== quantity) {
+      setQuantity(validQty);
+      setQuantityInput(String(validQty));
+    }
+
     const variantToUse = activeVariant || {
       id: `v_${selectedWeight}`,
       sku: `SKU-${selectedWeight}`,
@@ -175,8 +187,8 @@ export default function MobileProductDetailsScreen() {
       cartId: 'c1',
       productId: productData?.id || 'p_prod',
       unitPrice: productPrice,
-      totalPrice: productPrice * quantity,
-      quantity,
+      totalPrice: productPrice * validQty,
+      quantity: validQty,
       product: { id: productData?.id || 'p_prod', title: productTitle, slug: slug || 'product', images: [], processType: 'cold-process' },
       variant: variantToUse,
       createdAt: new Date().toISOString(),
@@ -186,6 +198,13 @@ export default function MobileProductDetailsScreen() {
   };
 
   const handleBuyNow = () => {
+    const rawParsed = parseInt(quantityInput, 10);
+    const validQty = !isNaN(rawParsed) && rawParsed >= 1 ? Math.min(maxStock, rawParsed) : Math.max(1, Math.min(maxStock, quantity));
+    if (validQty !== quantity) {
+      setQuantity(validQty);
+      setQuantityInput(String(validQty));
+    }
+
     const variantToUse = activeVariant || {
       id: `v_${selectedWeight}`,
       sku: `SKU-${selectedWeight}`,
@@ -201,8 +220,8 @@ export default function MobileProductDetailsScreen() {
       cartId: 'c1',
       productId: productData?.id || 'p_prod',
       unitPrice: productPrice,
-      totalPrice: productPrice * quantity,
-      quantity,
+      totalPrice: productPrice * validQty,
+      quantity: validQty,
       product: { id: productData?.id || 'p_prod', title: productTitle, slug: slug || 'product', images: [], processType: 'cold-process' },
       variant: variantToUse,
       createdAt: new Date().toISOString(),
@@ -406,25 +425,57 @@ export default function MobileProductDetailsScreen() {
 
           {/* Quantity */}
           <View>
-            <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 14, fontWeight: '700', color: '#191C1E', marginBottom: 10 }}>
-              Quantity
-            </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, width: 130, height: 44, overflow: 'hidden' }}>
-              <TouchableOpacity onPress={() => setQuantity(Math.max(1, quantity - 1))} style={{ width: 40, height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: '#F2F4F6' }}>
-                <Minus size={16} color="#434750" />
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 14, fontWeight: '700', color: '#191C1E' }}>
+                Quantity
+              </Text>
+              {maxStock < 99 && (
+                <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 12, color: maxStock <= 5 ? '#BA1A1A' : '#737781' }}>
+                  {maxStock <= 5 ? `Only ${maxStock} left in stock` : `${maxStock} available`}
+                </Text>
+              )}
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, width: 140, height: 44, overflow: 'hidden' }}>
+              <TouchableOpacity
+                onPress={() => {
+                  const newQty = Math.max(1, quantity - 1);
+                  setQuantity(newQty);
+                  setQuantityInput(String(newQty));
+                }}
+                disabled={quantity <= 1}
+                style={{ width: 42, height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: quantity <= 1 ? '#F8F9FA' : '#F2F4F6' }}
+              >
+                <Minus size={16} color={quantity <= 1 ? '#B0B4BA' : '#434750'} />
               </TouchableOpacity>
               <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
                 <TextInput
-                  value={String(quantity)}
+                  value={quantityInput}
                   onChangeText={(text) => {
-                    const num = parseInt(text.replace(/[^0-9]/g, ''), 10);
-                    if (!isNaN(num)) {
-                      setQuantity(Math.max(1, Math.min(99, num)));
-                    } else if (text === '') {
+                    const cleanText = text.replace(/[^0-9]/g, '');
+                    setQuantityInput(cleanText);
+                    if (cleanText !== '') {
+                      const num = parseInt(cleanText, 10);
+                      if (!isNaN(num)) {
+                        const clamped = Math.max(1, Math.min(maxStock, num));
+                        setQuantity(clamped);
+                      }
+                    }
+                  }}
+                  onBlur={() => {
+                    const num = parseInt(quantityInput, 10);
+                    if (isNaN(num) || num < 1) {
                       setQuantity(1);
+                      setQuantityInput('1');
+                    } else if (num > maxStock) {
+                      setQuantity(maxStock);
+                      setQuantityInput(String(maxStock));
+                    } else {
+                      setQuantity(num);
+                      setQuantityInput(String(num));
                     }
                   }}
                   keyboardType="number-pad"
+                  maxLength={3}
                   style={{
                     fontFamily: FONT_SANS_BOLD,
                     fontSize: 15,
@@ -435,8 +486,16 @@ export default function MobileProductDetailsScreen() {
                   }}
                 />
               </View>
-              <TouchableOpacity onPress={() => setQuantity(quantity + 1)} style={{ width: 40, height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: '#F2F4F6' }}>
-                <Plus size={16} color="#434750" />
+              <TouchableOpacity
+                onPress={() => {
+                  const newQty = Math.min(maxStock, quantity + 1);
+                  setQuantity(newQty);
+                  setQuantityInput(String(newQty));
+                }}
+                disabled={quantity >= maxStock}
+                style={{ width: 42, height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: quantity >= maxStock ? '#F8F9FA' : '#F2F4F6' }}
+              >
+                <Plus size={16} color={quantity >= maxStock ? '#B0B4BA' : '#434750'} />
               </TouchableOpacity>
             </View>
           </View>

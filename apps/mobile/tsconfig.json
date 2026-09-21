@@ -1,6 +1,7 @@
 {
   "extends": "@cinmax/tsconfig/react-native.json",
   "compilerOptions": {
+    "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
       "react": [

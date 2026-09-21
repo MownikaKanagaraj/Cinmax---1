@@ -65,6 +65,147 @@ const FONT_SANS_BOLD = Platform.select({
 
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=400&auto=format&fit=crop&q=80';
 
+interface CartItemCardProps {
+  item: {
+    id: string;
+    slug: string;
+    title: string;
+    price: number;
+    originalPrice: number;
+    quantity: number;
+    badge: string;
+    badgeBg: string;
+    badgeText: string;
+    image: string;
+    maxStock: number;
+  };
+  onUpdateQuantity: (id: string, qty: number) => void;
+  onRemove: (id: string) => void;
+  onPressItem: (slug: string) => void;
+}
+
+function CartItemCard({ item, onUpdateQuantity, onRemove, onPressItem }: CartItemCardProps) {
+  const [localText, setLocalText] = useState(String(item.quantity));
+
+  React.useEffect(() => {
+    setLocalText(String(item.quantity));
+  }, [item.quantity]);
+
+  const commitQuantity = (raw: string) => {
+    const parsed = parseInt(raw, 10);
+    if (isNaN(parsed) || parsed < 1) {
+      setLocalText(String(item.quantity));
+      return;
+    }
+    const clamped = Math.max(1, Math.min(item.maxStock, parsed));
+    setLocalText(String(clamped));
+    if (clamped !== item.quantity) {
+      onUpdateQuantity(item.id, clamped);
+    }
+  };
+
+  return (
+    <TouchableOpacity
+      onPress={() => onPressItem(item.slug)}
+      activeOpacity={0.9}
+      style={{
+        backgroundColor: '#FFFFFF',
+        borderRadius: 20,
+        padding: 14,
+        flexDirection: 'row',
+        gap: 14,
+        position: 'relative',
+        shadowColor: '#0A3D78',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.04,
+        shadowRadius: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(195, 198, 209, 0.25)',
+      }}
+    >
+      <Image source={{ uri: item.image }} style={{ width: 84, height: 84, borderRadius: 14 }} />
+
+      <View style={{ flex: 1, justifyContent: 'space-between' }}>
+        <View style={{ paddingRight: 20 }}>
+          <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 14, color: '#002754', fontWeight: '700' }} numberOfLines={1}>
+            {item.title}
+          </Text>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+            <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 15, color: '#002754', fontWeight: '700' }}>
+              ₹{item.price}
+            </Text>
+            {item.originalPrice > item.price && (
+              <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 11, color: '#737781', textDecorationLine: 'line-through' }}>
+                ₹{item.originalPrice}
+              </Text>
+            )}
+          </View>
+        </View>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F7F9FB', borderRadius: 20, borderWidth: 1, borderColor: '#C3C6D1', height: 34, paddingHorizontal: 4 }}>
+            <TouchableOpacity
+              onPress={() => {
+                const next = Math.max(1, item.quantity - 1);
+                onUpdateQuantity(item.id, next);
+                setLocalText(String(next));
+              }}
+              disabled={item.quantity <= 1}
+              style={{ width: 26, height: 26, borderRadius: 13, justifyContent: 'center', alignItems: 'center' }}
+            >
+              <Minus size={13} color={item.quantity <= 1 ? '#B0B4BA' : '#002754'} />
+            </TouchableOpacity>
+
+            <TextInput
+              value={localText}
+              onChangeText={(text) => {
+                const clean = text.replace(/[^0-9]/g, '');
+                setLocalText(clean);
+                if (clean !== '') {
+                  const num = parseInt(clean, 10);
+                  if (!isNaN(num) && num >= 1) {
+                    const clamped = Math.min(item.maxStock, num);
+                    onUpdateQuantity(item.id, clamped);
+                  }
+                }
+              }}
+              onBlur={() => commitQuantity(localText)}
+              keyboardType="number-pad"
+              maxLength={3}
+              style={{
+                fontFamily: FONT_SANS_BOLD,
+                fontSize: 13,
+                color: '#002754',
+                paddingHorizontal: 4,
+                textAlign: 'center',
+                minWidth: 32,
+                paddingVertical: 0,
+              }}
+            />
+
+            <TouchableOpacity
+              onPress={() => {
+                const next = Math.min(item.maxStock, item.quantity + 1);
+                onUpdateQuantity(item.id, next);
+                setLocalText(String(next));
+              }}
+              disabled={item.quantity >= item.maxStock}
+              style={{ width: 26, height: 26, borderRadius: 13, justifyContent: 'center', alignItems: 'center' }}
+            >
+              <Plus size={13} color={item.quantity >= item.maxStock ? '#B0B4BA' : '#002754'} />
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity onPress={() => onRemove(item.id)} style={{ padding: 4 }}>
+            <Trash2 size={16} color="#BA1A1A" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 export default function MobileCartScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -198,6 +339,7 @@ export default function MobileCartScreen() {
     badge: 'Handcrafted',
     badgeBg: '#EBF3FF',
     badgeText: '#002754',
+    maxStock: Math.max(1, (item.variant as any)?.inventoryQuantity ?? (item.product as any)?.inventoryQuantity ?? 99),
     image: (() => {
       const img = item.product?.images?.[0];
       if (!img) return FALLBACK_IMAGE;
@@ -398,86 +540,13 @@ export default function MobileCartScreen() {
           {/* 3. Cart Items List */}
           <View style={{ paddingHorizontal: CONTAINER_PADDING, marginTop: 18, gap: 14 }}>
             {cartList.map((item) => (
-              <TouchableOpacity
+              <CartItemCard
                 key={item.id}
-                onPress={() => router.push(`/product/${item.slug}` as any)}
-                activeOpacity={0.9}
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: 20,
-                  padding: 14,
-                  flexDirection: 'row',
-                  gap: 14,
-                  position: 'relative',
-                  shadowColor: '#0A3D78',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.04,
-                  shadowRadius: 10,
-                  borderWidth: 1,
-                  borderColor: 'rgba(195, 198, 209, 0.25)',
-                }}
-              >
-                <Image source={{ uri: item.image }} style={{ width: 84, height: 84, borderRadius: 14 }} />
-
-                <View style={{ flex: 1, justifyContent: 'space-between' }}>
-                  <View style={{ paddingRight: 20 }}>
-                    <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 14, color: '#002754', fontWeight: '700' }} numberOfLines={1}>
-                      {item.title}
-                    </Text>
-
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                      <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 15, color: '#002754', fontWeight: '700' }}>
-                        ₹{item.price}
-                      </Text>
-                      {item.originalPrice > item.price && (
-                        <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 11, color: '#737781', textDecorationLine: 'line-through' }}>
-                          ₹{item.originalPrice}
-                        </Text>
-                      )}
-                    </View>
-                  </View>
-
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F7F9FB', borderRadius: 20, borderWidth: 1, borderColor: '#C3C6D1', height: 32, paddingHorizontal: 4 }}>
-                      <TouchableOpacity
-                        onPress={() => updateQuantity(item.id, item.quantity - 1)}
-                        style={{ width: 24, height: 24, borderRadius: 12, justifyContent: 'center', alignItems: 'center' }}
-                      >
-                        <Minus size={12} color="#002754" />
-                      </TouchableOpacity>
-                      <TextInput
-                        value={String(item.quantity)}
-                        onChangeText={(text) => {
-                          const num = parseInt(text.replace(/[^0-9]/g, ''), 10);
-                          if (!isNaN(num) && num > 0) {
-                            updateQuantity(item.id, num);
-                          }
-                        }}
-                        keyboardType="number-pad"
-                        style={{
-                          fontFamily: FONT_SANS_BOLD,
-                          fontSize: 13,
-                          color: '#002754',
-                          paddingHorizontal: 4,
-                          textAlign: 'center',
-                          minWidth: 24,
-                          paddingVertical: 0,
-                        }}
-                      />
-                      <TouchableOpacity
-                        onPress={() => updateQuantity(item.id, item.quantity + 1)}
-                        style={{ width: 24, height: 24, borderRadius: 12, justifyContent: 'center', alignItems: 'center' }}
-                      >
-                        <Plus size={12} color="#002754" />
-                      </TouchableOpacity>
-                    </View>
-
-                    <TouchableOpacity onPress={() => removeItem(item.id)} style={{ padding: 4 }}>
-                      <Trash2 size={16} color="#BA1A1A" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </TouchableOpacity>
+                item={item}
+                onUpdateQuantity={updateQuantity}
+                onRemove={removeItem}
+                onPressItem={(slug) => router.push(`/product/${slug}` as any)}
+              />
             ))}
           </View>
 
