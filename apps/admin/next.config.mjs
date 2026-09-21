@@ -19,12 +19,12 @@ const nextConfig = {
       },
     ],
   },
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, nextRuntime }) => {
     const builtinExternals = [
       'crypto', 'stream', 'fs', 'net', 'tls', 'dns',
       'http', 'https', 'zlib', 'util', 'path', 'os', 'child_process',
     ];
-    if (isServer) {
+    if (isServer && nextRuntime !== 'edge') {
       const existingExternals = config.externals || [];
       config.externals = [
         ...(Array.isArray(existingExternals) ? existingExternals : [existingExternals]),
