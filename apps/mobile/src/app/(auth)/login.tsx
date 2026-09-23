@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Image,
   Dimensions,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -217,9 +218,10 @@ export default function MobileAuthScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingHorizontal: CONTAINER_PADDING, paddingTop: 20, paddingBottom: 60, maxWidth: 520, alignSelf: 'center', width: '100%' }} showsVerticalScrollIndicator={false}>
-        
-        {/* 2. Luxury Hero Banner */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={{ paddingHorizontal: CONTAINER_PADDING, paddingTop: 20, paddingBottom: 60, maxWidth: 520, alignSelf: 'center', width: '100%' }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+          
+          {/* 2. Luxury Hero Banner */}
         <View style={{ borderRadius: 24, overflow: 'hidden', height: 175, backgroundColor: '#002754', marginBottom: 20, position: 'relative', borderWidth: 1, borderColor: 'rgba(197, 168, 128, 0.4)', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 16 }}>
           <Image
             source={{ uri: 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=1000&auto=format&fit=crop&q=80' }}
@@ -489,6 +491,7 @@ export default function MobileAuthScreen() {
           <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 11, color: '#64748B' }}>Official CINMAX Authenticated</Text>
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

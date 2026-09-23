@@ -240,15 +240,10 @@ export default function MobileCheckoutScreen() {
   };
 
   useEffect(() => {
-    if (Platform.OS === 'android' && nativeRazorpayState.isOpen) {
-      const backSub = BackHandler.addEventListener('hardwareBackPress', () => {
-        setNativeRazorpayState((prev) => ({ ...prev, isOpen: false }));
-        setIsProcessing(false);
-        return true;
-      });
-      return () => backSub.remove();
-    }
-  }, [nativeRazorpayState.isOpen]);
+    // The Modal component's onRequestClose handles the Android hardware back button.
+    // We removed the global BackHandler here to prevent conflicting back press handling
+    // which causes the Modal to get stuck.
+  }, []);
 
   // Address Modal & Form State
   const [isManageAddressModalOpen, setIsManageAddressModalOpen] = useState(false);
@@ -522,7 +517,9 @@ export default function MobileCheckoutScreen() {
       } else if (data.type === 'PAYMENT_FAILED') {
         setNativeRazorpayState((prev) => ({ ...prev, isOpen: false }));
         setIsProcessing(false);
-        alert(`Payment Failed: ${data.payload?.error?.description || 'Transaction declined'}`);
+        setTimeout(() => {
+          alert(`Payment Failed: ${data.payload?.error?.description || 'Transaction declined'}`);
+        }, 100);
       }
     } catch (e) {
       console.error('Error handling Native Razorpay message:', e);
@@ -1523,7 +1520,7 @@ export default function MobileCheckoutScreen() {
       </Modal>
 
       {/* Native Razorpay Checkout Modal (Android / iOS / Expo Go) */}
-      {Platform.OS !== 'web' && nativeRazorpayState.isOpen && (
+      {Platform.OS !== 'web' && (
         <Modal
           visible={nativeRazorpayState.isOpen}
           animationType="slide"
@@ -1548,6 +1545,7 @@ export default function MobileCheckoutScreen() {
               </TouchableOpacity>
             </View>
             <WebView
+              key={nativeRazorpayState.isOpen ? 'webview-open' : 'webview-closed'}
               originWhitelist={['*']}
               source={{ html: nativeRazorpayState.html }}
               onMessage={handleNativeRazorpayMessage}
