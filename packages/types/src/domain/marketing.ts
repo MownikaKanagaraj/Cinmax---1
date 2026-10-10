@@ -57,13 +57,33 @@ export interface PromoBannerConfig {
   isActive: boolean;
 }
 
+export interface ComboOfferItem {
+  id: string;
+  slug: string;
+  title: string;
+  subtitle: string;
+  price: string;
+  originalPrice?: string;
+  badge?: string;
+  imageUrl: string;
+  linkUrl?: string;
+  bgColor?: string;
+  borderColor?: string;
+  badgeBg?: string;
+  badgeTextColor?: string;
+  sortOrder?: number;
+  isActive: boolean;
+}
+
 export interface HomeMarketingSettings {
   topOffers: (string | TopOfferItem)[];
   heroBanners: HeroBannerItem[];
   watchShopVideos: WatchShopVideoItem[];
   midBanner: PromoBannerConfig;
+  comboOffers?: ComboOfferItem[];
   realResults: TransformationStoryItem[];
   trustBadges: TrustBadgeItem[];
   bottomBanner: PromoBannerConfig;
   updatedAt: string;
 }
+

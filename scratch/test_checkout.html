@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Razorpay Test Checkout</title>
+</head>
+<body style="background:#040c18;color:white;font-family:sans-serif;padding:20px;text-align:center;">
+  <h2>Testing CINMAX Razorpay Checkout</h2>
+  <button id="start-btn" style="padding:12px 24px;font-size:16px;cursor:pointer;background:#C5A880;color:#002754;border:none;border-radius:8px;font-weight:bold;">Open Razorpay Checkout</button>
+  <div id="status" style="margin-top:20px;color:#94A3B8;">Click the button above to start</div>
+  <pre id="log" style="text-align:left;background:#111;padding:10px;margin-top:20px;font-size:12px;max-height:200px;overflow:auto;"></pre>
+
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script>
+    function log(msg) {
+      console.log(msg);
+      document.getElementById('log').innerText += msg + '\n';
+    }
+
+    async function init() {
+      document.getElementById('status').innerText = 'Creating Razorpay order on live backend...';
+      try {
+        const res = await fetch('https://cinmax-website.pages.dev/api/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: 510,
+            currency: 'INR',
+            cartItems: [{ id: '1', title: 'Test Botanical Soap', price: 450, quantity: 1 }],
+            deliveryState: 'Tamil Nadu'
+          })
+        });
+        const data = await res.json();
+        log('Order created: ' + JSON.stringify(data));
+        document.getElementById('status').innerText = 'Order ID: ' + data.order_id + '. Ready to open checkout.';
+
+        document.getElementById('start-btn').onclick = function() {
+          const options = {
+            key: data.key_id,
+            order_id: data.order_id,
+            amount: data.amount,
+            currency: data.currency || 'INR',
+            name: 'CINMAX Global Products',
+            description: 'Artisanal Botanicals Order',
+            prefill: {
+              name: 'Mownika Kanagaraj',
+              contact: '',
+              email: ''
+            },
+            theme: { color: '#002754' },
+            retry: { enabled: true, max_count: 4 },
+            handler: function(response) {
+              log('PAYMENT_SUCCESS: ' + JSON.stringify(response));
+              alert('SUCCESS: ' + response.razorpay_payment_id);
+            },
+            modal: {
+              backdropclose: false,
+              escape: false,
+              handleback: true,
+              confirm_close: true,
+              ondismiss: function() {
+                log('PAYMENT_CANCELLED');
+              }
+            }
+          };
+
+          log('Initializing Razorpay with options: ' + JSON.stringify(options));
+          const rzp = new Razorpay(options);
+          rzp.on('payment.failed', function(resp) {
+            log('PAYMENT_FAILED: ' + JSON.stringify(resp));
+          });
+          rzp.open();
+        };
+
+        // Auto-click start-btn
+        document.getElementById('start-btn').click();
+      } catch (err) {
+        log('Error: ' + err.message);
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -10,6 +10,8 @@ import {
   Image,
   Dimensions,
   KeyboardAvoidingView,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -219,30 +221,43 @@ export default function MobileAuthScreen() {
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={{ paddingHorizontal: CONTAINER_PADDING, paddingTop: 20, paddingBottom: 60, maxWidth: 520, alignSelf: 'center', width: '100%' }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
-          
-          {/* 2. Luxury Hero Banner */}
-        <View style={{ borderRadius: 24, overflow: 'hidden', height: 175, backgroundColor: '#002754', marginBottom: 20, position: 'relative', borderWidth: 1, borderColor: 'rgba(197, 168, 128, 0.4)', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 16 }}>
-          <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=1000&auto=format&fit=crop&q=80' }}
-            style={{ width: '100%', height: '100%' }}
-            resizeMode="cover"
-          />
-          <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0, 31, 68, 0.62)' }} />
-          <View style={{ position: 'absolute', inset: 0, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
-            <View style={{ backgroundColor: 'rgba(197, 168, 128, 0.25)', borderWidth: 1, borderColor: '#C5A880', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20, marginBottom: 8 }}>
-              <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#F3E5D8', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1.2 }}>
-                VIP CUSTOMER PORTAL
-              </Text>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <ScrollView
+            contentContainerStyle={{
+              paddingHorizontal: CONTAINER_PADDING,
+              paddingTop: 16,
+              paddingBottom: 380,
+              maxWidth: 520,
+              alignSelf: 'center',
+              width: '100%',
+              flexGrow: 1,
+            }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+          >
+            {/* 2. Luxury Hero Banner */}
+            <View style={{ borderRadius: 20, overflow: 'hidden', height: 130, backgroundColor: '#002754', marginBottom: 16, position: 'relative', borderWidth: 1, borderColor: 'rgba(197, 168, 128, 0.4)', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 12 }}>
+              <Image
+                source={{ uri: 'https://nthyavlzdgucrldtgjeo.supabase.co/storage/v1/object/public/products/cinmax-products/aroma-soap/1.jpg' }}
+                style={{ width: '100%', height: '100%' }}
+                resizeMode="cover"
+              />
+              <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0, 31, 68, 0.65)' }} />
+              <View style={{ position: 'absolute', inset: 0, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16 }}>
+                <View style={{ backgroundColor: 'rgba(197, 168, 128, 0.25)', borderWidth: 1, borderColor: '#C5A880', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 16, marginBottom: 4 }}>
+                  <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#F3E5D8', fontSize: 9.5, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1.2 }}>
+                    VIP CUSTOMER PORTAL
+                  </Text>
+                </View>
+                <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 21, fontWeight: '700', color: 'white', textAlign: 'center', marginBottom: 2 }}>
+                  Sign In to CINMAX
+                </Text>
+                <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 11.5, color: 'rgba(255, 255, 255, 0.9)', textAlign: 'center', maxWidth: 360, lineHeight: 15 }}>
+                  Track luxury dispatches, saved addresses, and masterclasses.
+                </Text>
+              </View>
             </View>
-            <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 24, fontWeight: '700', color: 'white', textAlign: 'center', marginBottom: 4 }}>
-              Sign In to CINMAX
-            </Text>
-            <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 12, color: 'rgba(255, 255, 255, 0.88)', textAlign: 'center', maxWidth: 360, lineHeight: 17 }}>
-              Track luxury dispatches, manage saved addresses, and access artisanal masterclasses.
-            </Text>
-          </View>
-        </View>
 
         {/* 3. Feedback Banners */}
         {errorMessage ? (
@@ -491,6 +506,7 @@ export default function MobileAuthScreen() {
           <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 11, color: '#64748B' }}>Official CINMAX Authenticated</Text>
         </View>
       </ScrollView>
+      </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

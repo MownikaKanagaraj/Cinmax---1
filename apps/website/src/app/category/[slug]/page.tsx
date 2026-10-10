@@ -11,7 +11,13 @@ import { LuxuryArrowRightIcon } from '../../../components/luxury-icons';
 export const revalidate = 120;
 
 export async function generateStaticParams() {
-  return [{ slug: 'cold-processed-soaps' }];
+  return [
+    { slug: 'cold-process-soaps' },
+    { slug: 'cold-processed-soaps' },
+    { slug: 'liquid-body-washes' },
+    { slug: 'body-butters-balms' },
+    { slug: 'exfoliating-bars' },
+  ];
 }
 
 export default async function CategoryPage(props: {

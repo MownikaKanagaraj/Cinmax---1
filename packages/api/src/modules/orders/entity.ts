@@ -28,6 +28,7 @@ export class OrderEntity implements Order {
   public billingAddress: Address;
   public items: OrderItem[];
   public trackingNumber?: string;
+  public trackingUrl?: string;
   public carrier?: string;
   public estimatedDeliveryDate?: string;
   public delivery?: DeliveryDetails;
@@ -54,6 +55,7 @@ export class OrderEntity implements Order {
     this.billingAddress = props.billingAddress || props.shippingAddress;
     this.items = props.items || [];
     this.trackingNumber = props.trackingNumber;
+    this.trackingUrl = props.trackingUrl;
     this.carrier = props.carrier;
     this.estimatedDeliveryDate = props.estimatedDeliveryDate;
     this.delivery = props.delivery;

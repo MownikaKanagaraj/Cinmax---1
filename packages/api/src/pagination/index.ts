@@ -66,7 +66,9 @@ export function paginateArray<T>(
   params?: PaginationParams
 ): PaginatedResult<T> {
   const page = Math.max(1, params?.page || 1);
-  const pageSize = Math.max(1, Math.min(100, params?.pageSize || 12));
+  const pageSize = params?.pageSize !== undefined
+    ? Math.max(1, Math.min(100, params.pageSize))
+    : (params?.page ? 12 : Math.max(100, items.length));
   const totalCount = items.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const startIndex = (page - 1) * pageSize;

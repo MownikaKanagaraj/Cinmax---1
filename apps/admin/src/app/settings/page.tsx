@@ -49,7 +49,7 @@ export default function AdminSettingsPage() {
   const [defaultCourier, setDefaultCourier] = React.useState('Blue Dart Express');
 
   // Payment Settings State
-  const [razorpayKeyId, setRazorpayKeyId] = React.useState('rzp_test_cinmax_botanical');
+  const [razorpayKeyId, setRazorpayKeyId] = React.useState('rzp_live_TkZfAnqVc2W9Cu');
   const [razorpayKeySecret, setRazorpayKeySecret] = React.useState('•••••••••••••••••••••••');
   const [webhookSecret, setWebhookSecret] = React.useState('whsec_cinmax_secure_hook');
 

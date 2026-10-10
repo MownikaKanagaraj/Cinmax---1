@@ -41,8 +41,8 @@ export function createCinmaxBrowserClient(
     auth: {
       persistSession: true,
       autoRefreshToken: true,
-      detectSessionInUrl: typeof window !== 'undefined',
-      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+      detectSessionInUrl: typeof window !== 'undefined' && typeof window.location !== 'undefined',
+      storage: typeof window !== 'undefined' && typeof window.localStorage !== 'undefined' ? window.localStorage : undefined,
     },
   });
 }

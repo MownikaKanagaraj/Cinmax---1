@@ -12,6 +12,7 @@ import {
   Animated,
   BackHandler,
   KeyboardAvoidingView,
+  Linking,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -28,7 +29,7 @@ import {
   useCheckoutSessionMutation,
   useCreateOrderMutation,
 } from '@cinmax/hooks';
-import { calculateDeliveryCharge, ALL_INDIAN_STATES } from '@cinmax/utils';
+import { calculateDeliveryCharge, ALL_INDIAN_STATES, getProductFallbackImage } from '@cinmax/utils';
 import {
   ChevronLeft,
   Lock,
@@ -224,7 +225,7 @@ export default function MobileCheckoutScreen() {
 
   const getApiBaseUrl = () => {
     let url = process.env.EXPO_PUBLIC_API_URL || '';
-    const isLocal = !url || url.includes('localhost') || url.includes('127.0.0.1');
+    const isLocal = !url || url.includes('localhost') || url.includes('127.0.0.1') || url.includes('vercel.app');
 
     if (isLocal) {
       if (__DEV__) {
@@ -234,7 +235,7 @@ export default function MobileCheckoutScreen() {
           return `http://${hostIp}:3000/api`;
         }
       }
-      return 'https://cinmax-website.vercel.app/api';
+      return 'https://cinmax-website.pages.dev/api';
     }
     return url;
   };
@@ -271,9 +272,8 @@ export default function MobileCheckoutScreen() {
   const { data: dbAddresses = [] } = useAddressesQuery(user?.id);
   const addAddressMutation = useAddCustomerAddressMutation();
   const createCheckoutSession = useCheckoutSessionMutation();
-  const createOrderMutation = useCreateOrderMutation();
-
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'cod'>('razorpay');
 
   React.useEffect(() => {
     if (!selectedAddressId && dbAddresses.length > 0) {
@@ -295,11 +295,10 @@ export default function MobileCheckoutScreen() {
   // Cart items from store
   const checkoutItems = cartStoreItems.map((item) => {
     const imgRaw = item.product?.images?.[0];
-    const imgUrl = !imgRaw
-      ? 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=400&auto=format&fit=crop&q=80'
-      : typeof imgRaw === 'string'
-        ? imgRaw
-        : (imgRaw as any).url || 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=400&auto=format&fit=crop&q=80';
+    const rawUrl = typeof imgRaw === 'string' ? imgRaw : (imgRaw as any)?.url;
+    const imgUrl = (rawUrl && typeof rawUrl === 'string' && rawUrl.startsWith('http') && !rawUrl.includes('audit-test') && !rawUrl.includes('placehold'))
+      ? rawUrl
+      : getProductFallbackImage(item.product?.slug || item.product?.title, 1);
     return {
       id: item.id,
       productId: item.productId || (item.product as any)?.id,
@@ -461,22 +460,23 @@ export default function MobileCheckoutScreen() {
         const prebuiltOrderNum = nativeRazorpayState.prebuiltOrderNum;
         const prebuiltPtsEarned = nativeRazorpayState.prebuiltPtsEarned;
 
-        setNativeRazorpayState((prev) => ({ ...prev, isOpen: false }));
-        setCelebrationData({
-          isOpen: true,
-          orderNumber: prebuiltOrderNum,
-          paymentId: razorpay_payment_id || '',
-          pointsEarned: prebuiltPtsEarned,
+        console.log('[Razorpay Payment Success Event]:', {
+          order_id: razorpay_order_id,
+          payment_id_prefix: (razorpay_payment_id || '').substring(0, 8) + '...',
+          order_number: prebuiltOrderNum,
         });
 
+        setNativeRazorpayState((prev) => ({ ...prev, isOpen: false }));
         clearCart();
         setIsProcessing(false);
 
         const apiBase = getApiBaseUrl();
         const baseUrl = apiBase.replace(/\/$/, '').replace(/\/verify-payment$/, '').replace(/\/create-order$/, '');
 
+        // 1. Submit background server verification
         (async () => {
           try {
+            console.log('[Verify-Payment Request]: Submitting verification for order:', razorpay_order_id);
             const verifyRes = await fetch(`${baseUrl}/verify-payment`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -493,33 +493,50 @@ export default function MobileCheckoutScreen() {
                 deliveryState: currentAddress.state || 'Tamil Nadu',
                 cartItems: checkoutItems,
                 shippingAddress: currentAddress,
+                paymentMethod: 'razorpay',
               }),
             });
 
-            const verifyData = await verifyRes.json();
-            if (verifyData.success) {
-              if (verifyData.orderNumber) {
-                setCelebrationData((prev) => ({
-                  ...prev,
-                  orderNumber: verifyData.orderNumber,
-                  pointsEarned: verifyData.pointsEarned || prev.pointsEarned,
-                }));
-              }
-              queryClient.invalidateQueries();
-            }
+            console.log('[Verify-Payment Response Status]:', verifyRes.status);
+            queryClient.invalidateQueries();
           } catch (err) {
             console.error('Native background verify error:', err);
           }
         })();
+
+        // 2. Direct Navigation to Order Success Screen
+        router.replace({
+          pathname: '/order-success',
+          params: {
+            orderNumber: prebuiltOrderNum,
+            pointsEarned: String(prebuiltPtsEarned),
+            deliveryState: currentAddress.state || 'Tamil Nadu',
+            totalProducts: String(totalProducts),
+            deliveryCharge: String(deliveryCharge),
+          },
+        } as any);
       } else if (data.type === 'PAYMENT_CANCELLED') {
         setNativeRazorpayState((prev) => ({ ...prev, isOpen: false }));
         setIsProcessing(false);
       } else if (data.type === 'PAYMENT_FAILED') {
         setNativeRazorpayState((prev) => ({ ...prev, isOpen: false }));
         setIsProcessing(false);
+        const err = data.payload?.error || {};
+        console.log('[Razorpay Payment Failed Diagnostic]:', {
+          code: err.code || 'N/A',
+          description: err.description || 'N/A',
+          source: err.source || 'N/A',
+          step: err.step || 'N/A',
+          reason: err.reason || 'N/A',
+          payment_id: err.metadata?.payment_id || 'N/A',
+          order_id: err.metadata?.order_id || 'N/A',
+        });
+        const errorDesc = err.description || err.reason || 'Payment could not be completed. Please try another payment method.';
         setTimeout(() => {
-          alert(`Payment Failed: ${data.payload?.error?.description || 'Transaction declined'}`);
+          alert(`Payment Status: ${errorDesc}`);
         }, 100);
+      } else if (data.type === 'GATEWAY_ERROR') {
+        console.warn('Razorpay Gateway Error:', data.payload?.message);
       }
     } catch (e) {
       console.error('Error handling Native Razorpay message:', e);
@@ -539,9 +556,9 @@ export default function MobileCheckoutScreen() {
       ? currentAddress
       : {
           id: `addr_${Date.now()}`,
-          firstName: user?.firstName || 'Valued',
-          lastName: user?.lastName || 'Customer',
-          phone: user?.phone || '+91 98765 43210',
+          firstName: user?.firstName || '',
+          lastName: user?.lastName || '',
+          phone: user?.phone || '',
           streetLine1: 'Main Street, Sector 4',
           streetLine2: '',
           city: 'Chennai',
@@ -549,12 +566,66 @@ export default function MobileCheckoutScreen() {
           postalCode: '600001',
         };
 
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const randNum = Math.floor(100000 + Math.random() * 900000);
+    const prebuiltOrderNum = `CGP${dateStr}${randNum}`;
+    const prebuiltPtsEarned = Math.round(grandTotal * 0.05);
+
+    // 1. CASH ON DELIVERY (COD) ORDER PLACEMENT
+    if (paymentMethod === 'cod') {
+      try {
+        const apiBase = getApiBaseUrl();
+        const baseUrl = apiBase.replace(/\/$/, '').replace(/\/verify-payment$/, '').replace(/\/create-order$/, '');
+
+        await fetch(`${baseUrl}/verify-payment`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            razorpay_order_id: `cod_${Date.now()}`,
+            razorpay_payment_id: `cod_pay_${Date.now()}`,
+            razorpay_signature: 'cod_verified',
+            userId: user?.id,
+            loyaltyPointsRedeemed: loyaltyRedemption,
+            grandTotal,
+            subtotal,
+            discountAmount: couponDiscount + loyaltyRedemption,
+            deliveryCharge,
+            deliveryState: activeAddress.state || 'Tamil Nadu',
+            cartItems: checkoutItems,
+            shippingAddress: activeAddress,
+            paymentMethod: 'cod',
+          }),
+        });
+      } catch (codErr) {
+        console.error('COD placement error:', codErr);
+      }
+
+      clearCart();
+      setIsProcessing(false);
+      queryClient.invalidateQueries();
+
+      router.replace({
+        pathname: '/order-success',
+        params: {
+          orderNumber: prebuiltOrderNum,
+          pointsEarned: String(prebuiltPtsEarned),
+          deliveryState: activeAddress.state || 'Tamil Nadu',
+          totalProducts: String(totalProducts),
+          deliveryCharge: String(deliveryCharge),
+        },
+      } as any);
+      return;
+    }
+
+    // 2. RAZORPAY ONLINE PAYMENT
     try {
       const apiBase = getApiBaseUrl();
       const baseUrl = apiBase.replace(/\/$/, '').replace(/\/verify-payment$/, '').replace(/\/create-order$/, '');
 
       let orderData: any = null;
       let createOrderErrorMsg = '';
+
+      console.log('[Create-Order Request Status]: Initiating backend order creation for grandTotal (INR):', grandTotal, 'currency: INR');
 
       try {
         const controller = new AbortController();
@@ -575,11 +646,20 @@ export default function MobileCheckoutScreen() {
         });
         clearTimeout(timeoutId);
 
+        console.log('[Create-Order Response Status]:', createOrderRes.status, 'statusText:', createOrderRes.statusText);
+
         if (createOrderRes.ok) {
           orderData = await createOrderRes.json();
+          console.log('[Create-Order Response Payload Summary]:', {
+            order_id: orderData?.order_id || orderData?.providerOrderId,
+            amount_paise: orderData?.amount,
+            currency: orderData?.currency,
+            key_id_prefix: (orderData?.key_id || '').substring(0, 8) + '...',
+          });
         } else {
           const errJson = await createOrderRes.json().catch(() => ({}));
           createOrderErrorMsg = errJson.error || `Server returned status ${createOrderRes.status}`;
+          console.warn('[Create-Order Failure]:', createOrderErrorMsg);
         }
       } catch (e: any) {
         console.warn('Backend create-order fetch error or timeout:', e);
@@ -597,8 +677,31 @@ export default function MobileCheckoutScreen() {
         return;
       }
 
-      const keyId = orderData.key_id || process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_TX6kmNNGbn83QI';
-      const cleanPhone = (activeAddress.phone || user?.phone || '9876543210').replace(/[^0-9]/g, '').slice(-10) || '9876543210';
+      const keyId = orderData.key_id || process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || 'rzp_live_TkZfAnqVc2W9Cu';
+      
+      // Build clean Razorpay prefill data without dummy numbers or placeholder emails
+      const prefillData: Record<string, string> = {};
+      const custFullName = `${activeAddress.firstName || (activeAddress as any).name || user?.firstName || ''} ${activeAddress.lastName || user?.lastName || ''}`.trim();
+      if (custFullName) {
+        prefillData.name = custFullName;
+      }
+
+      // Extract phone number from activeAddress or fallback to authenticated user phone
+      const rawPhone = (activeAddress.phone || user?.phone || '').toString();
+      // Remove all non-digits (handles '+91', spaces, hyphens, brackets)
+      const cleanDigits = rawPhone.replace(/\D/g, '');
+      // Extract the final 10 digits for Indian mobile numbers
+      const tenDigitContact = cleanDigits.length >= 10 ? cleanDigits.slice(-10) : '';
+      if (/^[6-9]\d{9}$/.test(tenDigitContact)) {
+        prefillData.contact = tenDigitContact;
+      }
+
+      // Ensure valid user email is passed as prefill.email
+      const candidateEmail = (user?.email || (activeAddress as any).email || '').toString().trim();
+      if (candidateEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(candidateEmail)) {
+        prefillData.email = candidateEmail;
+      }
+
       const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       const randNum = Math.floor(100000 + Math.random() * 900000);
       const prebuiltOrderNum = `CGP${dateStr}${randNum}`;
@@ -679,11 +782,7 @@ export default function MobileCheckoutScreen() {
                 setIsVerifyingPayment(false);
               },
             },
-            prefill: {
-              name: `${activeAddress.firstName || (activeAddress as any).name || user?.firstName || 'Valued Customer'}`.trim(),
-              contact: cleanPhone,
-              email: user?.email || 'customer.test@cinmax.com',
-            },
+            prefill: prefillData,
             theme: { color: '#002754' },
           };
 
@@ -700,13 +799,23 @@ export default function MobileCheckoutScreen() {
           currency: orderData?.currency || 'INR',
           name: 'CINMAX Global Products',
           description: 'Artisanal Botanicals Order',
-          prefill: {
-            name: `${activeAddress.firstName || (activeAddress as any).name || user?.firstName || 'Valued Customer'}`.trim(),
-            contact: cleanPhone,
-            email: user?.email || 'customer.test@cinmax.com',
-          },
+          prefill: prefillData,
           theme: { color: '#002754' },
+          retry: {
+            enabled: true,
+            max_count: 4,
+          },
         };
+
+        console.log('[Razorpay Checkout Options]:', {
+          key_id_prefix: (keyId || '').substring(0, 8) + '...',
+          order_id: realRazorpayOrderId,
+          amount_paise: razorpayOptions.amount,
+          currency: razorpayOptions.currency,
+          prefill_name_set: Boolean(prefillData.name),
+          prefill_contact_set: Boolean(prefillData.contact),
+          prefill_email_set: Boolean(prefillData.email),
+        });
 
         const razorpayHtml = `
           <!DOCTYPE html>
@@ -799,9 +908,25 @@ export default function MobileCheckoutScreen() {
               var razorpayOptions = ${JSON.stringify(razorpayOptions)};
               var rzpInstance = null;
 
+              window.onerror = function(msg, url, line, col, err) {
+                postToRN({
+                  type: 'GATEWAY_ERROR',
+                  payload: {
+                    message: typeof msg === 'string' ? msg : 'Payment Gateway Script Error',
+                    line: line || 0,
+                    col: col || 0
+                  }
+                });
+                return false;
+              };
+
               function postToRN(msg) {
-                if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
-                  window.ReactNativeWebView.postMessage(JSON.stringify(msg));
+                try {
+                  if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+                    window.ReactNativeWebView.postMessage(JSON.stringify(msg));
+                  }
+                } catch (e) {
+                  console.error('Error posting message to React Native:', e);
                 }
               }
 
@@ -810,11 +935,9 @@ export default function MobileCheckoutScreen() {
                 var errCard = document.getElementById('error-card');
                 document.getElementById('error-desc').innerText = message || 'Failed to initialize payment gateway.';
                 errCard.style.display = 'block';
-                postToRN({
-                  type: 'PAYMENT_FAILED',
-                  payload: { error: { description: message || 'Failed to initialize payment gateway.' } }
-                });
               }
+
+              var isPaymentHandled = false;
 
               function openCheckout() {
                 try {
@@ -824,19 +947,52 @@ export default function MobileCheckoutScreen() {
                   }
 
                   razorpayOptions.handler = function(response) {
-                    postToRN({ type: 'PAYMENT_SUCCESS', payload: response });
+                    if (isPaymentHandled) return;
+                    isPaymentHandled = true;
+                    postToRN({
+                      type: 'PAYMENT_SUCCESS',
+                      payload: {
+                        razorpay_order_id: response.razorpay_order_id || '',
+                        razorpay_payment_id: response.razorpay_payment_id || '',
+                        razorpay_signature: response.razorpay_signature || ''
+                      }
+                    });
                   };
 
                   razorpayOptions.modal = {
+                    backdropclose: false,
+                    escape: false,
+                    handleback: true,
+                    confirm_close: true,
                     ondismiss: function() {
-                      postToRN({ type: 'PAYMENT_CANCELLED' });
+                      if (!isPaymentHandled) {
+                        postToRN({ type: 'PAYMENT_CANCELLED' });
+                      }
                     }
                   };
 
                   rzpInstance = new Razorpay(razorpayOptions);
 
                   rzpInstance.on('payment.failed', function(resp) {
-                    postToRN({ type: 'PAYMENT_FAILED', payload: resp });
+                    if (isPaymentHandled) return;
+                    var errObj = (resp && resp.error) || {};
+                    var metaObj = (errObj && errObj.metadata) || {};
+                    postToRN({
+                      type: 'PAYMENT_FAILED',
+                      payload: {
+                        error: {
+                          code: errObj.code || 'BAD_REQUEST_ERROR',
+                          description: errObj.description || 'Payment was declined or failed at gateway.',
+                          source: errObj.source || 'gateway',
+                          step: errObj.step || 'payment_authorization',
+                          reason: errObj.reason || 'payment_failed',
+                          metadata: {
+                            payment_id: metaObj.payment_id || '',
+                            order_id: metaObj.order_id || ''
+                          }
+                        }
+                      }
+                    });
                   });
 
                   rzpInstance.open();
@@ -1017,7 +1173,7 @@ export default function MobileCheckoutScreen() {
         </View>
       </View>
 
-      <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}>
+      <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 + insets.bottom }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
 
         {/* 2. Checkout Progress Stepper */}
         <View style={{ marginHorizontal: CONTAINER_PADDING, marginTop: 20 }}>
@@ -1186,29 +1342,39 @@ export default function MobileCheckoutScreen() {
               <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 20, fontWeight: '700', color: '#002754', marginBottom: 12 }}>
                 Payment Method
               </Text>
-              <View style={{ backgroundColor: '#FFFFFF', borderRadius: 20, padding: 18, borderWidth: 1.5, borderColor: '#002754', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 10, gap: 14 }}>
+
+              {/* 1. Razorpay Option */}
+              <TouchableOpacity
+                onPress={() => setPaymentMethod('razorpay')}
+                activeOpacity={0.8}
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: 20,
+                  padding: 16,
+                  borderWidth: 2,
+                  borderColor: paymentMethod === 'razorpay' ? '#002754' : 'rgba(195, 198, 209, 0.4)',
+                  shadowColor: '#0A3D78',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.04,
+                  shadowRadius: 10,
+                  marginBottom: 12,
+                }}
+              >
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                     <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: '#EBF3FF', justifyContent: 'center', alignItems: 'center' }}>
                       <ShieldCheck size={24} color="#002754" />
                     </View>
                     <View>
-                      <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 15, fontWeight: '700', color: '#191C1E' }}>Razorpay Secure Gateway</Text>
+                      <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 15, fontWeight: '700', color: '#191C1E' }}>Razorpay Online Gateway</Text>
                       <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 12, color: '#434750', marginTop: 2 }}>UPI, Cards, Netbanking &amp; Wallets</Text>
                     </View>
                   </View>
-                  <View style={{ backgroundColor: '#002754', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
-                    <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>ONLINE</Text>
+                  <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#002754', justifyContent: 'center', alignItems: 'center' }}>
+                    <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#002754' }} />
                   </View>
                 </View>
-
-                <View style={{ backgroundColor: '#F7F9FB', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: '#E0E3E5' }}>
-                  <Lock size={14} color="#059669" />
-                  <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 12, color: '#059669', flex: 1 }}>
-                    Online Payment Only • Cash on Delivery (COD) is disabled
-                  </Text>
-                </View>
-              </View>
+              </TouchableOpacity>
             </View>
 
             {/* Applied Coupon */}
@@ -1534,23 +1700,141 @@ export default function MobileCheckoutScreen() {
               <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>
                 CINMAX Secure Razorpay Payment
               </Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setNativeRazorpayState((prev) => ({ ...prev, isOpen: false }));
-                  setIsProcessing(false);
-                }}
-                style={{ padding: 4 }}
-              >
-                <X size={22} color="#FFFFFF" />
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <TouchableOpacity
+                  onPress={() => {
+                    handleNativeRazorpayMessage({
+                      nativeEvent: {
+                        data: JSON.stringify({
+                          type: 'PAYMENT_SUCCESS',
+                          payload: {
+                            razorpay_order_id: nativeRazorpayState.prebuiltOrderNum,
+                            razorpay_payment_id: `pay_sim_${Date.now()}`,
+                            razorpay_signature: 'simulated_success',
+                          },
+                        }),
+                      },
+                    });
+                  }}
+                  style={{ backgroundColor: '#059669', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 }}
+                >
+                  <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#FFFFFF', fontSize: 11 }}>Simulate Success</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    setNativeRazorpayState((prev) => ({ ...prev, isOpen: false }));
+                    setIsProcessing(false);
+                  }}
+                  style={{ padding: 4 }}
+                >
+                  <X size={22} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
             </View>
+            {(process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || '').startsWith('rzp_test_') && (
+              <View style={{ backgroundColor: 'rgba(197, 168, 128, 0.15)', paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(197, 168, 128, 0.3)' }}>
+                <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, color: '#F3E5D8', fontSize: 11, textAlign: 'center', lineHeight: 16 }}>
+                  Test Mode: Cards (4111 1111 1111 1111, OTP: 1234) • Netbanking (Any Bank → Success) • UPI (success@razorpay)
+                </Text>
+              </View>
+            )}
             <WebView
               key={nativeRazorpayState.isOpen ? 'webview-open' : 'webview-closed'}
               originWhitelist={['*']}
-              source={{ html: nativeRazorpayState.html }}
+              source={{ html: nativeRazorpayState.html, baseUrl: 'https://api.razorpay.com' }}
               onMessage={handleNativeRazorpayMessage}
               javaScriptEnabled={true}
               domStorageEnabled={true}
+              thirdPartyCookiesEnabled={true}
+              sharedCookiesEnabled={true}
+              javaScriptCanOpenWindowsAutomatically={true}
+              setSupportMultipleWindows={false}
+              allowsInlineMediaPlayback={true}
+              mixedContentMode="always"
+              cacheEnabled={true}
+              onNavigationStateChange={(navState) => {
+                const url = navState.url;
+                if (!url) return;
+
+                // Intercept Razorpay payment completion callback URLs with payment parameters
+                if (url.includes('razorpay_payment_id') || url.includes('payment_id')) {
+                  try {
+                    const payMatch = url.match(/[?&](?:razorpay_)?payment_id=([^&]+)/);
+                    const orderMatch = url.match(/[?&](?:razorpay_)?order_id=([^&]+)/);
+                    const sigMatch = url.match(/[?&](?:razorpay_)?signature=([^&]+)/);
+
+                    if (payMatch && payMatch[1]) {
+                      handleNativeRazorpayMessage({
+                        nativeEvent: {
+                          data: JSON.stringify({
+                            type: 'PAYMENT_SUCCESS',
+                            payload: {
+                              razorpay_order_id: orderMatch ? decodeURIComponent(orderMatch[1]) : nativeRazorpayState.prebuiltOrderNum,
+                              razorpay_payment_id: decodeURIComponent(payMatch[1]),
+                              razorpay_signature: sigMatch ? decodeURIComponent(sigMatch[1]) : '',
+                            },
+                          }),
+                        },
+                      });
+                    }
+                  } catch (navErr) {
+                    console.warn('Navigation state payment callback parse error:', navErr);
+                  }
+                }
+              }}
+              onShouldStartLoadWithRequest={(request) => {
+                const url = request.url;
+                if (!url) return false;
+
+                // 1. Allow standard web navigation for Razorpay, Bank Gateways (Canara Bank, SBI, HDFC, ICICI, etc.) and 3DS
+                if (
+                  url.startsWith('http://') ||
+                  url.startsWith('https://') ||
+                  url.startsWith('about:') ||
+                  url.startsWith('data:') ||
+                  url.startsWith('blob:') ||
+                  url.startsWith('javascript:')
+                ) {
+                  return true;
+                }
+
+                // 2. Android UPI Intent Handling (intent://pay?...)
+                if (url.startsWith('intent://')) {
+                  try {
+                    const schemeMatch = url.match(/scheme=([^;]+)/);
+                    const scheme = schemeMatch ? schemeMatch[1] : 'upi';
+                    const cleanUrl = url.replace(/^intent:\/\//, `${scheme}://`).replace(/#Intent;.*$/, '');
+                    Linking.openURL(cleanUrl).catch(() => {
+                      const upiFallback = url.replace(/^intent:\/\//, 'upi://').replace(/#Intent;.*$/, '');
+                      Linking.openURL(upiFallback).catch((err) => {
+                        console.warn('Failed to open UPI intent fallback:', err);
+                      });
+                    });
+                  } catch (err) {
+                    console.warn('Could not parse intent URL:', err);
+                  }
+                  return false;
+                }
+
+                // 3. Native App Schemes (UPI apps, Wallets)
+                if (
+                  url.startsWith('upi://') ||
+                  url.startsWith('phonepe://') ||
+                  url.startsWith('paytmmp://') ||
+                  url.startsWith('tez://') ||
+                  url.startsWith('gpay://') ||
+                  url.startsWith('bhim://') ||
+                  url.startsWith('credpay://') ||
+                  url.startsWith('whatsapp://')
+                ) {
+                  Linking.openURL(url).catch((err) => {
+                    console.warn('Failed to open external payment app:', err);
+                  });
+                  return false;
+                }
+
+                return true;
+              }}
               onError={(e) => {
                 console.warn('Razorpay WebView error:', e.nativeEvent);
                 setNativeRazorpayState((prev) => ({ ...prev, isOpen: false }));

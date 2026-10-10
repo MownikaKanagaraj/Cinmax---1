@@ -17,12 +17,12 @@ export class RazorpayProvider implements IPaymentProvider {
       process.env.RAZORPAY_KEY_ID ||
       process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
       process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID ||
-      'rzp_test_TX6kmNNGbn83QI';
+      'rzp_live_TkZfAnqVc2W9Cu';
 
     this.keySecret =
       keySecret ||
       process.env.RAZORPAY_KEY_SECRET ||
-      'tcp9HIn70PSx5JzNm611UHmw';
+      'eE9uBssQ2tN4j7E9zufM81g9';
 
     try {
       this.razorpayInstance = new Razorpay({

@@ -110,6 +110,7 @@ export interface ProductImage {
   id: string;
   url: string;
   alt: string;
+  altText?: string;
   sortOrder: number;
   isPrimary: boolean;
 }
@@ -377,6 +378,7 @@ export interface Order {
   items: OrderItem[];
   delivery?: DeliveryDetails;
   trackingNumber?: string;
+  trackingUrl?: string;
   carrier?: string;
   courierName?: string;
   estimatedDeliveryDate?: string;

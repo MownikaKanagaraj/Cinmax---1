@@ -9,7 +9,9 @@ import {
   Modal,
   ActivityIndicator,
   TextInput,
+  Linking,
 } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
@@ -21,7 +23,7 @@ import {
   usePlaylistPurchasesStore,
   useAuthStore,
 } from '@cinmax/hooks';
-import { parseYouTubeEmbedUrl } from '@cinmax/utils';
+import { parseYouTubeEmbedUrl, getPlaylistThumbnail, getProductFallbackImage } from '@cinmax/utils';
 import {
   GraduationCap,
   PlayCircle,
@@ -175,12 +177,12 @@ export default function MobileClassesScreen() {
 
           if (orderRes.ok && orderData.order_id) {
             const options: any = {
-              key: orderData.key_id || process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_TX6kmNNGbn83QI',
+              key: orderData.key_id || process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || 'rzp_live_TkZfAnqVc2W9Cu',
               amount: orderData.amount || amountInPaise,
               currency: 'INR',
               name: 'CINMAX Masterclass Academy',
               description: `Playlist: ${selectedPlaylist.title}`,
-              image: selectedPlaylist.thumbnailUrl || 'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=400',
+              image: selectedPlaylist.thumbnailUrl || 'https://nthyavlzdgucrldtgjeo.supabase.co/storage/v1/object/public/products/cinmax-products/aroma-soap/1.jpg',
               order_id: orderData.order_id,
               handler: async function (response: any) {
                 // Backend payment verification & purchase recording
@@ -517,10 +519,10 @@ export default function MobileClassesScreen() {
               {filteredPlaylists.map((pl: any) => {
                 const unlocked = isUnlocked(pl);
                 const videoCount = pl.videos?.length || pl.videoCount || 0;
-                const thumbnail =
-                  pl.thumbnailUrl ||
-                  pl.videos?.[0]?.thumbnailUrl ||
-                  'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=800&auto=format&fit=crop&q=80';
+                const thumbnail = getPlaylistThumbnail(
+                  pl.thumbnailUrl,
+                  pl.videos?.[0]?.thumbnailUrl || pl.videos?.[0]?.youtubeUrl || getProductFallbackImage(pl.productTitle, 1)
+                );
 
                 return (
                   <TouchableOpacity
@@ -725,18 +727,28 @@ export default function MobileClassesScreen() {
                           allowFullScreen
                         />
                       ) : (
-                        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-                          <PlayCircle size={48} color="white" />
-                          <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', marginTop: 10 }}>
-                            Playing: {selectedVideo.title}
-                          </Text>
+                        <View style={{ flex: 1 }}>
+                          <WebView
+                            source={{
+                              uri: parseYouTubeEmbedUrl(selectedVideo.youtubeUrl) || `https://www.youtube.com/embed/${selectedVideo.youtubeId}?autoplay=1`
+                            }}
+                            allowsFullscreenVideo
+                            javaScriptEnabled
+                            domStorageEnabled
+                            style={{ flex: 1, backgroundColor: '#000000' }}
+                          />
                         </View>
                       )}
                     </View>
                   ) : (
                     <View style={{ width: '100%', height: 210, backgroundColor: '#001938', position: 'relative' }}>
                       <Image
-                        source={{ uri: selectedPlaylist.thumbnailUrl || 'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=800' }}
+                        source={{
+                          uri: getPlaylistThumbnail(
+                            selectedPlaylist.thumbnailUrl,
+                            selectedPlaylist.videos?.[0]?.thumbnailUrl || selectedPlaylist.videos?.[0]?.youtubeUrl || getProductFallbackImage(selectedPlaylist.productTitle, 1)
+                          )
+                        }}
                         style={{ width: '100%', height: '100%' }}
                         resizeMode="cover"
                       />

@@ -200,7 +200,7 @@ export default function CheckoutPage() {
 
       // 3. Configure Razorpay Standard Modal Options
       const options: any = {
-        key: orderData?.key_id || orderData?.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_TX6kmNNGbn83QI',
+        key: orderData?.key_id || orderData?.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_live_TkZfAnqVc2W9Cu',
         order_id: orderData?.order_id || orderData?.providerOrderId,
         amount: orderData?.amount || Math.round(grandTotal * 100),
         currency: orderData?.currency || 'INR',

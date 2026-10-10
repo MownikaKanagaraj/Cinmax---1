@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useOrdersQuery, useWishlistStore, useCartStore, useUser } from '@cinmax/hooks';
+import { getProductFallbackImage } from '@cinmax/utils';
 import {
   ArrowLeft,
   Search,
@@ -152,7 +153,7 @@ export default function MobileOrdersScreen() {
       variant: `Qty: ${ord.items?.reduce((acc, item) => acc + item.quantity, 0) || 1} units`,
       price: `₹${ord.grandTotal}`,
       estDelivery: estDel,
-      image: ord.items?.[0]?.imageUrl || 'https://images.unsplash.com/photo-1607006482602-7650d2037422?w=400',
+      image: ord.items?.[0]?.imageUrl || getProductFallbackImage(ord.items?.[0]?.productTitle, 1),
       progress: isDel ? 1.0 : isShip ? 0.75 : 0.4,
       awbNumber: awb,
       courierName: courier,

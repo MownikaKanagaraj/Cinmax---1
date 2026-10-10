@@ -9,7 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ProductCard } from '../components/ProductCard';
 import { useProductsQuery } from '@cinmax/hooks';
 import type { Product } from '@cinmax/types';
@@ -37,26 +37,60 @@ const FONT_SANS_BOLD = Platform.select({
   default: 'PlusJakartaSans_700Bold',
 });
 
+import { getProductFallbackImage } from '@cinmax/utils';
+
 export default function MobileSearchScreen() {
   const router = useRouter();
-  const [query, setQuery] = useState('');
+  const { query: initialQuery } = useLocalSearchParams<{ query?: string }>();
+  const [query, setQuery] = useState(initialQuery || '');
 
   const searchSuggestions = ['Saffron Soap', 'Sandalwood', 'Charcoal Detox', 'Lavender Oil', 'Face Serum'];
 
   const { data: productsData, isLoading } = useProductsQuery();
-  const rawProducts: Product[] = productsData?.items || [];
 
-  const liveResults = rawProducts.map((p) => ({
-    id: p.id,
-    slug: p.slug,
-    title: p.title,
-    price: `₹${p.basePrice}`,
-    originalPrice: p.compareAtPrice ? `₹${p.compareAtPrice}` : undefined,
-    rating: `${p.averageRating || 4.9}`,
-    image: typeof p.images?.[0] === 'string' ? p.images[0] : p.images?.[0]?.url || 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=400&auto=format&fit=crop&q=80',
-    badge: p.isFeatured ? 'Hero Bar' : 'Botanical',
-    badgeBg: p.isFeatured ? '#002754' : '#365E9B',
-  }));
+  const liveResults = React.useMemo(() => {
+    const rawProducts: Product[] = productsData?.items || [];
+    const seen = new Set<string>();
+    const list: any[] = [];
+
+    for (const p of rawProducts) {
+      if (!p || p.isActive === false) continue;
+      const lowerTitle = (p.title || '').trim().toLowerCase();
+      const lowerSlug = (p.slug || '').trim().toLowerCase();
+
+      if (
+        lowerSlug.includes('test-product') ||
+        lowerTitle.includes('test product') ||
+        lowerSlug.includes('audited-herbal-bar') ||
+        lowerTitle.includes('audited') ||
+        lowerTitle.includes('audit-test') ||
+        lowerSlug.includes('azure-marine') ||
+        lowerSlug.includes('french-lavender') ||
+        lowerSlug.includes('nordic-pine')
+      ) {
+        continue;
+      }
+
+      const dedupeKey = lowerSlug || lowerTitle || p.id;
+      if (seen.has(dedupeKey)) continue;
+      seen.add(dedupeKey);
+
+      const specificSoapImage = getProductFallbackImage(p.slug || p.title, 1);
+      const rawImg = typeof p.images?.[0] === 'string' ? p.images[0] : p.images?.[0]?.url;
+      const validImage = rawImg && !rawImg.includes('audit-test') ? rawImg : specificSoapImage;
+
+      list.push({
+        id: p.id,
+        slug: p.slug,
+        title: p.title,
+        price: `₹${p.basePrice}`,
+        originalPrice: p.compareAtPrice ? `₹${p.compareAtPrice}` : undefined,
+        rating: `${p.averageRating || 4.9}`,
+        image: validImage,
+      });
+    }
+    return list;
+  }, [productsData?.items]);
 
   const filteredResults = liveResults.filter((p) =>
     !query.trim() || p.title.toLowerCase().includes(query.toLowerCase())
@@ -79,7 +113,6 @@ export default function MobileSearchScreen() {
           <TextInput
             value={query}
             onChangeText={setQuery}
-            autoFocus
             placeholder="Search soaps, serums, body care..."
             placeholderTextColor="#737781"
             style={{ fontFamily: FONT_SANS_REGULAR, flex: 1, fontSize: 14, color: '#191C1E' }}
@@ -92,7 +125,7 @@ export default function MobileSearchScreen() {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
 
         {/* Popular Searches */}
         {!query && (

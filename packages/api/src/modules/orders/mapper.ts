@@ -45,6 +45,7 @@ export class OrderMapper {
       billingAddress: dto.billing_address || dto.shipping_address,
       items,
       trackingNumber: dto.tracking_number ?? (dto.metadata as any)?.tracking_number ?? (dto.metadata as any)?.trackingNumber ?? undefined,
+      trackingUrl: (dto.metadata as any)?.tracking_url ?? (dto.metadata as any)?.trackingUrl ?? undefined,
       carrier: dto.carrier ?? (dto.metadata as any)?.carrier ?? (dto.metadata as any)?.courierName ?? undefined,
       estimatedDeliveryDate: dto.estimated_delivery_date ?? (dto.metadata as any)?.estimated_delivery_date ?? (dto.metadata as any)?.estimatedDeliveryDate ?? undefined,
       timeline,

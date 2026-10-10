@@ -29,15 +29,31 @@ export class SupabaseProductRepository implements IProductRepository {
       query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,subtitle.ilike.%${searchTerm}%`);
     }
 
-    if (filter?.categorySlug) {
+    if (filter?.categorySlug && filter.categorySlug !== 'all') {
+      const cleanSlug = filter.categorySlug.trim().toLowerCase();
+      let catId: string | null = null;
       const { data: catData } = await this.supabase
         .from('categories')
         .select('id')
-        .eq('slug', filter.categorySlug)
+        .eq('slug', cleanSlug)
         .maybeSingle();
 
       if (catData?.id) {
-        query = query.eq('category_id', catData.id);
+        catId = catData.id;
+      } else {
+        const baseSlug = cleanSlug.replace(/-processed-/, '-process-').replace(/-soaps?$/, '');
+        const { data: fuzzyCat } = await this.supabase
+          .from('categories')
+          .select('id')
+          .ilike('slug', `%${baseSlug}%`)
+          .maybeSingle();
+        if (fuzzyCat?.id) {
+          catId = fuzzyCat.id;
+        }
+      }
+
+      if (catId) {
+        query = query.eq('category_id', catId);
       }
     }
 

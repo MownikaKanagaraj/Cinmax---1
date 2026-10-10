@@ -168,9 +168,10 @@ export default function AdminOrderDetailPage() {
                   onChange={(e) => setStatus(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 font-bold text-[#0F172A] dark:text-white"
                 >
-                  <option value="pending">Pending</option>
-                  <option value="processing">Processing & Packing</option>
-                  <option value="shipped">Shipped</option>
+                  <option value="pending">Order Placed (Pending)</option>
+                  <option value="processing">Order Confirmed & Processing</option>
+                  <option value="shipped">Shipped (With Courier)</option>
+                  <option value="out_for_delivery">Out for Delivery</option>
                   <option value="delivered">Delivered</option>
                   <option value="cancelled">Cancelled</option>
                   <option value="payment_failed">Payment Failed</option>

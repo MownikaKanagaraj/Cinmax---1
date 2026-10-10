@@ -18,15 +18,16 @@ import { RepositoryProvider } from '@cinmax/api';
 
 export interface AppProvidersProps {
   children: React.ReactNode;
+  container?: any;
 }
 
 /**
  * Universal Root Provider Composer for Web & Native applications
  */
-export function AppProviders({ children }: AppProvidersProps) {
+export function AppProviders({ children, container }: AppProvidersProps) {
   return (
     <QueryProvider>
-      <RepositoryProvider>
+      <RepositoryProvider container={container}>
         <ThemeProvider>
           <AuthProvider>
             <AppSettingsProvider>

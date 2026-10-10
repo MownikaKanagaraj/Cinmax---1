@@ -1,10 +1,11 @@
 import '../../global.css';
 import React, { useEffect } from 'react';
+import { View, Text, Image, ActivityIndicator } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppProviders, useAuthStore } from '@cinmax/hooks';
-import { createCinmaxMobileClient, RepositoryProvider, getContainer } from '@cinmax/api';
+import { createCinmaxMobileClient, getContainer } from '@cinmax/api';
 import { ExpoSecureStoreAdapter } from '../storage/expoSecureStore';
 import { StyleSheet } from 'react-native-css-interop';
 import {
@@ -111,22 +112,42 @@ export default function RootLayout() {
     PlusJakartaSans_700Bold,
   });
 
+  if (!fontsLoaded) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#002754', justifyContent: 'center', alignItems: 'center' }}>
+        <StatusBar style="light" />
+        <View style={{ alignItems: 'center', gap: 14 }}>
+          <Image
+            source={require('../../assets/logo.png')}
+            style={{ width: 110, height: 80 }}
+            resizeMode="contain"
+          />
+          <Text style={{ fontSize: 30, fontWeight: '700', color: '#C5A880', letterSpacing: 2 }}>
+            CINMAX
+          </Text>
+          <Text style={{ fontSize: 11, fontWeight: '600', color: '#FAF7F2', letterSpacing: 3, textTransform: 'uppercase' }}>
+            Artisanal Botanical Beauty
+          </Text>
+          <ActivityIndicator color="#C5A880" style={{ marginTop: 24 }} size="small" />
+        </View>
+      </View>
+    );
+  }
+
   const StackNavigator = Stack as any;
   return (
-    <RepositoryProvider container={mobileContainer}>
-      <AppProviders>
-        <AuthInitializer>
-          <SafeAreaProvider>
-            <StatusBar style="dark" />
-            <StackNavigator
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: '#F7F9FB' },
-              }}
-            />
-          </SafeAreaProvider>
-        </AuthInitializer>
-      </AppProviders>
-    </RepositoryProvider>
+    <AppProviders container={mobileContainer}>
+      <AuthInitializer>
+        <SafeAreaProvider>
+          <StatusBar style="dark" />
+          <StackNavigator
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: '#F7F9FB' },
+            }}
+          />
+        </SafeAreaProvider>
+      </AuthInitializer>
+    </AppProviders>
   );
 }

@@ -14,7 +14,7 @@ import {
   usePlaylistPurchasesStore,
   useAuthStore,
 } from '@cinmax/hooks';
-import { parseYouTubeEmbedUrl } from '@cinmax/utils';
+import { parseYouTubeEmbedUrl, getPlaylistThumbnail, getProductFallbackImage } from '@cinmax/utils';
 import {
   GraduationCap,
   PlayCircle,
@@ -137,7 +137,7 @@ export default function ClassesPage() {
 
         if (createRes.ok && orderData.order_id) {
           const options: any = {
-            key: orderData.key_id || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_TX6kmNNGbn83QI',
+            key: orderData.key_id || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_live_TkZfAnqVc2W9Cu',
             amount: orderData.amount || Math.round(selectedPlaylist.price * 100),
             currency: orderData.currency || 'INR',
             name: 'CINMAX Masterclass Academy',
@@ -319,10 +319,10 @@ export default function ClassesPage() {
                 {filteredPlaylists.map((pl: any) => {
                   const unlocked = isUnlocked(pl);
                   const videoCount = pl.videos?.length || pl.videoCount || 0;
-                  const thumbnail =
-                    pl.thumbnailUrl ||
-                    pl.videos?.[0]?.thumbnailUrl ||
-                    'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=800';
+                  const thumbnail = getPlaylistThumbnail(
+                    pl.thumbnailUrl,
+                    pl.videos?.[0]?.thumbnailUrl || pl.videos?.[0]?.youtubeUrl || getProductFallbackImage(pl.productTitle, 1)
+                  );
 
                   return (
                     <div
@@ -445,7 +445,10 @@ export default function ClassesPage() {
             ) : (
               <div className="relative aspect-video rounded-2xl overflow-hidden bg-slate-900 flex items-center justify-center p-8 text-center text-white">
                 <img
-                  src={selectedPlaylist.thumbnailUrl || 'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=800'}
+                  src={getPlaylistThumbnail(
+                    selectedPlaylist.thumbnailUrl,
+                    selectedPlaylist.videos?.[0]?.thumbnailUrl || selectedPlaylist.videos?.[0]?.youtubeUrl || getProductFallbackImage(selectedPlaylist.productTitle, 1)
+                  )}
                   alt={selectedPlaylist.title}
                   className="absolute inset-0 w-full h-full object-cover opacity-30"
                 />

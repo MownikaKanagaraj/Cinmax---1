@@ -11,4 +11,5 @@ export * from './cart';
 export * from './security';
 export * from './youtube';
 export * from './loyalty';
+export * from './productImages';
 

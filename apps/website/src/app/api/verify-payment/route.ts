@@ -33,7 +33,31 @@ export async function OPTIONS(request: Request) {
 export async function POST(request: Request) {
   const corsHeaders = getCorsHeaders(request);
   try {
-    const body = await request.json().catch(() => ({}));
+    let body: any = {};
+    const contentType = request.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      body = await request.json().catch(() => ({}));
+    } else if (
+      contentType.includes('application/x-www-form-urlencoded') ||
+      contentType.includes('multipart/form-data')
+    ) {
+      const formData = await request.formData().catch(() => null);
+      if (formData) {
+        body = Object.fromEntries(formData.entries());
+      }
+    } else {
+      try {
+        body = await request.json();
+      } catch (e) {
+        try {
+          const fd = await request.formData();
+          body = Object.fromEntries(fd.entries());
+        } catch (e2) {
+          body = {};
+        }
+      }
+    }
+
     const razorpay_order_id = body.razorpay_order_id || body.razorpayOrderId;
     const razorpay_payment_id = body.razorpay_payment_id || body.razorpayPaymentId;
     const razorpay_signature = body.razorpay_signature || body.razorpaySignature;
@@ -93,14 +117,20 @@ export async function POST(request: Request) {
 
     const userId = isUuid(body.userId) ? body.userId : null;
 
-    const shippingAddress = body.shippingAddress || {
-      firstName: '',
-      lastName: '',
-      street: '',
-      city: 'Chennai',
-      state: body.deliveryState || 'Tamil Nadu',
-      postalCode: '600001',
-      country: 'India',
+    const rawAddress = body.shippingAddress || {};
+    const shippingAddress = {
+      firstName: rawAddress.firstName || (rawAddress.name ? rawAddress.name.split(' ')[0] : '') || '',
+      lastName: rawAddress.lastName || (rawAddress.name ? rawAddress.name.split(' ').slice(1).join(' ') : '') || '',
+      name: rawAddress.name || `${rawAddress.firstName || ''} ${rawAddress.lastName || ''}`.trim(),
+      phone: rawAddress.phone || body.phone || '',
+      street: rawAddress.street || rawAddress.addressLine1 || rawAddress.streetLine1 || '',
+      addressLine1: rawAddress.addressLine1 || rawAddress.street || rawAddress.streetLine1 || '',
+      addressLine2: rawAddress.addressLine2 || rawAddress.streetLine2 || '',
+      city: rawAddress.city || 'Chennai',
+      state: rawAddress.state || body.deliveryState || 'Tamil Nadu',
+      postalCode: rawAddress.postalCode || rawAddress.pincode || '600001',
+      pincode: rawAddress.pincode || rawAddress.postalCode || '600001',
+      country: rawAddress.country || 'India',
     };
 
     const totalProductsQty = Array.isArray(body.cartItems) && body.cartItems.length > 0
@@ -160,7 +190,7 @@ export async function POST(request: Request) {
 
     const rawFirstName = (shippingAddress.firstName || '').trim();
     const rawLastName = (shippingAddress.lastName || '').trim();
-    const shipName = rawFirstName ? `${rawFirstName} ${rawLastName}`.trim() : '';
+    const shipName = shippingAddress.name || (rawFirstName ? `${rawFirstName} ${rawLastName}`.trim() : '');
 
     const customerFullName = shipName || userProfileName || customerNameFromRzp || (body.customerName ? String(body.customerName) : 'Customer');
 

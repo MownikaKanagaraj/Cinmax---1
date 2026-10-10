@@ -21,7 +21,8 @@ import {
   useAddressesQuery,
   useAddCustomerAddressMutation,
 } from '@cinmax/hooks';
-import { calculateDeliveryCharge, ALL_INDIAN_STATES } from '@cinmax/utils';
+import { calculateDeliveryCharge, ALL_INDIAN_STATES, getProductFallbackImage } from '@cinmax/utils';
+import { getSoapImageSource } from '../constants/soapAssets';
 import {
   ArrowLeft,
   Heart,
@@ -63,7 +64,7 @@ const FONT_SANS_BOLD = Platform.select({
   default: 'PlusJakartaSans_700Bold',
 });
 
-const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=400&auto=format&fit=crop&q=80';
+const FALLBACK_IMAGE = 'https://nthyavlzdgucrldtgjeo.supabase.co/storage/v1/object/public/products/cinmax-products/aroma-soap/1.jpg';
 
 interface CartItemCardProps {
   item: {
@@ -86,6 +87,7 @@ interface CartItemCardProps {
 
 function CartItemCard({ item, onUpdateQuantity, onRemove, onPressItem }: CartItemCardProps) {
   const [localText, setLocalText] = useState(String(item.quantity));
+  const imageSource = getSoapImageSource(item.image, item.slug || item.title);
 
   React.useEffect(() => {
     setLocalText(String(item.quantity));
@@ -123,7 +125,24 @@ function CartItemCard({ item, onUpdateQuantity, onRemove, onPressItem }: CartIte
         borderColor: 'rgba(195, 198, 209, 0.25)',
       }}
     >
-      <Image source={{ uri: item.image }} style={{ width: 84, height: 84, borderRadius: 14 }} />
+      {/* Luxury Ambient Blurred Background Soap Card */}
+      <View style={{ width: 84, height: 84, borderRadius: 14, overflow: 'hidden', backgroundColor: '#F8F9FB', borderWidth: 1, borderColor: 'rgba(197, 168, 128, 0.35)', position: 'relative' }}>
+        {/* Layer 1: Ambient Blurred Backdrop */}
+        <Image
+          source={imageSource}
+          style={{ position: 'absolute', width: '100%', height: '100%', opacity: 0.65 }}
+          resizeMode="cover"
+          blurRadius={Platform.OS === 'ios' ? 16 : 10}
+        />
+        {/* Layer 2: Soft Tint Overlay */}
+        <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
+        {/* Layer 3: Sharp Foreground Image */}
+        <Image
+          source={imageSource}
+          style={{ width: '100%', height: '100%' }}
+          resizeMode="contain"
+        />
+      </View>
 
       <View style={{ flex: 1, justifyContent: 'space-between' }}>
         <View style={{ paddingRight: 20 }}>
@@ -342,9 +361,11 @@ export default function MobileCartScreen() {
     maxStock: Math.max(1, (item.variant as any)?.inventoryQuantity ?? (item.product as any)?.inventoryQuantity ?? 99),
     image: (() => {
       const img = item.product?.images?.[0];
-      if (!img) return FALLBACK_IMAGE;
-      if (typeof img === 'string') return img;
-      return (img as any).url || FALLBACK_IMAGE;
+      const rawUrl = typeof img === 'string' ? img : (img as any)?.url;
+      if (rawUrl && typeof rawUrl === 'string' && rawUrl.startsWith('http') && !rawUrl.includes('audit-test') && !rawUrl.includes('placehold')) {
+        return rawUrl;
+      }
+      return getProductFallbackImage(item.product?.slug || item.product?.title, 1);
     })(),
   }));
 

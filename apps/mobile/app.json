@@ -2,14 +2,21 @@
   "expo": {
     "name": "CINMAX",
     "slug": "cinmax-mobile",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "sdkVersion": "57.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "jsEngine": "jsc",
+    "jsEngine": "hermes",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#002754"
+    },
     "web": {
       "bundler": "metro",
-      "output": "single"
+      "output": "single",
+      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-router",
@@ -26,7 +33,7 @@
         {
           "android": {
             "newArchEnabled": true,
-            "jsEngine": "jsc",
+            "jsEngine": "hermes",
             "enableProguardInReleaseBuilds": false,
             "enableShrinkResourcesInReleaseBuilds": false
           }
@@ -34,10 +41,12 @@
       ]
     ],
     "android": {
-      "package": "com.cinmax.mobile",
-      "jsEngine": "jsc",
+      "package": "com.cinmax.app",
+      "versionCode": 2,
+      "jsEngine": "hermes",
       "adaptiveIcon": {
-        "backgroundColor": "#040c18"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#002754"
       }
     },
     "experiments": {

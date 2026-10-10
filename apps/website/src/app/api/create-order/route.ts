@@ -147,7 +147,7 @@ export async function POST(request: Request) {
         providerOrderId: result.providerOrderId,
         amount: result.amount,
         currency: result.currency,
-        key_id: result.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_TX6kmNNGbn83QI',
+        key_id: result.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_live_TkZfAnqVc2W9Cu',
       },
       { status: 200, headers: corsHeaders }
     );

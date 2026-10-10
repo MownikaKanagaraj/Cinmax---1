@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,20 @@ import {
   TextInput,
   Dimensions,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ProductCard } from '../../components/ProductCard';
-import { useCartStore, useWishlistStore, useProductsQuery, useCategoriesQuery } from '@cinmax/hooks';
+import { getProductFallbackImage } from '@cinmax/utils';
+import {
+  useCartStore,
+  useWishlistStore,
+  useProductsQuery,
+  useCategoriesQuery,
+  useUser,
+  useUnreadNotificationsCountQuery,
+} from '@cinmax/hooks';
 import type { Product, Category } from '@cinmax/types';
 import {
   ArrowLeft,
@@ -24,6 +33,8 @@ import {
   Filter as FilterIcon,
   Sparkles,
   SlidersHorizontal,
+  RefreshCw,
+  Bell,
 } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -56,7 +67,10 @@ const FONT_SANS_BOLD = Platform.select({
 
 export default function MobileShopScreen() {
   const router = useRouter();
-  const { data: productsData, isLoading } = useProductsQuery();
+  const { user } = useUser();
+  const { data: unreadNotificationsCount = 0 } = useUnreadNotificationsCountQuery(user?.id);
+  const params = useLocalSearchParams<{ category?: string; concern?: string; title?: string }>();
+  const { data: productsData, isLoading, refetch } = useProductsQuery();
   const { data: categoriesData = [] } = useCategoriesQuery();
   const { items: wishlistItems } = useWishlistStore();
   const { items: cartItems } = useCartStore();
@@ -64,41 +78,101 @@ export default function MobileShopScreen() {
 
   const scrollViewRef = React.useRef<ScrollView>(null);
 
+  const [activeCategory, setActiveCategory] = useState<string>(params.category || 'All');
+  const [activeConcern, setActiveConcern] = useState<string>(params.concern || 'all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'featured' | 'price_low' | 'price_high' | 'rating'>('featured');
+
+  useEffect(() => {
+    if (params.category) {
+      setActiveCategory(params.category);
+    }
+    if (params.concern) {
+      setActiveConcern(params.concern);
+    }
+  }, [params.category, params.concern]);
+
   React.useEffect(() => {
     scrollViewRef.current?.scrollTo({ y: 0, animated: false });
   }, []);
 
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'featured' | 'price_low' | 'price_high' | 'rating'>('featured');
-
   const categoryPills = ['All', ...categoriesData.map((c: Category) => c.name)];
 
-  const rawProducts: Product[] = productsData?.items || [];
-  const liveProducts = rawProducts.map((p) => ({
-    id: p.id,
-    slug: p.slug,
-    title: p.title,
-    categoryName: p.category?.name || 'Botanical Soap',
-    numericPrice: p.basePrice,
-    price: `₹${p.basePrice}`,
-    originalPrice: p.compareAtPrice ? `₹${p.compareAtPrice}` : undefined,
-    rating: `${p.averageRating || 4.9}`,
-    reviewCount: `${p.reviewCount || 128}`,
-    badge: p.isFeatured ? 'Hero Bar' : p.isNew ? 'New Batch' : 'Handcrafted',
-    badgeBg: p.isFeatured ? '#002754' : '#C5A880',
-    image: typeof p.images?.[0] === 'string' ? p.images[0] : p.images?.[0]?.url || 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=400&auto=format&fit=crop&q=80',
-  }));
+  const liveProducts = React.useMemo(() => {
+    const rawProducts: Product[] = productsData?.items || [];
+    const seen = new Set<string>();
+    const list: any[] = [];
+
+    for (const p of rawProducts) {
+      if (!p || p.isActive === false) continue;
+      const lowerTitle = (p.title || '').trim().toLowerCase();
+      const lowerSlug = (p.slug || '').trim().toLowerCase();
+
+      if (
+        lowerSlug.includes('test-product') ||
+        lowerTitle.includes('test product') ||
+        lowerSlug.includes('audited-herbal-bar') ||
+        lowerTitle.includes('audited') ||
+        lowerTitle.includes('audit-test') ||
+        lowerSlug.includes('azure-marine') ||
+        lowerSlug.includes('french-lavender') ||
+        lowerSlug.includes('nordic-pine')
+      ) {
+        continue;
+      }
+
+      const dedupeKey = lowerSlug || lowerTitle || p.id;
+      if (seen.has(dedupeKey)) continue;
+      seen.add(dedupeKey);
+
+      const specificSoapImage = getProductFallbackImage(p.slug || p.title, 1);
+      const rawImg = typeof p.images?.[0] === 'string' ? p.images[0] : p.images?.[0]?.url;
+      const validImage = rawImg && !rawImg.includes('audit-test') ? rawImg : specificSoapImage;
+
+      list.push({
+        id: p.id,
+        slug: p.slug,
+        title: p.title,
+        description: p.description || '',
+        categoryName: p.category?.name || 'Botanical Soap',
+        categorySlug: p.category?.slug || '',
+        skinTypes: (p.skinTypes || []) as string[],
+        numericPrice: p.basePrice,
+        price: `₹${p.basePrice}`,
+        originalPrice: p.compareAtPrice ? `₹${p.compareAtPrice}` : undefined,
+        rating: `${p.averageRating || 4.9}`,
+        reviewCount: `${p.reviewCount || 128}`,
+        image: validImage,
+      });
+    }
+    return list;
+  }, [productsData?.items]);
 
   const filteredProducts = liveProducts
     .filter((p) => {
       const matchesSearch =
+        !searchQuery.trim() ||
         p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.categoryName.toLowerCase().includes(searchQuery.toLowerCase());
+        p.categoryName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.description.toLowerCase().includes(searchQuery.toLowerCase());
+
       const matchesCategory =
         activeCategory === 'All' ||
-        p.categoryName.toLowerCase().includes(activeCategory.toLowerCase());
-      return matchesSearch && matchesCategory;
+        p.categoryName.toLowerCase() === activeCategory.toLowerCase() ||
+        p.categoryName.toLowerCase().includes(activeCategory.toLowerCase()) ||
+        p.categorySlug.toLowerCase() === activeCategory.toLowerCase();
+
+      const matchesConcern =
+        !activeConcern ||
+        activeConcern === 'all' ||
+        p.skinTypes.some((st: string) => st.toLowerCase().includes(activeConcern.toLowerCase())) ||
+        (activeConcern === 'dry' && (p.title.toLowerCase().includes('dry') || p.skinTypes.some((s: string) => s.toLowerCase().includes('dry')))) ||
+        (activeConcern === 'oily' && (p.title.toLowerCase().includes('ash') || p.title.toLowerCase().includes('charcoal') || p.skinTypes.some((s: string) => s.toLowerCase().includes('oily')))) ||
+        (activeConcern === 'sensitive' && (p.title.toLowerCase().includes('lavender') || p.title.toLowerCase().includes('sensitive') || p.skinTypes.some((s: string) => s.toLowerCase().includes('sensitive')))) ||
+        (activeConcern === 'mature' && (p.title.toLowerCase().includes('rose') || p.title.toLowerCase().includes('anti') || p.skinTypes.some((s: string) => s.toLowerCase().includes('mature')))) ||
+        (activeConcern === 'combination' && (p.skinTypes.some((s: string) => s.toLowerCase().includes('combination') || s.toLowerCase().includes('all'))));
+
+      return matchesSearch && matchesCategory && matchesConcern;
     })
     .sort((a, b) => {
       if (sortBy === 'price_low') return a.numericPrice - b.numericPrice;
@@ -124,12 +198,28 @@ export default function MobileShopScreen() {
           Shop Cosmetics
         </Text>
 
-        <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+          <TouchableOpacity
+            onPress={() => router.push('/notifications' as any)}
+            hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+            activeOpacity={0.7}
+            style={{ minWidth: 38, minHeight: 38, justifyContent: 'center', alignItems: 'center', position: 'relative' }}
+          >
+            <Bell size={22} color="#002754" />
+            {unreadNotificationsCount > 0 && (
+              <View pointerEvents="none" style={{ position: 'absolute', top: 0, right: -2, backgroundColor: '#C5A880', borderRadius: 8, width: 16, height: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: '#FFFFFF' }}>
+                <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#002754', fontSize: 9, fontWeight: '800' }}>
+                  {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
           <TouchableOpacity
             onPress={() => router.push('/wishlist' as any)}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
             activeOpacity={0.7}
-            style={{ minWidth: 40, minHeight: 40, justifyContent: 'center', alignItems: 'center', position: 'relative' }}
+            style={{ minWidth: 38, minHeight: 38, justifyContent: 'center', alignItems: 'center', position: 'relative' }}
           >
             <Heart size={22} color={wishlistItems.length > 0 ? '#DC2626' : '#002754'} fill={wishlistItems.length > 0 ? '#DC2626' : 'none'} />
             {wishlistItems.length > 0 && (
@@ -141,9 +231,9 @@ export default function MobileShopScreen() {
 
           <TouchableOpacity
             onPress={() => router.push('/cart' as any)}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
             activeOpacity={0.7}
-            style={{ minWidth: 40, minHeight: 40, justifyContent: 'center', alignItems: 'center', position: 'relative' }}
+            style={{ minWidth: 38, minHeight: 38, justifyContent: 'center', alignItems: 'center', position: 'relative' }}
           >
             <ShoppingBag size={22} color="#002754" />
             {totalCartCount > 0 && (
@@ -155,12 +245,12 @@ export default function MobileShopScreen() {
         </View>
       </View>
 
-      <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
+      <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
 
         {/* 2. GRAND CATALOG HERO BANNER */}
         <View style={{ marginHorizontal: CONTAINER_PADDING, marginTop: 16, borderRadius: 24, overflow: 'hidden', height: 180, backgroundColor: '#002754', position: 'relative', borderWidth: 1, borderColor: 'rgba(197, 168, 128, 0.35)', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 14 }}>
           <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=1000&auto=format&fit=crop&q=80' }}
+            source={{ uri: 'https://nthyavlzdgucrldtgjeo.supabase.co/storage/v1/object/public/products/cinmax-products/aroma-soap/1.jpg' }}
             style={{ width: '100%', height: '100%' }}
             resizeMode="cover"
           />
@@ -229,6 +319,57 @@ export default function MobileShopScreen() {
           </ScrollView>
         </View>
 
+        {/* 4.5. CONCERN FILTER PILLS / ACTIVE CHIP */}
+        <View style={{ marginTop: 10 }}>
+          <ScrollView
+            horizontal
+            nestedScrollEnabled={true}
+            showsHorizontalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            contentContainerStyle={{ gap: 8, paddingHorizontal: CONTAINER_PADDING }}
+          >
+            {[
+              { id: 'all', title: 'All Concerns' },
+              { id: 'dry', title: 'Dry Skin' },
+              { id: 'oily', title: 'Acne Prone' },
+              { id: 'sensitive', title: 'Sensitive Skin' },
+              { id: 'mature', title: 'Anti-Aging' },
+              { id: 'combination', title: 'Glowing Skin' },
+            ].map((con) => {
+              const active = activeConcern === con.id;
+              return (
+                <TouchableOpacity
+                  key={con.id}
+                  onPress={() => setActiveConcern(con.id)}
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 7,
+                    borderRadius: 16,
+                    backgroundColor: active ? '#C5A880' : '#FFFFFF',
+                    borderWidth: 1,
+                    borderColor: active ? '#C5A880' : 'rgba(195, 198, 209, 0.35)',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: FONT_SANS_SEMIBOLD,
+                      fontSize: 12,
+                      fontWeight: '600',
+                      color: active ? '#002754' : '#737781',
+                      includeFontPadding: false,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {con.title}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
         {/* 5. SORT BAR */}
         <View style={{ paddingHorizontal: CONTAINER_PADDING, marginTop: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 12, color: '#737781' }}>
@@ -263,24 +404,57 @@ export default function MobileShopScreen() {
           </ScrollView>
         </View>
 
-        {/* 6. PRODUCT GRID */}
-        <View style={{ paddingHorizontal: CONTAINER_PADDING, marginTop: 16, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-          {filteredProducts.map((prod) => (
-            <ProductCard
-              key={prod.id}
-              id={prod.id}
-              title={prod.title}
-              slug={prod.slug}
-              price={prod.numericPrice}
-              originalPrice={prod.originalPrice ? parseFloat(prod.originalPrice.replace('₹', '')) : undefined}
-              image={prod.image}
-              rating={prod.rating}
-              reviewCount={prod.reviewCount}
-              badge={prod.badge}
-              badgeBg={prod.badgeBg}
-            />
-          ))}
-        </View>
+        {/* 6. PRODUCT GRID / LOADING / EMPTY STATE */}
+        {isLoading ? (
+          <View style={{ paddingVertical: 60, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color="#002754" />
+            <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, marginTop: 14, fontSize: 13, color: '#465F8A' }}>
+              Loading botanical catalog...
+            </Text>
+          </View>
+        ) : filteredProducts.length === 0 ? (
+          <View style={{ paddingVertical: 60, paddingHorizontal: 30, alignItems: 'center', justifyContent: 'center' }}>
+            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: 'rgba(0, 39, 84, 0.08)', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
+              <FilterIcon size={28} color="#002754" />
+            </View>
+            <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 18, fontWeight: '700', color: '#002754', textAlign: 'center', marginBottom: 6 }}>
+              No matching products found
+            </Text>
+            <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 13, color: '#737781', textAlign: 'center', marginBottom: 20 }}>
+              Try adjusting your category, concern, or search query to find artisanal items.
+            </Text>
+            <TouchableOpacity
+              onPress={() => {
+                setActiveCategory('All');
+                setActiveConcern('all');
+                setSearchQuery('');
+              }}
+              style={{ backgroundColor: '#002754', paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20 }}
+            >
+              <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', fontSize: 13, fontWeight: '700' }}>
+                Reset All Filters
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={{ paddingHorizontal: CONTAINER_PADDING, marginTop: 16, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+            {filteredProducts.map((prod) => (
+              <ProductCard
+                key={prod.id}
+                id={prod.id}
+                title={prod.title}
+                slug={prod.slug}
+                price={prod.numericPrice}
+                originalPrice={prod.originalPrice ? parseFloat(prod.originalPrice.replace('₹', '')) : undefined}
+                image={prod.image}
+                rating={prod.rating}
+                reviewCount={prod.reviewCount}
+                badge={prod.badge}
+                badgeBg={prod.badgeBg}
+              />
+            ))}
+          </View>
+        )}
 
       </ScrollView>
     </SafeAreaView>

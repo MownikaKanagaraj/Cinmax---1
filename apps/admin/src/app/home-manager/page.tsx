@@ -12,6 +12,7 @@ import type {
   WatchShopVideoItem,
   TransformationStoryItem,
   TrustBadgeItem,
+  ComboOfferItem,
 } from '@cinmax/types';
 import {
   Sliders,
@@ -31,6 +32,7 @@ import {
   Upload,
   X,
   CheckCircle2,
+  Package,
 } from 'lucide-react';
 
 // Utility helper to convert user uploaded file to base64 Data URL
@@ -48,7 +50,7 @@ export default function AdminHomePageManager() {
   const updateMarketingMutation = useUpdateHomeMarketingMutation();
 
   const [activeSection, setActiveSection] = React.useState<
-    'marquee' | 'hero' | 'reals' | 'mid_banner' | 'real_results' | 'why_choose' | 'bottom_banner'
+    'marquee' | 'hero' | 'reals' | 'mid_banner' | 'combo_offers' | 'real_results' | 'why_choose' | 'bottom_banner'
   >('hero');
   const [isSaved, setIsSaved] = React.useState(false);
   const [showLivePreview, setShowLivePreview] = React.useState(false);
@@ -58,7 +60,7 @@ export default function AdminHomePageManager() {
 
   // Active Modal State
   const [activeModal, setActiveModal] = React.useState<
-    'none' | 'add_offer' | 'add_hero' | 'add_real' | 'add_story' | 'add_badge'
+    'none' | 'add_offer' | 'add_hero' | 'add_real' | 'add_story' | 'add_badge' | 'add_combo'
   >('none');
 
   // Form states for modals
@@ -87,6 +89,21 @@ export default function AdminHomePageManager() {
     productImage: '',
     videoUrl: '',
     slug: 'product',
+    isActive: true,
+  });
+
+  const [comboForm, setComboForm] = React.useState({
+    title: '',
+    subtitle: '',
+    price: '₹899',
+    originalPrice: '₹1200',
+    badge: 'Save 25%',
+    slug: 'ultimate-spa-gift-pack',
+    imageUrl: '',
+    bgColor: 'rgba(0, 39, 84, 0.08)',
+    borderColor: 'rgba(0, 39, 84, 0.12)',
+    badgeBg: '#002754',
+    badgeTextColor: 'white',
     isActive: true,
   });
 
@@ -231,11 +248,50 @@ export default function AdminHomePageManager() {
     setActiveModal('none');
   };
 
+  const handleSaveComboModal = () => {
+    if (!comboForm.title.trim()) return;
+    const newItem: ComboOfferItem = {
+      id: `c_${Date.now()}`,
+      title: comboForm.title.trim(),
+      subtitle: comboForm.subtitle.trim(),
+      price: comboForm.price.trim(),
+      originalPrice: comboForm.originalPrice.trim() || undefined,
+      badge: comboForm.badge.trim() || undefined,
+      slug: comboForm.slug.trim() || 'product',
+      imageUrl: comboForm.imageUrl || 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=500',
+      bgColor: comboForm.bgColor,
+      borderColor: comboForm.borderColor,
+      badgeBg: comboForm.badgeBg,
+      badgeTextColor: comboForm.badgeTextColor,
+      isActive: comboForm.isActive,
+    };
+    setFormData({
+      ...formData,
+      comboOffers: [...(formData.comboOffers || []), newItem],
+    });
+    setComboForm({
+      title: '',
+      subtitle: '',
+      price: '₹899',
+      originalPrice: '₹1200',
+      badge: 'Save 25%',
+      slug: 'ultimate-spa-gift-pack',
+      imageUrl: '',
+      bgColor: 'rgba(0, 39, 84, 0.08)',
+      borderColor: 'rgba(0, 39, 84, 0.12)',
+      badgeBg: '#002754',
+      badgeTextColor: 'white',
+      isActive: true,
+    });
+    setActiveModal('none');
+  };
+
   const sectionsList = [
     { id: 'marquee', label: 'Top Offers & Pills', count: formData.topOffers?.length || 0, icon: Tag },
     { id: 'hero', label: 'Hero Banner Sliders', count: formData.heroBanners?.length || 0, icon: Sliders },
     { id: 'reals', label: 'Watch & Shop Reals', count: formData.watchShopVideos?.length || 0, icon: Video },
     { id: 'mid_banner', label: 'Mid-Page Promo Banner', count: 1, icon: ImageIcon },
+    { id: 'combo_offers', label: 'Combo Offers & Bundles', count: formData.comboOffers?.length || 0, icon: Package },
     { id: 'real_results', label: 'Before & After Results', count: formData.realResults?.length || 0, icon: Star },
     { id: 'why_choose', label: 'Why Choose Us Badges', count: formData.trustBadges?.length || 0, icon: Award },
     { id: 'bottom_banner', label: 'Bottom Footer Banner', count: 1, icon: Sparkles },
@@ -840,6 +896,173 @@ export default function AdminHomePageManager() {
                     />
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* SECTION 4.5: COMBO OFFERS */}
+          {activeSection === 'combo_offers' && (
+            <div className="p-6 rounded-2xl bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 shadow-md space-y-6">
+              <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-4">
+                <div>
+                  <h3 className="text-base font-extrabold text-[#0F172A] dark:text-white flex items-center gap-2">
+                    <Package className="w-5 h-5 text-blue-500" />
+                    <span>Section 4.5: Combo Offers &amp; Gift Bundles</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">Admin-curated bundle packs, festive combos, pricing, discounts, and product links.</p>
+                </div>
+                <button
+                  onClick={() => setActiveModal('add_combo')}
+                  className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-blue-600/20"
+                >
+                  <Plus className="w-4 h-4" /> Add Combo Offer
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {(formData.comboOffers || []).map((combo, idx) => (
+                  <div
+                    key={combo.id}
+                    className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 space-y-4"
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-xs">Combo #{idx + 1}</span>
+                      <div className="flex items-center gap-2">
+                        <label className="flex items-center gap-1.5 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={combo.isActive}
+                            onChange={(e) => {
+                              const updated = [...(formData.comboOffers || [])];
+                              updated[idx].isActive = e.target.checked;
+                              setFormData({ ...formData, comboOffers: updated });
+                            }}
+                            className="rounded text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-[11px] font-semibold text-slate-500">Active</span>
+                        </label>
+                        <button
+                          onClick={() => {
+                            const updated = (formData.comboOffers || []).filter((_, i) => i !== idx);
+                            setFormData({ ...formData, comboOffers: updated });
+                          }}
+                          className="text-red-500 hover:text-red-700 font-bold text-xs flex items-center gap-1 ml-2"
+                        >
+                          <Trash2 className="w-4 h-4" /> Delete
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4 items-start">
+                      <div className="w-24 shrink-0">
+                        <div className="relative rounded-xl overflow-hidden border border-slate-300 h-24 mb-1">
+                          <img src={combo.imageUrl} alt={combo.title} className="w-full h-full object-cover" />
+                        </div>
+                        <label className="w-full py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 text-blue-600 font-bold text-[9px] flex items-center justify-center gap-1 cursor-pointer">
+                          <Upload className="w-3 h-3" /> Change
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={async (e) => {
+                              if (e.target.files?.[0]) {
+                                const dataUrl = await fileToDataUrl(e.target.files[0]);
+                                const updated = [...(formData.comboOffers || [])];
+                                updated[idx].imageUrl = dataUrl;
+                                setFormData({ ...formData, comboOffers: updated });
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
+
+                      <div className="flex-1 space-y-2">
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400">Combo Title</label>
+                          <input
+                            type="text"
+                            value={combo.title}
+                            onChange={(e) => {
+                              const updated = [...(formData.comboOffers || [])];
+                              updated[idx].title = e.target.value;
+                              setFormData({ ...formData, comboOffers: updated });
+                            }}
+                            className="w-full font-bold text-xs bg-white dark:bg-slate-800 border border-slate-200 rounded-lg p-1.5 outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400">Subtitle / Details</label>
+                          <input
+                            type="text"
+                            value={combo.subtitle}
+                            onChange={(e) => {
+                              const updated = [...(formData.comboOffers || [])];
+                              updated[idx].subtitle = e.target.value;
+                              setFormData({ ...formData, comboOffers: updated });
+                            }}
+                            className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-200 rounded-lg p-1.5 outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400">Offer Price</label>
+                        <input
+                          type="text"
+                          value={combo.price}
+                          onChange={(e) => {
+                            const updated = [...(formData.comboOffers || [])];
+                            updated[idx].price = e.target.value;
+                            setFormData({ ...formData, comboOffers: updated });
+                          }}
+                          className="w-full font-bold text-xs text-blue-600 bg-white dark:bg-slate-800 border border-slate-200 rounded-lg p-1.5 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400">Original Price</label>
+                        <input
+                          type="text"
+                          value={combo.originalPrice || ''}
+                          onChange={(e) => {
+                            const updated = [...(formData.comboOffers || [])];
+                            updated[idx].originalPrice = e.target.value;
+                            setFormData({ ...formData, comboOffers: updated });
+                          }}
+                          className="w-full text-xs text-slate-400 line-through bg-white dark:bg-slate-800 border border-slate-200 rounded-lg p-1.5 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400">Discount Badge</label>
+                        <input
+                          type="text"
+                          value={combo.badge || ''}
+                          onChange={(e) => {
+                            const updated = [...(formData.comboOffers || [])];
+                            updated[idx].badge = e.target.value;
+                            setFormData({ ...formData, comboOffers: updated });
+                          }}
+                          className="w-full font-bold text-xs text-emerald-600 bg-white dark:bg-slate-800 border border-slate-200 rounded-lg p-1.5 outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400">Product Slug / Target Link</label>
+                      <input
+                        type="text"
+                        value={combo.slug}
+                        onChange={(e) => {
+                          const updated = [...(formData.comboOffers || [])];
+                          updated[idx].slug = e.target.value;
+                          setFormData({ ...formData, comboOffers: updated });
+                        }}
+                        className="w-full font-mono text-xs bg-white dark:bg-slate-800 border border-slate-200 rounded-lg p-1.5 outline-none"
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -1495,6 +1718,126 @@ export default function AdminHomePageManager() {
               </button>
               <button onClick={handleSaveBadgeModal} className="px-5 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs shadow-md shadow-blue-600/20">
                 Save Badge
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 6: ADD COMBO OFFER */}
+      {activeModal === 'add_combo' && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 w-full max-w-lg space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
+              <h3 className="font-bold text-sm text-[#0F172A] dark:text-white flex items-center gap-2">
+                <Package className="w-4 h-4 text-blue-500" />
+                Add Combo Offer &amp; Gift Bundle
+              </h3>
+              <button onClick={() => setActiveModal('none')} className="text-slate-400 hover:text-slate-200">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-400 mb-1">Combo Image Upload</label>
+              <div className="h-28 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 mb-2 relative flex items-center justify-center">
+                {comboForm.imageUrl ? (
+                  <img src={comboForm.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="text-center p-3">
+                    <Upload className="w-5 h-5 text-slate-400 mx-auto mb-1" />
+                    <span className="text-[10px] text-slate-400">Click below to upload combo image</span>
+                  </div>
+                )}
+              </div>
+              <label className="w-full px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-600 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer">
+                <Upload className="w-3.5 h-3.5" /> Select Local Image File
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    if (e.target.files?.[0]) {
+                      const dataUrl = await fileToDataUrl(e.target.files[0]);
+                      setComboForm({ ...comboForm, imageUrl: dataUrl });
+                    }
+                  }}
+                />
+              </label>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-400 mb-1">Combo Title</label>
+              <input
+                type="text"
+                placeholder="e.g. Ultimate Spa Gift Pack"
+                value={comboForm.title}
+                onChange={(e) => setComboForm({ ...comboForm, title: e.target.value })}
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold bg-slate-50 dark:bg-slate-900"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-400 mb-1">Subtitle / Package Inclusions</label>
+              <input
+                type="text"
+                placeholder="e.g. Includes 4 Premium Soaps + Sisal Loofah"
+                value={comboForm.subtitle}
+                onChange={(e) => setComboForm({ ...comboForm, subtitle: e.target.value })}
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50 dark:bg-slate-900"
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1">Offer Price</label>
+                <input
+                  type="text"
+                  placeholder="e.g. ₹899"
+                  value={comboForm.price}
+                  onChange={(e) => setComboForm({ ...comboForm, price: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border text-xs font-bold text-blue-600 bg-slate-50 dark:bg-slate-900"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1">Original Price</label>
+                <input
+                  type="text"
+                  placeholder="e.g. ₹1200"
+                  value={comboForm.originalPrice}
+                  onChange={(e) => setComboForm({ ...comboForm, originalPrice: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border text-xs text-slate-400 bg-slate-50 dark:bg-slate-900"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1">Badge Tag</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Save 25%"
+                  value={comboForm.badge}
+                  onChange={(e) => setComboForm({ ...comboForm, badge: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border text-xs font-bold text-emerald-600 bg-slate-50 dark:bg-slate-900"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-400 mb-1">Product Slug / Target Link</label>
+              <input
+                type="text"
+                placeholder="e.g. ultimate-spa-gift-pack"
+                value={comboForm.slug}
+                onChange={(e) => setComboForm({ ...comboForm, slug: e.target.value })}
+                className="w-full px-3 py-2 rounded-xl border font-mono text-xs bg-slate-50 dark:bg-slate-900"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <button onClick={() => setActiveModal('none')} className="px-4 py-2 rounded-xl border text-xs font-bold text-slate-500">
+                Cancel
+              </button>
+              <button onClick={handleSaveComboModal} className="px-5 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs shadow-md shadow-blue-600/20">
+                Save Combo Offer
               </button>
             </div>
           </div>

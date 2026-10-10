@@ -14,7 +14,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ProductCard } from '../../components/ProductCard';
-import { useProductsQuery, useWishlistStore, useCartStore, usePlaylistsQuery, useUser } from '@cinmax/hooks';
+import { useProductsQuery, useProductBySlugQuery, useWishlistStore, useCartStore, usePlaylistsQuery, useUser } from '@cinmax/hooks';
+import { getProductFallbackGallery, getProductFallbackImage } from '@cinmax/utils';
 import {
   ArrowLeft,
   Share2,
@@ -37,6 +38,12 @@ import {
   Layers,
   ArrowRight,
   Lock,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+  X,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -70,8 +77,9 @@ export default function MobileProductDetailsScreen() {
   const router = useRouter();
   const { user, isAuthenticated } = useUser();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const { data: productsData } = useProductsQuery();
-  const productData = productsData?.items?.find((p) => p.slug === slug) || productsData?.items?.[0];
+  const { data: directProduct, isLoading: isDirectLoading } = useProductBySlugQuery(slug as string);
+  const { data: productsData, isLoading: isProductsLoading } = useProductsQuery();
+  const productData = directProduct || productsData?.items?.find((p) => p.slug === slug);
   const { data: productPlaylists = [] } = usePlaylistsQuery(true, productData?.id);
   const { isWishlisted, toggleItem } = useWishlistStore();
   const { addItem } = useCartStore();
@@ -85,6 +93,11 @@ export default function MobileProductDetailsScreen() {
   }, [slug]);
 
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [isZoomModalOpen, setIsZoomModalOpen] = useState(false);
+  const [zoomScale, setZoomScale] = useState(1);
+  const galleryScrollRef = React.useRef<ScrollView>(null);
+  const GALLERY_WIDTH = SCREEN_WIDTH - (CONTAINER_PADDING * 2);
+
   const [selectedWeight, setSelectedWeight] = useState('100g');
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -93,15 +106,15 @@ export default function MobileProductDetailsScreen() {
   const [isPincodeChecked, setIsPincodeChecked] = useState(false);
   const [openAccordion, setOpenAccordion] = useState<'specs' | 'shipping' | null>(null);
 
-  const defaultImages = [
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuAa53xGDNm24F3FLLvkunr8Wc3UvxBX72m-eGWbQq3GGO3i_64mO5N1GuVU5hTCEIp6TRuZkR3AU54alBhH6lqpP9bcP3Z7SWW9nocgstrZ0qsXEXnFToOLUoLrMyJyFPvSXcyWV--X-Em8ONgiYTgU88w3sBYevC-6g1s_A3PfZ5jPm8ExPbF5o7Cz7pEhJIHlXNQdj9P1-ItHKQqrVjgp8g3DNn8m8iHfO8xmfagbwbDIJj737UCa',
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuCf9JoWSF3-S5LwBKgj6E_ydizODwyBL7ZB5CrYxX0UOlEtz-rYpHe362m1-U4IFKlAvZb0jKnVsAzC_JsBOQIDlzd0KF7g4GGAg4oua71dPHrK_NNA16JlU8csEvzHJTrnADDK0BWoSUnjksVcQ-IprWSbjZFZOT95Gigw5zNrT_BDl1UrbJcPNpFlElNbK5oGoeeQw4rT9hWvOTX82EEaMHU3PXWFyujUGfgP_zZO_oE2z3krND0l',
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuClMfZAIfX6HGhXNqF4OsqLoSsD5fpBaUZTPX5dN0aL16awrYcV2jwsPlX1qy1VaUmfinGyyNai8b-j8YZuUM1llki-6GfJCs0_j1ov-rlBMycm5Gn8fFVKZ8t-LI5wV5F2tXerSvapl8LF5aY3pIKPXmSLL1SP3dMakULs_U0ErbOvE-CyyyEIf66n4xiChbr3TJQ5Ajep8J8qJtNJQI8ygCYiLe21aMsrW6E6BG6zibVm8nroqxGv',
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuCZfQtzA9d4pmFfzymqypTKQTGS-5-fHBtJ08VsBNtq5oVz9yMxPZMEdZB39Z6vlsaPwav2RoVK1u0uau1Lp9Fl8DX-IjmIWbfUS0F0xDEqWfR4VTtozZHh10cEOtlROVba_nbwyJwg4-Dtq1kLiaEJgCYfmp5kSVOY1U_TEpxg9Bxeczec9BYy3GNlVOhlAaiOMwOLfobcZmdJaRzQChY0hYNRXsMK17H74dZ5td__IpHgF1WKtsnl',
-  ];
+  const defaultImages = getProductFallbackGallery(slug as string);
+
+  const handleSelectImage = (idx: number) => {
+    setSelectedImageIndex(idx);
+    galleryScrollRef.current?.scrollTo({ x: idx * GALLERY_WIDTH, animated: true });
+  };
 
   const rawImgs = productData?.images && productData.images.length > 0
-    ? productData.images.map((i: any) => (typeof i === 'string' ? i : i.url)).filter(Boolean)
+    ? productData.images.map((i: any) => (typeof i === 'string' ? i : i.url)).filter((u: string) => Boolean(u && !u.includes('lh3.googleusercontent')))
     : [];
   const productImages = rawImgs.length > 0 ? rawImgs : defaultImages;
   const productTitle = productData?.title || 'Botanical Product';
@@ -135,7 +148,7 @@ export default function MobileProductDetailsScreen() {
       title: p.title,
       slug: p.slug,
       price: `₹${p.basePrice}`,
-      image: typeof p.images?.[0] === 'string' ? p.images[0] : p.images?.[0]?.url || 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=400',
+      image: typeof p.images?.[0] === 'string' ? p.images[0] : p.images?.[0]?.url || 'https://nthyavlzdgucrldtgjeo.supabase.co/storage/v1/object/public/products/cinmax-products/aroma-soap/1.jpg',
     }));
 
   const handleShare = async () => {
@@ -189,7 +202,13 @@ export default function MobileProductDetailsScreen() {
       unitPrice: productPrice,
       totalPrice: productPrice * validQty,
       quantity: validQty,
-      product: { id: productData?.id || 'p_prod', title: productTitle, slug: slug || 'product', images: [], processType: 'cold-process' },
+      product: {
+        id: productData?.id || 'p_prod',
+        title: productTitle,
+        slug: slug || 'product',
+        images: productImages.map((u: string, idx: number) => ({ id: `img_${idx}`, url: u, altText: productTitle, sortOrder: idx })),
+        processType: 'cold-process',
+      },
       variant: variantToUse,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -222,7 +241,13 @@ export default function MobileProductDetailsScreen() {
       unitPrice: productPrice,
       totalPrice: productPrice * validQty,
       quantity: validQty,
-      product: { id: productData?.id || 'p_prod', title: productTitle, slug: slug || 'product', images: [], processType: 'cold-process' },
+      product: {
+        id: productData?.id || 'p_prod',
+        title: productTitle,
+        slug: slug || 'product',
+        images: productImages.map((u: string, idx: number) => ({ id: `img_${idx}`, url: u, altText: productTitle, sortOrder: idx })),
+        processType: 'cold-process',
+      },
       variant: variantToUse,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -253,8 +278,28 @@ export default function MobileProductDetailsScreen() {
           <TouchableOpacity onPress={handleShare} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={{ width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' }}>
             <Share2 size={20} color="#434750" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => toggleItem(productData?.id || 'p_saffron')} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={{ width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' }}>
-            <Heart size={20} color="#002754" fill={isWishlisted(productData?.id || 'p_saffron') ? '#002754' : 'none'} />
+          <TouchableOpacity
+            onPress={() => {
+              if (productData) {
+                toggleItem(productData);
+              } else {
+                toggleItem({
+                  id: (slug as string) || 'prod',
+                  title: productTitle,
+                  slug: (slug as string) || 'product',
+                  basePrice: productPrice,
+                  images: productImages.map((u: string, idx: number) => ({ id: `img_${idx}`, url: u, altText: productTitle, sortOrder: idx })),
+                });
+              }
+            }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={{ width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' }}
+          >
+            <Heart
+              size={20}
+              color={isWishlisted(productData?.id) || isWishlisted(slug as string) ? '#DC2626' : '#002754'}
+              fill={isWishlisted(productData?.id) || isWishlisted(slug as string) ? '#DC2626' : 'none'}
+            />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/cart' as any)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={{ width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
             <ShoppingBag size={20} color="#002754" />
@@ -267,18 +312,84 @@ export default function MobileProductDetailsScreen() {
 
         {/* 2. Image Gallery & Thumbnails */}
         <View style={{ paddingHorizontal: CONTAINER_PADDING, marginTop: 16 }}>
-          <View style={{ width: '100%', aspectRatio: 4 / 5, borderRadius: 20, overflow: 'hidden', backgroundColor: '#ECEEF0', position: 'relative', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.06, shadowRadius: 15 }}>
-            <Image source={{ uri: productImages[selectedImageIndex] || defaultImages[0] }} style={{ width: '100%', height: '100%' }} />
-            {/* Swipe Indicator Dots */}
-            <View style={{ position: 'absolute', bottom: 12, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
-              {productImages.map((_: any, idx: number) => (
-                <View
+          <View style={{ width: '100%', aspectRatio: 4 / 5, borderRadius: 24, overflow: 'hidden', backgroundColor: '#FAF5EE', borderWidth: 1, borderColor: 'rgba(197, 168, 128, 0.35)', position: 'relative', shadowColor: '#3C2A1E', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 4 }}>
+            <ScrollView
+              ref={galleryScrollRef}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              decelerationRate="fast"
+              snapToInterval={GALLERY_WIDTH}
+              snapToAlignment="center"
+              nestedScrollEnabled={true}
+              onMomentumScrollEnd={(e) => {
+                const offset = e.nativeEvent.contentOffset.x;
+                const newIndex = Math.round(offset / GALLERY_WIDTH);
+                if (newIndex >= 0 && newIndex < productImages.length) {
+                  setSelectedImageIndex(newIndex);
+                }
+              }}
+              style={{ width: '100%', height: '100%' }}
+            >
+              {productImages.map((img: string, idx: number) => (
+                <TouchableOpacity
                   key={idx}
+                  activeOpacity={0.95}
+                  onPress={() => {
+                    setZoomScale(1);
+                    setIsZoomModalOpen(true);
+                  }}
+                  style={{ width: GALLERY_WIDTH, height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: '#FAF5EE' }}
+                >
+                  <Image source={{ uri: img }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* Tap to Zoom Badge */}
+            <TouchableOpacity
+              onPress={() => {
+                setZoomScale(1.5);
+                setIsZoomModalOpen(true);
+              }}
+              activeOpacity={0.8}
+              style={{ position: 'absolute', top: 12, right: 12, backgroundColor: 'rgba(0, 39, 84, 0.85)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14, flexDirection: 'row', alignItems: 'center', gap: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4, zIndex: 10 }}
+            >
+              <Maximize2 size={13} color="#FFFFFF" />
+              <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
+                Zoom
+              </Text>
+            </TouchableOpacity>
+
+            {/* Prev / Next Arrows on Main Image */}
+            {selectedImageIndex > 0 && (
+              <TouchableOpacity
+                onPress={() => handleSelectImage(selectedImageIndex - 1)}
+                style={{ position: 'absolute', left: 8, top: '45%', width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.92)', justifyContent: 'center', alignItems: 'center', shadowColor: '#3C2A1E', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4, zIndex: 10 }}
+              >
+                <ChevronLeft size={20} color="#002754" />
+              </TouchableOpacity>
+            )}
+            {selectedImageIndex < productImages.length - 1 && (
+              <TouchableOpacity
+                onPress={() => handleSelectImage(selectedImageIndex + 1)}
+                style={{ position: 'absolute', right: 8, top: '45%', width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.92)', justifyContent: 'center', alignItems: 'center', shadowColor: '#3C2A1E', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4, zIndex: 10 }}
+              >
+                <ChevronRight size={20} color="#002754" />
+              </TouchableOpacity>
+            )}
+
+            {/* Swipe Indicator Dots */}
+            <View style={{ position: 'absolute', bottom: 12, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 6, zIndex: 10 }}>
+              {productImages.map((_: any, idx: number) => (
+                <TouchableOpacity
+                  key={idx}
+                  onPress={() => handleSelectImage(idx)}
                   style={{
-                    width: selectedImageIndex === idx ? 16 : 8,
-                    height: 8,
-                    borderRadius: 4,
-                    backgroundColor: selectedImageIndex === idx ? '#002754' : 'rgba(0, 39, 84, 0.3)',
+                    width: selectedImageIndex === idx ? 18 : 7,
+                    height: 7,
+                    borderRadius: 3.5,
+                    backgroundColor: selectedImageIndex === idx ? '#002754' : 'rgba(0, 39, 84, 0.25)',
                   }}
                 />
               ))}
@@ -290,18 +401,22 @@ export default function MobileProductDetailsScreen() {
             {productImages.map((img: string, idx: number) => (
               <TouchableOpacity
                 key={idx}
-                onPress={() => setSelectedImageIndex(idx)}
+                onPress={() => handleSelectImage(idx)}
                 style={{
-                  width: 70,
-                  height: 70,
-                  borderRadius: 12,
+                  width: 72,
+                  height: 72,
+                  borderRadius: 14,
                   overflow: 'hidden',
-                  borderWidth: selectedImageIndex === idx ? 2 : 1,
-                  borderColor: selectedImageIndex === idx ? '#002754' : 'transparent',
-                  opacity: selectedImageIndex === idx ? 1 : 0.7,
+                  borderWidth: 2,
+                  borderColor: selectedImageIndex === idx ? '#002754' : 'rgba(197, 168, 128, 0.35)',
+                  backgroundColor: '#FAF5EE',
+                  shadowColor: '#3C2A1E',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: selectedImageIndex === idx ? 0.15 : 0.04,
+                  shadowRadius: 6,
                 }}
               >
-                <Image source={{ uri: img }} style={{ width: '100%', height: '100%' }} />
+                <Image source={{ uri: img }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -831,6 +946,125 @@ export default function MobileProductDetailsScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* INTERACTIVE FULL SCREEN ZOOM MODAL */}
+      <Modal visible={isZoomModalOpen} animationType="fade" transparent onRequestClose={() => setIsZoomModalOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0, 18, 42, 0.96)', justifyContent: 'space-between', alignItems: 'center', paddingVertical: insets.top + 10 }}>
+          {/* Zoom Header */}
+          <View style={{ width: '100%', paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
+            <View style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 }}>
+              <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#FFFFFF', fontSize: 12 }}>
+                {selectedImageIndex + 1} / {productImages.length}
+              </Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+              <TouchableOpacity
+                onPress={() => setZoomScale((prev) => Math.max(1, prev - 0.5))}
+                disabled={zoomScale <= 1}
+                style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: zoomScale <= 1 ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.25)', justifyContent: 'center', alignItems: 'center' }}
+              >
+                <ZoomOut size={20} color={zoomScale <= 1 ? '#888' : '#FFFFFF'} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setZoomScale((prev) => Math.min(3.5, prev + 0.5))}
+                disabled={zoomScale >= 3.5}
+                style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: zoomScale >= 3.5 ? 'rgba(255,255,255,0.1)' : '#C5A880', justifyContent: 'center', alignItems: 'center' }}
+              >
+                <ZoomIn size={20} color="#002754" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  setZoomScale(1);
+                  setIsZoomModalOpen(false);
+                }}
+                style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', marginLeft: 4 }}
+              >
+                <X size={22} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Zoomable Image Container */}
+          <View style={{ flex: 1, width: '100%', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
+            <ScrollView
+              contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center' }}
+              maximumZoomScale={4}
+              minimumZoomScale={1}
+              showsHorizontalScrollIndicator={false}
+              showsVerticalScrollIndicator={false}
+              centerContent
+            >
+              <Image
+                source={{ uri: productImages[selectedImageIndex] }}
+                style={{
+                  width: SCREEN_WIDTH * 0.94,
+                  height: SCREEN_WIDTH * 1.15,
+                  borderRadius: 16,
+                  transform: [{ scale: zoomScale }],
+                }}
+                resizeMode="contain"
+              />
+            </ScrollView>
+
+            {/* Prev image in Zoom Modal */}
+            {selectedImageIndex > 0 && (
+              <TouchableOpacity
+                onPress={() => {
+                  setZoomScale(1);
+                  handleSelectImage(selectedImageIndex - 1);
+                }}
+                style={{ position: 'absolute', left: 14, top: '48%', width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(0, 39, 84, 0.85)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(197, 168, 128, 0.5)', zIndex: 10 }}
+              >
+                <ChevronLeft size={24} color="#C5A880" />
+              </TouchableOpacity>
+            )}
+
+            {/* Next image in Zoom Modal */}
+            {selectedImageIndex < productImages.length - 1 && (
+              <TouchableOpacity
+                onPress={() => {
+                  setZoomScale(1);
+                  handleSelectImage(selectedImageIndex + 1);
+                }}
+                style={{ position: 'absolute', right: 14, top: '48%', width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(0, 39, 84, 0.85)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(197, 168, 128, 0.5)', zIndex: 10 }}
+              >
+                <ChevronRight size={24} color="#C5A880" />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Bottom Thumbnails Strip in Zoom Modal */}
+          <View style={{ width: '100%', paddingHorizontal: 20, paddingBottom: insets.bottom + 10, alignItems: 'center' }}>
+            <Text style={{ fontFamily: FONT_SANS_REGULAR, color: 'rgba(255,255,255,0.7)', fontSize: 12, marginBottom: 12 }}>
+              Tap thumbnail or zoom controls to inspect ingredients & packaging
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, justifyContent: 'center' }}>
+              {productImages.map((img: string, idx: number) => (
+                <TouchableOpacity
+                  key={idx}
+                  onPress={() => {
+                    setZoomScale(1);
+                    handleSelectImage(idx);
+                  }}
+                  style={{
+                    width: 58,
+                    height: 58,
+                    borderRadius: 12,
+                    overflow: 'hidden',
+                    borderWidth: 2,
+                    borderColor: selectedImageIndex === idx ? '#C5A880' : 'rgba(255,255,255,0.3)',
+                  }}
+                >
+                  <Image source={{ uri: img }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
         </View>
       </Modal>

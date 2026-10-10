@@ -30,7 +30,9 @@ export class ProductService {
       .select(`
         *,
         category:categories(*),
-        variants:product_variants(*)
+        variants:product_variants(*),
+        images:product_images(*),
+        ingredients:ingredients(*)
       `)
       .eq('is_active', true);
 

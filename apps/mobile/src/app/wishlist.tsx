@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useCartStore, useWishlistStore } from '@cinmax/hooks';
+import { getProductFallbackImage } from '@cinmax/utils';
 import {
   ArrowLeft,
   ShoppingBag,
@@ -230,9 +231,9 @@ export default function MobileWishlistScreen() {
           ) : (
             <View style={{ gap: 16 }}>
               {filteredProducts.map((p) => {
-                const imgUri = typeof p.images?.[0] === 'string'
-                  ? p.images[0]
-                  : p.images?.[0]?.url || 'https://images.unsplash.com/photo-1607006482602-7650d2037422?w=400';
+                const specificFallback = getProductFallbackImage(p.slug || p.title, 1);
+                const rawUrl = typeof p.images?.[0] === 'string' ? p.images[0] : p.images?.[0]?.url;
+                const imgUri = rawUrl && !rawUrl.includes('audit-test') ? rawUrl : specificFallback;
                 const itemPrice = p.basePrice || (p as any).price || 299;
                 return (
                   <TouchableOpacity
@@ -253,7 +254,9 @@ export default function MobileWishlistScreen() {
                       shadowRadius: 6,
                     }}
                   >
-                    <Image source={{ uri: imgUri }} style={{ width: 76, height: 76, borderRadius: 14 }} />
+                    <View style={{ width: 76, height: 76, borderRadius: 14, overflow: 'hidden', backgroundColor: '#FAF5EE', borderWidth: 1, borderColor: 'rgba(197, 168, 128, 0.35)', justifyContent: 'center', alignItems: 'center' }}>
+                      <Image source={{ uri: imgUri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                    </View>
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontFamily: FONT_SERIF_SEMIBOLD, fontSize: 15, color: '#002754' }} numberOfLines={1}>
                         {p.title}
@@ -278,7 +281,7 @@ export default function MobileWishlistScreen() {
                             unitPrice: itemPrice,
                             totalPrice: itemPrice,
                             quantity: 1,
-                            product: { id: p.id, title: p.title, slug: p.slug || 'product', images: [], processType: 'cold-process' },
+                            product: { id: p.id, title: p.title, slug: p.slug || 'product', images: [{ id: `img_${p.id}`, url: imgUri, altText: p.title, sortOrder: 0 }], processType: 'cold-process' },
                             variant: { id: `v_${p.id}`, sku: `SKU-${p.id}`, title: 'Standard', price: itemPrice, weightGrams: 100, volumeMl: 0, options: {} },
                             createdAt: new Date().toISOString(),
                             updatedAt: new Date().toISOString(),
