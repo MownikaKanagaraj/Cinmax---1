@@ -28,6 +28,7 @@ import {
   useAddCustomerAddressMutation,
   useCheckoutSessionMutation,
   useCreateOrderMutation,
+  useDispatchTimeQuery,
 } from '@cinmax/hooks';
 import { calculateDeliveryCharge, ALL_INDIAN_STATES, getProductFallbackImage } from '@cinmax/utils';
 import {
@@ -183,6 +184,7 @@ export default function MobileCheckoutScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { dispatchTimeDays } = useDispatchTimeQuery();
   const { items: cartStoreItems, clearCart, coupon, removeCoupon, savedLocalAddress, setSavedLocalAddress } = useCartStore();
   const scrollViewRef = React.useRef<ScrollView>(null);
 
@@ -310,6 +312,7 @@ export default function MobileCheckoutScreen() {
       price: item.unitPrice || 0,
       quantity: item.quantity,
       image: imgUrl,
+      product: item.product,
     };
   });
 
@@ -547,6 +550,20 @@ export default function MobileCheckoutScreen() {
     if (!user) {
       alert('Authentication Required: Please log in to your account to place an order.');
       router.push('/(auth)/login' as any);
+      return;
+    }
+
+    // Enforce Minimum Order Quantity per product
+    const invalidItem = checkoutItems.find((item: any) => {
+      const minReq = Math.max(1, item.product?.minOrderQuantity || 1);
+      return item.quantity < minReq;
+    });
+
+    if (invalidItem) {
+      const minReq = Math.max(1, invalidItem.product?.minOrderQuantity || 1);
+      alert(
+        `Quantity Error: "${invalidItem.product?.title || 'Product'}" requires a minimum order quantity of ${minReq} units. Please adjust your cart.`
+      );
       return;
     }
 
@@ -1499,6 +1516,11 @@ export default function MobileCheckoutScreen() {
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                   <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 13, color: '#64748B' }}>GST (18% Included)</Text>
                   <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 13, color: '#64748B' }}>₹{includedGst}</Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 13, color: '#434750' }}>Dispatch Time</Text>
+                  <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 13, color: '#002754' }}>Within {dispatchTimeDays} days</Text>
                 </View>
 
                 <View style={{ borderTopWidth: 1, borderTopColor: '#E0E3E5', paddingTop: 12, marginTop: 4, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>

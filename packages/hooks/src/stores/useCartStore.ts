@@ -62,8 +62,19 @@ export const useCartStore = create<CartStoreState>((set, get) => ({
       let newItem: CartItem;
 
       if (productOrItem && productOrItem.productId && productOrItem.unitPrice) {
-        newItem = productOrItem as CartItem;
+        newItem = { ...productOrItem } as CartItem;
+        const minQty = Math.max(1, Number(newItem.product?.minOrderQuantity || (newItem as any).minOrderQuantity || 1));
+        if (newItem.quantity < minQty) {
+          newItem.quantity = minQty;
+          newItem.totalPrice = newItem.unitPrice * minQty;
+        }
       } else if (productOrItem && variant) {
+        const minQty = Math.max(1, Number(productOrItem.minOrderQuantity || 1));
+        const effectiveQty = Math.max(minQty, Number(quantity) || 1);
+        const effectiveUnitPrice = productOrItem.quantityPrice && Number(productOrItem.quantityPrice) > 0
+          ? Number(productOrItem.quantityPrice)
+          : Number(variant.price);
+
         newItem = {
           id: `ci_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
           cartId: 'local_cart',
@@ -75,18 +86,20 @@ export const useCartStore = create<CartStoreState>((set, get) => ({
             slug: productOrItem.slug,
             images: productOrItem.images,
             processType: productOrItem.processType,
+            minOrderQuantity: minQty,
+            quantityPrice: productOrItem.quantityPrice || null,
           },
           variant: {
             id: variant.id,
             sku: variant.sku,
             title: variant.title,
-            price: variant.price,
+            price: effectiveUnitPrice,
             weightGrams: variant.weightGrams,
             options: variant.options,
           },
-          quantity,
-          unitPrice: variant.price,
-          totalPrice: variant.price * quantity,
+          quantity: effectiveQty,
+          unitPrice: effectiveUnitPrice,
+          totalPrice: effectiveUnitPrice * effectiveQty,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
@@ -101,7 +114,9 @@ export const useCartStore = create<CartStoreState>((set, get) => ({
       if (existingIndex > -1) {
         const updated = [...state.items];
         const current = updated[existingIndex];
-        const newQty = current.quantity + (newItem.quantity || 1);
+        const minQty = Math.max(1, Number(current.product?.minOrderQuantity || newItem.product?.minOrderQuantity || 1));
+        const addedQty = newItem.quantity || 1;
+        const newQty = Math.max(minQty, current.quantity + addedQty);
         updated[existingIndex] = {
           ...current,
           quantity: newQty,
@@ -126,11 +141,16 @@ export const useCartStore = create<CartStoreState>((set, get) => ({
       return;
     }
     set((state) => ({
-      items: state.items.map((item) =>
-        item.id === itemId
-          ? { ...item, quantity, totalPrice: quantity * item.unitPrice }
-          : item
-      ),
+      items: state.items.map((item) => {
+        if (item.id !== itemId) return item;
+        const minQty = Math.max(1, Number(item.product?.minOrderQuantity || (item as any).minOrderQuantity || 1));
+        const clampedQty = Math.max(minQty, quantity);
+        return {
+          ...item,
+          quantity: clampedQty,
+          totalPrice: clampedQty * item.unitPrice,
+        };
+      }),
     }));
   },
 

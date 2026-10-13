@@ -65,6 +65,8 @@ export default function AdminNewProductPage() {
   const [compareAtPrice, setCompareAtPrice] = React.useState('210');
   const [stock, setStock] = React.useState('50');
   const [weightGrams, setWeightGrams] = React.useState('100');
+  const [minOrderQuantity, setMinOrderQuantity] = React.useState('1');
+  const [quantityPrice, setQuantityPrice] = React.useState('');
 
   // Images
   const [images, setImages] = React.useState<ProductImageItem[]>([]);
@@ -402,6 +404,8 @@ export default function AdminNewProductPage() {
         categoryId,
         basePrice: mainBasePrice,
         compareAtPrice: mainComparePrice,
+        minOrderQuantity: Math.max(1, parseInt(minOrderQuantity, 10) || 1),
+        quantityPrice: quantityPrice && Number(quantityPrice) > 0 ? Number(quantityPrice) : null,
         currency: 'INR',
         stock: preparedVariants.reduce((acc, v) => acc + (v.inventoryQuantity || 0), 0),
         weightGrams: primaryVariant?.weightGrams || Number(weightGrams) || 100,
@@ -879,6 +883,62 @@ export default function AdminNewProductPage() {
               </div>
             </div>
           )}
+
+          {/* Minimum Order Quantity & Quantity-Based Pricing Card */}
+          <div className="mt-5 p-5 md:p-6 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-900/50 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-amber-200/60 dark:border-amber-900/40">
+              <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-amber-700 dark:text-amber-400" />
+                <h4 className="text-xs font-bold text-amber-950 dark:text-amber-200">
+                  Minimum Order Quantity &amp; Quantity-Based Pricing
+                </h4>
+              </div>
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700">
+                Purchasing Policy
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5 block">
+                  Minimum Order Quantity (Units) *
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  required
+                  value={minOrderQuantity}
+                  onChange={(e) => setMinOrderQuantity(e.target.value)}
+                  placeholder="1"
+                  className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-[#0F172A] dark:text-white font-bold outline-none focus:border-amber-600"
+                />
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                  Whole positive number (1, 2, 3...). Customers must purchase at least this quantity to place an order.
+                </p>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5 block">
+                  Quantity-Based Unit Price (₹ INR) <span className="text-slate-500 font-normal">(Optional)</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">₹</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={quantityPrice}
+                    onChange={(e) => setQuantityPrice(e.target.value)}
+                    placeholder="Leave blank to use standard price"
+                    className="w-full pl-8 pr-3.5 py-2.5 rounded-xl text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-[#0F172A] dark:text-white font-bold outline-none focus:border-amber-600"
+                  />
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                  Optional special unit price when customer purchases at least the minimum order quantity.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Section 3: Product Imagery & Gallery */}

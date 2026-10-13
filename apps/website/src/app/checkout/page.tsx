@@ -7,14 +7,15 @@ import { Header } from '../../components/header';
 import { Footer } from '../../components/footer';
 import { GrandPaymentSuccessModal } from '../../components/grand-payment-success-modal';
 import { Container, PageHeader, Breadcrumb, Button, Input } from '@cinmax/ui';
-import { useCartStore, useUser, useAddressesQuery } from '@cinmax/hooks';
+import { useCartStore, useUser, useAddressesQuery, useDispatchTimeQuery } from '@cinmax/hooks';
 import { formatCurrency, calculateDeliveryCharge } from '@cinmax/utils';
-import { MapPin, Plus, Check } from 'lucide-react';
+import { MapPin, Plus, Check, Truck } from 'lucide-react';
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, getTotals, clearCart } = useCartStore();
   const { user } = useUser();
+  const { dispatchTimeDays } = useDispatchTimeQuery();
 
   const [paymentMethod, setPaymentMethod] = React.useState('razorpay');
   const [deliveryState, setDeliveryState] = React.useState('Tamil Nadu');
@@ -125,6 +126,20 @@ export default function CheckoutPage() {
 
     if (!deliveryState || deliveryState.trim() === '' || deliveryState === 'Unselected') {
       alert('Address Error: Please select a valid delivery state before proceeding to payment.');
+      return;
+    }
+
+    // Enforce Minimum Order Quantity per product
+    const invalidQtyItem = items.find((item) => {
+      const minReq = Math.max(1, item.product?.minOrderQuantity || 1);
+      return item.quantity < minReq;
+    });
+
+    if (invalidQtyItem) {
+      const minReq = Math.max(1, invalidQtyItem.product?.minOrderQuantity || 1);
+      alert(
+        `Quantity Error: "${invalidQtyItem.product.title}" requires a minimum order quantity of ${minReq} units. Please adjust your cart.`
+      );
       return;
     }
 
@@ -591,6 +606,10 @@ export default function CheckoutPage() {
                   <div className="flex justify-between text-muted-foreground">
                     <span>GST (18% Included)</span>
                     <span>{formatCurrency(includedGst)}</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground text-xs">
+                    <span>Dispatch Time</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">Within {dispatchTimeDays} days</span>
                   </div>
                   <div className="flex justify-between font-serif text-xl font-bold text-[#002754] dark:text-white pt-3 border-t border-[#0A3D78]/10">
                     <span>Grand Total</span>

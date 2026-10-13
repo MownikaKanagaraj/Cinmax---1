@@ -55,7 +55,10 @@ const individualFiles = [
   'apps/mobile/babel.config.js',
   'apps/mobile/app.json',
   'apps/mobile/package.json',
+  'apps/mobile/index.js',
   'apps/mobile/android/app/src/main/AndroidManifest.xml',
+  'apps/mobile/android/app/build.gradle',
+  'apps/mobile/android/build.gradle',
   'packages/types/package.json',
   'packages/api/package.json',
   'packages/hooks/package.json',
@@ -78,6 +81,9 @@ try {
     fs.rmSync('C:\\cxx', { recursive: true, force: true });
   }
   fs.mkdirSync('C:\\cxx', { recursive: true });
+  if (fs.existsSync('C:\\b')) {
+    fs.rmSync('C:\\b', { recursive: true, force: true });
+  }
   console.log('Created clean C:\\cxx directory.');
 } catch (e) {
   console.warn('CXX clean warning:', e.message);
@@ -103,6 +109,27 @@ if (fs.existsSync(cmResDir)) {
       }
     }
   }
+}
+
+// Clean stale JS bundle caches
+const staleBundleDirs = [
+  path.join(cmRoot, 'apps/mobile/android/app/build/generated/assets'),
+  path.join(cmRoot, 'apps/mobile/android/app/build/intermediates/assets'),
+  path.join(cmRoot, 'apps/mobile/android/app/build/outputs/apk'),
+];
+for (const dir of staleBundleDirs) {
+  if (fs.existsSync(dir)) {
+    try {
+      fs.rmSync(dir, { recursive: true, force: true });
+      console.log(`Cleaned stale bundle dir: ${dir}`);
+    } catch (e) {}
+  }
+}
+
+try {
+  require('./patch_reanimated_interpolator');
+} catch (e) {
+  console.warn('Patch warning:', e.message);
 }
 
 console.log('--- 3. Running assembleRelease in C:\\cm\\apps\\mobile\\android ---');
@@ -131,14 +158,18 @@ if (fs.existsSync(sourceApk)) {
   const sizeMb = (stat.size / (1024 * 1024)).toFixed(2);
   const targetApk = path.join(desktopDir, 'CINMAX-app-release.apk');
   const workspaceApk = path.join(workspaceRoot, 'CINMAX-app-release.apk');
+  const targetCinmaxApk = path.join(desktopDir, 'cinmax-release.apk');
+  const workspaceCinmaxApk = path.join(workspaceRoot, 'cinmax-release.apk');
   
   fs.copyFileSync(sourceApk, targetApk);
   fs.copyFileSync(sourceApk, workspaceApk);
+  fs.copyFileSync(sourceApk, targetCinmaxApk);
+  fs.copyFileSync(sourceApk, workspaceCinmaxApk);
   console.log(`\n========================================`);
   console.log(`BUILD SUCCESSFUL!`);
   console.log(`Source APK: ${sourceApk}`);
-  console.log(`Desktop APK: ${targetApk}`);
-  console.log(`Workspace APK: ${workspaceApk}`);
+  console.log(`Desktop APK: ${targetApk} & ${targetCinmaxApk}`);
+  console.log(`Workspace APK: ${workspaceApk} & ${workspaceCinmaxApk}`);
   console.log(`Size: ${sizeMb} MB (${stat.size} bytes)`);
   console.log(`Updated at: ${new Date().toISOString()}`);
   console.log(`========================================\n`);

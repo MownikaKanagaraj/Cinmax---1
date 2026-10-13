@@ -5,7 +5,10 @@ export interface CartItem {
   cartId: string;
   productId: string;
   variantId: string;
-  product: Pick<Product, 'id' | 'title' | 'slug' | 'images' | 'processType'>;
+  product: Pick<Product, 'id' | 'title' | 'slug' | 'images' | 'processType'> & {
+    minOrderQuantity?: number;
+    quantityPrice?: number | null;
+  };
   variant: Pick<ProductVariant, 'id' | 'sku' | 'title' | 'price' | 'weightGrams' | 'options'>;
   quantity: number;
   unitPrice: number;

@@ -59,6 +59,8 @@ export interface CreateProductPayload {
   isFeatured?: boolean;
   isNew?: boolean;
   isActive?: boolean;
+  minOrderQuantity?: number;
+  quantityPrice?: number | null;
   images?: ProductImageInput[];
   variants?: ProductVariantInput[];
   ingredients?: ProductIngredientInput[];

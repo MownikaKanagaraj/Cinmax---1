@@ -117,6 +117,8 @@ export interface Product {
   isNew: boolean;
   isBestSeller: boolean;
   isActive?: boolean;
+  minOrderQuantity?: number;
+  quantityPrice?: number | null;
   averageRating: number;
   reviewCount: number;
   createdAt: string;

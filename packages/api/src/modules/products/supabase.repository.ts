@@ -278,6 +278,8 @@ export class SupabaseProductRepository implements IProductRepository {
         is_featured: payload.isFeatured ?? false,
         is_new: payload.isNew ?? true,
         is_active: payload.isActive ?? true,
+        min_order_quantity: payload.minOrderQuantity ? Math.max(1, Number(payload.minOrderQuantity)) : 1,
+        quantity_price: payload.quantityPrice !== undefined && payload.quantityPrice !== null ? Number(payload.quantityPrice) : null,
       };
 
       const { data: inserted, error: prodErr } = await this.supabase
@@ -389,6 +391,8 @@ export class SupabaseProductRepository implements IProductRepository {
       if (payload.isFeatured !== undefined) updates.is_featured = payload.isFeatured;
       if (payload.isNew !== undefined) updates.is_new = payload.isNew;
       if (payload.isActive !== undefined) updates.is_active = payload.isActive;
+      if (payload.minOrderQuantity !== undefined) updates.min_order_quantity = Math.max(1, Number(payload.minOrderQuantity));
+      if (payload.quantityPrice !== undefined) updates.quantity_price = payload.quantityPrice !== null ? Number(payload.quantityPrice) : null;
 
       const { error: updateErr } = await this.supabase
         .from('products')

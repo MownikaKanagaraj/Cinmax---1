@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { AdminLayout } from '../../components/admin-layout';
 import { PageHeader, Button, Input } from '@cinmax/ui';
+import { useSettingsQuery, useUpdateSettingsMutation } from '@cinmax/hooks';
 import {
   Settings,
   Bell,
@@ -23,6 +24,7 @@ import {
   HelpCircle,
   Globe,
   Tag,
+  Clock,
 } from 'lucide-react';
 
 export default function AdminSettingsPage() {
@@ -31,6 +33,9 @@ export default function AdminSettingsPage() {
   >('general');
 
   const [isSaved, setIsSaved] = React.useState(false);
+
+  const { data: serverSettings } = useSettingsQuery();
+  const updateSettingsMutation = useUpdateSettingsMutation();
 
   // General Settings State
   const [storeName, setStoreName] = React.useState('CINMAX Global Products');
@@ -47,6 +52,18 @@ export default function AdminSettingsPage() {
   // Delivery Settings State
   const [freeShippingThreshold, setFreeShippingThreshold] = React.useState('499');
   const [defaultCourier, setDefaultCourier] = React.useState('Blue Dart Express');
+  const [dispatchTimeDays, setDispatchTimeDays] = React.useState('20');
+
+  React.useEffect(() => {
+    if (serverSettings) {
+      if (serverSettings.dispatchTimeDays !== undefined) {
+        setDispatchTimeDays(String(serverSettings.dispatchTimeDays));
+      }
+      if (serverSettings.freeShippingThreshold !== undefined) {
+        setFreeShippingThreshold(String(serverSettings.freeShippingThreshold));
+      }
+    }
+  }, [serverSettings]);
 
   // Payment Settings State
   const [razorpayKeyId, setRazorpayKeyId] = React.useState('rzp_live_TkZfAnqVc2W9Cu');
@@ -164,8 +181,20 @@ export default function AdminSettingsPage() {
     }
   };
 
-  const handleSaveAll = () => {
+  const handleSaveAll = async () => {
     setIsSaved(true);
+    try {
+      await updateSettingsMutation.mutateAsync({
+        dispatchTimeDays: Math.max(1, parseInt(dispatchTimeDays, 10) || 20),
+        freeShippingThreshold: Number(freeShippingThreshold) || 499,
+        appName: storeName,
+        contactEmail: conciergeEmail,
+        supportPhone: supportPhone,
+        currency: 'INR',
+      });
+    } catch (err) {
+      console.error('Error saving settings to Supabase:', err);
+    }
     setTimeout(() => setIsSaved(false), 2500);
   };
 
@@ -285,6 +314,36 @@ export default function AdminSettingsPage() {
                 </Button>
               </div>
             </div>
+
+            {/* Platform Versions & Environment Status */}
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
+                Platform Versions & Environment Information
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Customer Storefront Web</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-mono font-bold text-blue-600 dark:text-blue-400">v1.0.5</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold">Active</span>
+                  </div>
+                </div>
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Store Admin Portal</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-mono font-bold text-indigo-600 dark:text-indigo-400">v1.0.5</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold">Active</span>
+                  </div>
+                </div>
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Android Mobile APK</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-mono font-bold text-purple-600 dark:text-purple-400">v1.0.5 (Build 3)</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold">Android 7–16+</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -321,6 +380,33 @@ export default function AdminSettingsPage() {
                   onChange={(e) => setFreeShippingThreshold(e.target.value)}
                 />
               </div>
+            </div>
+
+            {/* Minimum Dispatch Time Configuration */}
+            <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-2 mb-2">
+                <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 block">
+                  Dispatch Time (Days)
+                </label>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
+                  Global Default: 20 Days
+                </span>
+              </div>
+              <div className="flex items-center gap-3 max-w-sm">
+                <Input
+                  type="number"
+                  min={1}
+                  value={dispatchTimeDays}
+                  onChange={(e) => setDispatchTimeDays(e.target.value)}
+                  className="font-bold text-sm"
+                  placeholder="20"
+                />
+                <span className="text-xs font-bold text-slate-500 whitespace-nowrap">Days</span>
+              </div>
+              <p className="text-xs text-slate-400 mt-2">
+                Specifies standard formulation curing &amp; order dispatch turnaround. When saved, this value automatically updates across the Customer Website and Android App.
+              </p>
             </div>
           </div>
         )}

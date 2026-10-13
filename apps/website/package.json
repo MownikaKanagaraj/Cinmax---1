@@ -1,6 +1,6 @@
 {
   "name": "@cinmax/website",
-  "version": "1.0.0",
+  "version": "1.0.5",
   "private": true,
   "description": "CINMAX Global Products - Next.js Storefront Web Application",
   "scripts": {

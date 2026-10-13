@@ -102,8 +102,18 @@ export function useSettingsQuery() {
   return useQuery<AppSettingsEntity>({
     queryKey: queryKeys.settings.current(),
     queryFn: () => contentService.getSettings(),
-    staleTime: 1000 * 60 * 15,
+    staleTime: 1000 * 60 * 2,
   });
+}
+
+export function useDispatchTimeQuery() {
+  const { data: settings, isLoading } = useSettingsQuery();
+  const dispatchDays = settings?.dispatchTimeDays !== undefined ? Number(settings.dispatchTimeDays) : 20;
+  return {
+    dispatchTimeDays: dispatchDays,
+    displayText: `Dispatch Time: ${dispatchDays} Days`,
+    isLoading,
+  };
 }
 
 export function useUpdateSettingsMutation() {
@@ -115,6 +125,7 @@ export function useUpdateSettingsMutation() {
     onSuccess: (updated) => {
       queryClient.setQueryData(queryKeys.settings.current(), updated);
       queryClient.invalidateQueries({ queryKey: queryKeys.settings.all });
+      queryClient.invalidateQueries({ queryKey: ['home-marketing-settings'] });
     },
   });
 }

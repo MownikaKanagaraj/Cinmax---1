@@ -6,4 +6,5 @@ export interface AppSettingsDTO {
   standard_shipping_fee: number | string;
   contact_email: string;
   support_phone?: string | null;
+  dispatch_time_days?: number | string | null;
 }

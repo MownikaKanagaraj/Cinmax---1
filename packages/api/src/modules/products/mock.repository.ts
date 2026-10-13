@@ -198,6 +198,8 @@ export class MockProductRepository implements IProductRepository {
       isFeatured: payload.isFeatured ?? false,
       isNew: payload.isNew ?? true,
       isActive: payload.isActive ?? true,
+      minOrderQuantity: payload.minOrderQuantity ? Math.max(1, Number(payload.minOrderQuantity)) : 1,
+      quantityPrice: payload.quantityPrice !== undefined && payload.quantityPrice !== null ? Number(payload.quantityPrice) : null,
       images: (payload.images || []).map((img, idx) => ({
         id: img.id || `img_${newId}_${idx}`,
         url: img.url,

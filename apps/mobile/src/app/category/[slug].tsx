@@ -141,6 +141,8 @@ export default function MobileCategoryScreen() {
                   image={validImg}
                   rating={prod.averageRating?.toString() || '4.9'}
                   reviewCount={prod.reviewCount?.toString() || '128'}
+                  minOrderQuantity={prod.minOrderQuantity}
+                  quantityPrice={prod.quantityPrice}
                 />
               );
             })}

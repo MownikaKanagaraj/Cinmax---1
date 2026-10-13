@@ -4,6 +4,7 @@ import * as React from 'react';
 import { AdminLayout } from '../../components/admin-layout';
 import { PageHeader, Button, Input } from '@cinmax/ui';
 import { formatCurrency } from '@cinmax/utils';
+import { useSettingsQuery, useUpdateSettingsMutation } from '@cinmax/hooks';
 import {
   Truck,
   MapPin,
@@ -17,6 +18,7 @@ import {
   Info,
   Building,
   CheckCircle2,
+  Clock,
 } from 'lucide-react';
 
 interface DeliveryRule {
@@ -90,8 +92,25 @@ export default function DeliveryManagementPage() {
 
   const currentCalc = calculateShipping(calcState, calcQty);
 
-  const handleSave = () => {
+  const { data: serverSettings } = useSettingsQuery();
+  const updateSettingsMutation = useUpdateSettingsMutation();
+  const [dispatchTimeDays, setDispatchTimeDays] = React.useState('20');
+
+  React.useEffect(() => {
+    if (serverSettings?.dispatchTimeDays !== undefined) {
+      setDispatchTimeDays(String(serverSettings.dispatchTimeDays));
+    }
+  }, [serverSettings]);
+
+  const handleSave = async () => {
     setIsSaved(true);
+    try {
+      await updateSettingsMutation.mutateAsync({
+        dispatchTimeDays: Math.max(1, parseInt(dispatchTimeDays, 10) || 20),
+      });
+    } catch (err) {
+      console.error('Error saving dispatch settings:', err);
+    }
     setTimeout(() => setIsSaved(false), 2500);
   };
 
@@ -113,6 +132,44 @@ export default function DeliveryManagementPage() {
           </Button>
         }
       />
+
+      {/* Minimum Dispatch Time Configuration Card */}
+      <div className="p-6 rounded-2xl bg-white dark:bg-[#0B132B] border border-slate-200 dark:border-slate-800 shadow-sm my-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <h3 className="font-bold text-base text-[#0F172A] dark:text-white">Minimum Dispatch Time (Days)</h3>
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border border-blue-200">
+              Live Global Setting
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xl">
+            Configure the mandatory order preparation and curing timeline before courier pickup. Default is 20 days. When updated, changes reflect immediately across the Website and Android App.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              min={1}
+              value={dispatchTimeDays}
+              onChange={(e) => setDispatchTimeDays(e.target.value)}
+              className="w-24 text-center font-bold text-base"
+              placeholder="20"
+            />
+            <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Days</span>
+          </div>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleSave}
+            className="rounded-xl font-bold whitespace-nowrap"
+          >
+            {isSaved ? 'Saved ✓' : 'Save Days'}
+          </Button>
+        </div>
+      </div>
 
       {/* Interactive Shipping Rate Simulator */}
       <div className="p-6 rounded-2xl bg-gradient-to-br from-blue-900 to-[#002754] text-white shadow-xl my-6">

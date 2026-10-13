@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Sparkles, Mail, Lock, Eye, EyeOff, User, Phone, CheckCircle2, AlertCircle, Heart, ShieldCheck } from 'lucide-react-native';
 import { useRegisterMutation, useWishlistStore } from '@cinmax/hooks';
+import { LOCAL_SOAP_ASSETS } from '../../constants/soapAssets';
 
 const CONTAINER_PADDING = 20;
 
@@ -151,12 +152,12 @@ export default function MobileRegisterScreen() {
             {/* 2. Luxury Hero Banner */}
             <View style={{ borderRadius: 20, overflow: 'hidden', height: 130, backgroundColor: '#002754', marginBottom: 16, position: 'relative', borderWidth: 1, borderColor: 'rgba(197, 168, 128, 0.4)', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 12 }}>
               <Image
-                source={{ uri: 'https://nthyavlzdgucrldtgjeo.supabase.co/storage/v1/object/public/products/cinmax-products/rose-soap/1.jpg' }}
+                source={LOCAL_SOAP_ASSETS['rose-soap']}
                 style={{ width: '100%', height: '100%' }}
                 resizeMode="cover"
               />
-              <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0, 31, 68, 0.65)' }} />
-              <View style={{ position: 'absolute', inset: 0, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16 }}>
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 31, 68, 0.65)' }} />
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16 }}>
                 <View style={{ backgroundColor: 'rgba(197, 168, 128, 0.25)', borderWidth: 1, borderColor: '#C5A880', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 16, marginBottom: 4 }}>
                   <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#F3E5D8', fontSize: 9.5, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1.2 }}>
                     JOIN CINMAX VIP CIRCLE

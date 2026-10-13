@@ -66,19 +66,62 @@ const FONT_SANS_BOLD = Platform.select({
   default: 'PlusJakartaSans_700Bold',
 });
 
-export default function MobileClassesScreen() {
+class ClassesErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error('Classes Screen caught error:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF7F2', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+          <GraduationCap size={48} color="#002754" />
+          <Text style={{ fontSize: 18, fontWeight: '700', color: '#002754', marginTop: 16, textAlign: 'center' }}>
+            CINMAX Masterclass Academy
+          </Text>
+          <Text style={{ fontSize: 13, color: '#737781', marginTop: 8, textAlign: 'center', lineHeight: 18 }}>
+            Unable to stream classes temporarily. Tap below to reload the academy.
+          </Text>
+          <TouchableOpacity
+            onPress={() => this.setState({ hasError: false })}
+            style={{ marginTop: 20, backgroundColor: '#002754', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14 }}
+          >
+            <Text style={{ color: 'white', fontWeight: '700' }}>Reload Classes</Text>
+          </TouchableOpacity>
+        </SafeAreaView>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function MobileClassesScreenContent() {
   const router = useRouter();
   const { user } = useUser();
-  const { items: wishlistItems } = useWishlistStore();
-  const { purchasedPlaylistIds, addPurchasedPlaylistId, syncPurchasedPlaylistIds } = usePlaylistPurchasesStore();
+  const { items: wishlistItems = [] } = useWishlistStore();
+  const { purchasedPlaylistIds = [], addPurchasedPlaylistId, syncPurchasedPlaylistIds } = usePlaylistPurchasesStore();
 
-  const { data: playlists = [], isLoading: isLoadingPlaylists } = usePlaylistsQuery(true);
-  const { data: userPurchases = [] } = useUserPlaylistPurchasesQuery(user?.id);
+  const { data: rawPlaylists, isLoading: isLoadingPlaylists } = usePlaylistsQuery(true);
+  const playlists = Array.isArray(rawPlaylists) ? rawPlaylists : [];
+
+  const { data: rawUserPurchases } = useUserPlaylistPurchasesQuery(user?.id);
+  const userPurchases = Array.isArray(rawUserPurchases) ? rawUserPurchases : [];
+
   const recordPurchaseMutation = useRecordPlaylistPurchaseMutation();
 
   useEffect(() => {
-    if (userPurchases.length > 0) {
-      syncPurchasedPlaylistIds(userPurchases.map((p) => p.playlistId));
+    if (userPurchases.length > 0 && typeof syncPurchasedPlaylistIds === 'function') {
+      try {
+        syncPurchasedPlaylistIds(userPurchases.map((p) => p.playlistId).filter(Boolean));
+      } catch (e) {
+        console.warn('syncPurchasedPlaylistIds warning:', e);
+      }
     }
   }, [userPurchases]);
 
@@ -91,13 +134,16 @@ export default function MobileClassesScreen() {
 
   const isUnlocked = (pl: any) => {
     if (!pl || !pl.id) return false;
-    return purchasedPlaylistIds.includes(pl.id) || userPurchases.some((p) => p.playlistId === pl.id);
+    const isLocal = Array.isArray(purchasedPlaylistIds) && purchasedPlaylistIds.includes(pl.id);
+    const isRemote = userPurchases.some((p) => p && p.playlistId === pl.id);
+    return Boolean(isLocal || isRemote);
   };
 
   const handleOpenPlaylist = (pl: any) => {
+    if (!pl) return;
     setSelectedPlaylist(pl);
     const unlocked = isUnlocked(pl);
-    if (unlocked && pl.videos && pl.videos.length > 0) {
+    if (unlocked && Array.isArray(pl.videos) && pl.videos.length > 0) {
       setSelectedVideo(pl.videos[0]);
     } else {
       setSelectedVideo(null);
@@ -253,15 +299,16 @@ export default function MobileClassesScreen() {
     }
   };
 
-  // Filter playlists
+  // Filter playlists safely
   const filteredPlaylists = playlists.filter((pl: any) => {
+    if (!pl) return false;
     const matchesTab = activeTab === 'all' || isUnlocked(pl);
-    const matchesSearch =
-      !searchQuery.trim() ||
-      pl.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (pl.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (pl.productTitle || '').toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesTab && matchesSearch;
+    const q = (searchQuery || '').trim().toLowerCase();
+    if (!q) return matchesTab;
+    const title = (pl.title || '').toLowerCase();
+    const desc = (pl.description || '').toLowerCase();
+    const prod = (pl.productTitle || '').toLowerCase();
+    return matchesTab && (title.includes(q) || desc.includes(q) || prod.includes(q));
   });
 
   const unlockedCount = playlists.filter((pl: any) => isUnlocked(pl)).length;
@@ -284,7 +331,7 @@ export default function MobileClassesScreen() {
           elevation: 10,
         }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, marginRight: 10 }}>
           <View
             style={{
               width: 38,
@@ -297,19 +344,20 @@ export default function MobileClassesScreen() {
           >
             <GraduationCap size={22} color="#C5A880" />
           </View>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text
               style={{
                 fontFamily: FONT_SERIF_BOLD,
-                fontSize: 20,
+                fontSize: 19,
                 fontWeight: '700',
                 color: '#002754',
                 letterSpacing: -0.5,
               }}
+              numberOfLines={1}
             >
               CINMAX Classes
             </Text>
-            <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 11, color: '#737781' }}>
+            <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 11, color: '#737781' }} numberOfLines={1}>
               Product-Wise Masterclass Playlists
             </Text>
           </View>
@@ -341,85 +389,14 @@ export default function MobileClassesScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
-        {/* 2. Hero Academy Banner */}
-        <View
-          style={{
-            marginHorizontal: CONTAINER_PADDING,
-            marginTop: 16,
-            backgroundColor: '#002754',
-            borderRadius: 24,
-            padding: 22,
-            position: 'relative',
-            overflow: 'hidden',
-            shadowColor: '#0A3D78',
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.15,
-            shadowRadius: 16,
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-            <Sparkles size={14} color="#C5A880" />
-            <Text
-              style={{
-                fontFamily: FONT_SANS_BOLD,
-                color: '#C5A880',
-                fontSize: 11,
-                textTransform: 'uppercase',
-                letterSpacing: 1,
-              }}
-            >
-              Product Playlists Engine
-            </Text>
-          </View>
-
-          <Text
-            style={{
-              fontFamily: FONT_SERIF_BOLD,
-              fontSize: 22,
-              fontWeight: '700',
-              color: '#FFFFFF',
-              lineHeight: 28,
-              marginBottom: 8,
-            }}
-          >
-            Product-Wise Botanical Playlists
-          </Text>
-
-          <Text
-            style={{
-              fontFamily: FONT_SANS_REGULAR,
-              fontSize: 13,
-              color: '#E0E3E5',
-              lineHeight: 19,
-              marginBottom: 16,
-            }}
-          >
-            Each product comes with its own dedicated playlist of video classes. Purchase once to unlock all videos inside with permanent lifetime access.
-          </Text>
-
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <ShieldCheck size={16} color="#C5A880" />
-              <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, color: '#FFFFFF', fontSize: 12 }}>
-                Lifetime Unlocked Access
-              </Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Award size={16} color="#C5A880" />
-              <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, color: '#FFFFFF', fontSize: 12 }}>
-                Verified Razorpay Payment
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* 3. Main Navigation Toggle: Browse Playlists vs My Classes */}
-        <View style={{ marginHorizontal: CONTAINER_PADDING, marginTop: 18, flexDirection: 'row', backgroundColor: 'rgba(195, 198, 209, 0.25)', borderRadius: 16, padding: 4 }}>
+        {/* Navigation Toggle: Browse Playlists vs My Classes */}
+        <View style={{ marginHorizontal: CONTAINER_PADDING, marginTop: 14, flexDirection: 'row', backgroundColor: 'rgba(195, 198, 209, 0.25)', borderRadius: 16, padding: 4 }}>
           <TouchableOpacity
             onPress={() => setActiveTab('all')}
             style={{
               flex: 1,
               paddingVertical: 10,
+              paddingHorizontal: 6,
               alignItems: 'center',
               borderRadius: 12,
               backgroundColor: activeTab === 'all' ? '#FFFFFF' : 'transparent',
@@ -429,9 +406,9 @@ export default function MobileClassesScreen() {
               shadowOffset: { width: 0, height: 2 },
             }}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <BookOpen size={16} color={activeTab === 'all' ? '#002754' : '#737781'} />
-              <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 13, color: activeTab === 'all' ? '#002754' : '#737781' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <BookOpen size={15} color={activeTab === 'all' ? '#002754' : '#737781'} />
+              <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: activeTab === 'all' ? '#002754' : '#737781' }} numberOfLines={1}>
                 All Playlists ({playlists.length})
               </Text>
             </View>
@@ -442,6 +419,7 @@ export default function MobileClassesScreen() {
             style={{
               flex: 1,
               paddingVertical: 10,
+              paddingHorizontal: 6,
               alignItems: 'center',
               borderRadius: 12,
               backgroundColor: activeTab === 'my_classes' ? '#FFFFFF' : 'transparent',
@@ -451,10 +429,10 @@ export default function MobileClassesScreen() {
               shadowOffset: { width: 0, height: 2 },
             }}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <GraduationCap size={16} color={activeTab === 'my_classes' ? '#059669' : '#737781'} />
-              <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 13, color: activeTab === 'my_classes' ? '#059669' : '#737781' }}>
-                My Purchased ({unlockedCount})
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <GraduationCap size={15} color={activeTab === 'my_classes' ? '#059669' : '#737781'} />
+              <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 12, color: activeTab === 'my_classes' ? '#059669' : '#737781' }} numberOfLines={1}>
+                Purchased ({unlockedCount})
               </Text>
             </View>
           </TouchableOpacity>
@@ -548,7 +526,7 @@ export default function MobileClassesScreen() {
                         style={{ width: '100%', height: '100%' }}
                         resizeMode="cover"
                       />
-                      <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', alignItems: 'center' }}>
+                      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', alignItems: 'center' }}>
                         <View
                           style={{
                             width: 56,
@@ -573,17 +551,19 @@ export default function MobileClassesScreen() {
                           position: 'absolute',
                           top: 12,
                           left: 12,
+                          right: 110,
                           backgroundColor: '#002754',
-                          paddingHorizontal: 12,
+                          paddingHorizontal: 10,
                           paddingVertical: 5,
                           borderRadius: 20,
                           flexDirection: 'row',
                           alignItems: 'center',
                           gap: 6,
+                          alignSelf: 'flex-start',
                         }}
                       >
                         <Package size={13} color="#C5A880" />
-                        <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', fontSize: 10, textTransform: 'uppercase' }}>
+                        <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', fontSize: 10, textTransform: 'uppercase' }} numberOfLines={1}>
                           {pl.productTitle || 'PRODUCT PLAYLIST'}
                         </Text>
                       </View>
@@ -609,14 +589,14 @@ export default function MobileClassesScreen() {
                     </View>
 
                     {/* Playlist Content Breakdown */}
-                    <View style={{ padding: 18 }}>
+                    <View style={{ padding: 16 }}>
                       <Text
                         style={{
                           fontFamily: FONT_SERIF_BOLD,
                           fontSize: 17,
                           fontWeight: '700',
                           color: '#002754',
-                          lineHeight: 22,
+                          lineHeight: 23,
                           marginBottom: 6,
                         }}
                       >
@@ -628,28 +608,28 @@ export default function MobileClassesScreen() {
                           fontFamily: FONT_SANS_REGULAR,
                           fontSize: 13,
                           color: '#434750',
-                          lineHeight: 18,
-                          marginBottom: 14,
+                          lineHeight: 19,
+                          marginBottom: 12,
                         }}
                         numberOfLines={2}
                       >
                         {pl.description || 'Complete masterclass playlist covering formulation secrets and step-by-step guidance.'}
                       </Text>
 
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#F0F2F5' }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
                           <Layers size={14} color="#737781" />
-                          <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 12, color: '#737781' }}>
-                            {videoCount} {videoCount === 1 ? 'Class' : 'Classes'} • Lifetime Access
+                          <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 12, color: '#737781', lineHeight: 16 }}>
+                            {videoCount} {videoCount === 1 ? 'Class' : 'Classes'} • Lifetime
                           </Text>
                         </View>
 
                         <View
                           style={{
                             backgroundColor: unlocked ? '#E6F4EA' : '#002754',
-                            paddingHorizontal: 14,
-                            paddingVertical: 8,
-                            borderRadius: 14,
+                            paddingHorizontal: 12,
+                            paddingVertical: 7,
+                            borderRadius: 12,
                             flexDirection: 'row',
                             alignItems: 'center',
                             gap: 6,
@@ -660,6 +640,7 @@ export default function MobileClassesScreen() {
                               fontFamily: FONT_SANS_BOLD,
                               color: unlocked ? '#059669' : 'white',
                               fontSize: 12,
+                              lineHeight: 16,
                             }}
                           >
                             {unlocked ? 'Watch Classes' : 'Unlock Playlist'}
@@ -701,9 +682,9 @@ export default function MobileClassesScreen() {
                 borderBottomColor: '#F0F2F5',
               }}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, marginRight: 10 }}>
                 <GraduationCap size={20} color="#002754" />
-                <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 17, fontWeight: '700', color: '#002754' }} numberOfLines={1}>
+                <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 17, fontWeight: '700', color: '#002754', flex: 1 }} numberOfLines={1}>
                   {selectedPlaylist && isUnlocked(selectedPlaylist) ? 'Watch Classes' : 'Playlist Details & Payment'}
                 </Text>
               </View>
@@ -752,7 +733,7 @@ export default function MobileClassesScreen() {
                         style={{ width: '100%', height: '100%' }}
                         resizeMode="cover"
                       />
-                      <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0, 25, 56, 0.82)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+                      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 25, 56, 0.82)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
                         <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#002754', justifyContent: 'center', alignItems: 'center', marginBottom: 10, borderWidth: 2, borderColor: '#C5A880' }}>
                           <Lock size={26} color="#C5A880" />
                         </View>
@@ -768,16 +749,16 @@ export default function MobileClassesScreen() {
 
                   {/* Playlist Metadata & Purchase Bar */}
                   <View style={{ padding: CONTAINER_PADDING, gap: 14 }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <View style={{ flex: 1, marginRight: 10 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
+                      <View style={{ flex: 1, minWidth: 180 }}>
                         <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 11, color: '#002754', textTransform: 'uppercase', marginBottom: 2 }}>
                           {selectedPlaylist.productTitle || 'Product Playlist'}
                         </Text>
-                        <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 19, fontWeight: '700', color: '#002754' }}>
+                        <Text style={{ fontFamily: FONT_SERIF_BOLD, fontSize: 18, fontWeight: '700', color: '#002754', lineHeight: 24 }}>
                           {selectedPlaylist.title}
                         </Text>
                       </View>
-                      <View style={{ backgroundColor: isUnlocked(selectedPlaylist) ? '#E6F4EA' : '#FFF8E1', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 12 }}>
+                      <View style={{ backgroundColor: isUnlocked(selectedPlaylist) ? '#E6F4EA' : '#FFF8E1', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, alignSelf: 'flex-start' }}>
                         <Text style={{ fontFamily: FONT_SANS_BOLD, color: isUnlocked(selectedPlaylist) ? '#059669' : '#B45309', fontSize: 12 }}>
                           {isUnlocked(selectedPlaylist) ? 'UNLOCKED' : `Playlist Price: ₹${selectedPlaylist.price}`}
                         </Text>
@@ -795,7 +776,8 @@ export default function MobileClassesScreen() {
                         disabled={isProcessingPayment}
                         style={{
                           backgroundColor: '#002754',
-                          paddingVertical: 15,
+                          paddingVertical: 14,
+                          paddingHorizontal: 16,
                           borderRadius: 18,
                           flexDirection: 'row',
                           justifyContent: 'center',
@@ -813,7 +795,7 @@ export default function MobileClassesScreen() {
                         ) : (
                           <>
                             <Lock size={18} color="#C5A880" />
-                            <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', fontSize: 15, fontWeight: '700' }}>
+                            <Text style={{ fontFamily: FONT_SANS_BOLD, color: 'white', fontSize: 14, fontWeight: '700', textAlign: 'center', flexShrink: 1, lineHeight: 20 }}>
                               Pay ₹{selectedPlaylist.price} with Razorpay &amp; Unlock All Classes
                             </Text>
                           </>
@@ -824,6 +806,7 @@ export default function MobileClassesScreen() {
                         style={{
                           backgroundColor: '#E6F4EA',
                           paddingVertical: 12,
+                          paddingHorizontal: 14,
                           borderRadius: 16,
                           borderWidth: 1,
                           borderColor: '#059669',
@@ -834,7 +817,7 @@ export default function MobileClassesScreen() {
                         }}
                       >
                         <CheckCircle2 size={18} color="#059669" />
-                        <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#059669', fontSize: 13, fontWeight: '700' }}>
+                        <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#059669', fontSize: 13, fontWeight: '700', textAlign: 'center', flexShrink: 1, lineHeight: 18 }}>
                           Purchased / Unlocked • Permanent Lifetime Access
                         </Text>
                       </View>
@@ -928,5 +911,13 @@ export default function MobileClassesScreen() {
         </View>
       </Modal>
     </SafeAreaView>
+  );
+}
+
+export default function MobileClassesScreen() {
+  return (
+    <ClassesErrorBoundary>
+      <MobileClassesScreenContent />
+    </ClassesErrorBoundary>
   );
 }

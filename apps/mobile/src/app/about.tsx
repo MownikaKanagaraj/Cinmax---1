@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useHomeMarketingQuery } from '@cinmax/hooks';
+import { getSoapImageSource } from '../constants/soapAssets';
 import {
   ArrowLeft,
   Leaf,
@@ -131,14 +132,17 @@ export default function MobileAboutScreen() {
         {/* HERO IMAGE BANNER */}
         <View style={{ height: 240, width: '100%', backgroundColor: '#002754', position: 'relative' }}>
           <Image
-            source={{ uri: bottomBanner.imageUrl || 'https://nthyavlzdgucrldtgjeo.supabase.co/storage/v1/object/public/products/cinmax-products/neem-oil-soap/2.jpg' }}
+            source={getSoapImageSource(bottomBanner.imageUrl, 'neem-oil-soap')}
             style={{ width: '100%', height: '100%' }}
             resizeMode="cover"
           />
           <View
             style={{
               position: 'absolute',
-              inset: 0,
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
               backgroundColor: 'rgba(0, 39, 84, 0.55)',
               justifyContent: 'center',
               alignItems: 'center',

@@ -2,7 +2,7 @@
   "expo": {
     "name": "CINMAX",
     "slug": "cinmax-mobile",
-    "version": "1.0.1",
+    "version": "1.0.7",
     "sdkVersion": "57.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
@@ -42,7 +42,7 @@
     ],
     "android": {
       "package": "com.cinmax.app",
-      "versionCode": 2,
+      "versionCode": 5,
       "jsEngine": "hermes",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",

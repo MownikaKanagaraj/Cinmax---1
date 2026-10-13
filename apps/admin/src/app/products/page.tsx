@@ -367,6 +367,20 @@ export default function AdminProductsPage() {
                             {formatCurrency(compare)}
                           </p>
                         )}
+                        {((p.minOrderQuantity && p.minOrderQuantity > 1) || p.quantityPrice) && (
+                          <div className="mt-1 flex flex-col gap-0.5">
+                            {p.minOrderQuantity && p.minOrderQuantity > 1 && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200 w-fit">
+                                Min: {p.minOrderQuantity} pcs
+                              </span>
+                            )}
+                            {p.quantityPrice && (
+                              <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                                {formatCurrency(p.quantityPrice)}/unit
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </td>
 
                       {/* Stock */}

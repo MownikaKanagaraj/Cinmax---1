@@ -1,6 +1,6 @@
 {
   "name": "@cinmax/mobile",
-  "version": "1.0.0",
+  "version": "1.0.7",
   "private": true,
   "description": "CINMAX Global Products - React Native Expo Mobile App",
   "main": "expo-router/entry",

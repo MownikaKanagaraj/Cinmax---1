@@ -16,12 +16,14 @@ import {
   Button,
   EmptyState,
 } from '@cinmax/ui';
-import { useCartStore, useFeaturedProductsQuery, useValidateCouponMutation, useUser } from '@cinmax/hooks';
+import { useCartStore, useFeaturedProductsQuery, useValidateCouponMutation, useUser, useDispatchTimeQuery } from '@cinmax/hooks';
 import { formatCurrency, calculateDeliveryCharge } from '@cinmax/utils';
+import { Truck } from 'lucide-react';
 
 export default function CartPage() {
   const router = useRouter();
   const { user, isAuthenticated } = useUser();
+  const { dispatchTimeDays } = useDispatchTimeQuery();
   const [showLoginModal, setShowLoginModal] = React.useState(false);
   const { items, updateQuantity, removeItem, coupon, applyCoupon, removeCoupon, getTotals, addItem } =
     useCartStore();
@@ -29,6 +31,17 @@ export default function CartPage() {
   const { data: featuredProducts = [] } = useFeaturedProductsQuery(1);
 
   const handleProceedToCheckout = () => {
+    const invalidItem = items.find((item) => {
+      const minQty = Math.max(1, item.product?.minOrderQuantity || 1);
+      return item.quantity < minQty;
+    });
+
+    if (invalidItem) {
+      const minQty = Math.max(1, invalidItem.product?.minOrderQuantity || 1);
+      alert(`"${invalidItem.product.title}" requires a minimum order quantity of ${minQty} units.`);
+      return;
+    }
+
     if (!isAuthenticated && !user) {
       setShowLoginModal(true);
     } else {
@@ -156,12 +169,17 @@ export default function CartPage() {
                           Edition: {item.variant.title} ({item.variant.weightGrams}g)
                         </p>
                         <PriceTag price={item.unitPrice} currency="INR" size="md" />
+                        {item.product?.minOrderQuantity && item.product.minOrderQuantity > 1 && (
+                          <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 block mt-1">
+                            Min. Order Quantity: {item.product.minOrderQuantity} units
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-4">
                         <QuantitySelector
                           quantity={item.quantity}
-                          min={1}
-                          max={10}
+                          min={Math.max(1, item.product?.minOrderQuantity || 1)}
+                          max={50}
                           onChange={(qty) => updateQuantity(item.id, qty)}
                         />
                         <button
@@ -238,6 +256,12 @@ export default function CartPage() {
                         {formatCurrency(totals.subtotal - totals.discount + totals.shippingFee)}
                       </span>
                     </div>
+                  </div>
+
+                  {/* Dispatch Time Banner */}
+                  <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300">
+                    <Truck className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                    <span><b>Dispatch Time:</b> Ships within <b>{dispatchTimeDays} days</b></span>
                   </div>
 
                   <Button

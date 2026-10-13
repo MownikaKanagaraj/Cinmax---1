@@ -1,9 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import { useCartStore, useWishlistStore } from '@cinmax/hooks';
+import { useCartStore, useWishlistStore, useDispatchTimeQuery } from '@cinmax/hooks';
 import { Button, PriceTag, QuantitySelector } from '@cinmax/ui';
 import { LuxuryWishlistIcon, LuxuryBagIcon } from './luxury-icons';
+import { Truck } from 'lucide-react';
 
 export function ProductInteractiveSection({
   product,
@@ -13,40 +14,77 @@ export function ProductInteractiveSection({
   defaultVariant: any;
 }) {
   const { addItem } = useCartStore();
-  const { toggleItem, isWishlisted } = useWishlistStore();
+  const { toggleWishlist, isInWishlist } = useWishlistStore();
+  const { dispatchTimeDays } = useDispatchTimeQuery();
   const [selectedVariant, setSelectedVariant] = React.useState(defaultVariant);
-  const [quantity, setQuantity] = React.useState(1);
+
+  const minQty = Math.max(1, product?.minOrderQuantity || 1);
+  const [quantity, setQuantity] = React.useState(minQty);
   const [added, setAdded] = React.useState(false);
 
-  const isFav = isWishlisted(product.id);
+  // Sync quantity if minQty changes or when product loads
+  React.useEffect(() => {
+    if (minQty > 1 && quantity < minQty) {
+      setQuantity(minQty);
+    }
+  }, [minQty, quantity]);
+
+  const isFav = isInWishlist ? isInWishlist(product.id) : false;
+
+  const hasQuantityPrice = Boolean(product?.quantityPrice && product.quantityPrice > 0);
+  const applicablePrice = hasQuantityPrice
+    ? product.quantityPrice
+    : (selectedVariant?.price ?? product?.basePrice ?? 18.0);
 
   const handleAdd = () => {
     const variantToUse = selectedVariant || defaultVariant || {
       id: `var_${product.id}`,
       sku: `SKU-${product.slug || product.id}`,
       title: 'Standard Edition',
-      price: product.basePrice || 18.0,
+      price: applicablePrice,
       weightGrams: 150,
       options: {},
     };
-    addItem(product, variantToUse, quantity);
+    const effectiveQty = Math.max(minQty, quantity);
+    addItem(product, variantToUse, effectiveQty);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
 
-
   return (
     <div className="space-y-6 pt-2">
-      {/* Price Tag */}
-      <div className="flex items-baseline gap-3">
-        <PriceTag
-          price={selectedVariant.price}
-          compareAtPrice={selectedVariant.compareAtPrice}
-          currency="INR"
-          size="lg"
-        />
-        <span className="text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-2.5 py-1 rounded-full border border-emerald-200">
-          In Stock • Ready for Cure Dispatch
+      {/* Price & Minimum Quantity Tag */}
+      <div className="space-y-2">
+        <div className="flex items-baseline gap-3">
+          <PriceTag
+            price={applicablePrice}
+            compareAtPrice={selectedVariant?.compareAtPrice}
+            currency="INR"
+            size="lg"
+          />
+          <span className="text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-2.5 py-1 rounded-full border border-emerald-200">
+            In Stock
+          </span>
+        </div>
+
+        {minQty > 1 && (
+          <div className="p-3.5 rounded-2xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 text-xs text-amber-950 dark:text-amber-200 space-y-1">
+            <p className="font-bold flex items-center gap-1.5 text-amber-900 dark:text-amber-300">
+              <span className="w-2 h-2 rounded-full bg-amber-600"></span>
+              Minimum Order Quantity: {minQty} units
+            </p>
+            <p className="text-[11px] text-slate-600 dark:text-slate-300">
+              Per-unit price: <b>₹{applicablePrice}.00</b>. Customers must purchase at least <b>{minQty} units</b> to receive this pricing.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Minimum Dispatch Time Banner */}
+      <div className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300">
+        <Truck className="w-4 h-4 text-blue-600 flex-shrink-0" />
+        <span>
+          <b>Dispatch Time:</b> Handcrafted &amp; dispatched within <b>{dispatchTimeDays} days</b>
         </span>
       </div>
 
@@ -63,7 +101,7 @@ export function ProductInteractiveSection({
                 type="button"
                 onClick={() => setSelectedVariant(v)}
                 className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
-                  selectedVariant.id === v.id
+                  selectedVariant?.id === v.id
                     ? 'bg-[#002754] text-white border-[#002754] shadow-md'
                     : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 hover:border-[#002754]'
                 }`}
@@ -81,9 +119,9 @@ export function ProductInteractiveSection({
           <span className="text-xs font-bold text-slate-600 dark:text-slate-400">Qty:</span>
           <QuantitySelector
             quantity={quantity}
-            min={1}
-            max={10}
-            onChange={(q) => setQuantity(q)}
+            min={minQty}
+            max={50}
+            onChange={(q) => setQuantity(Math.max(minQty, q))}
           />
         </div>
 
@@ -96,12 +134,12 @@ export function ProductInteractiveSection({
           }`}
         >
           <LuxuryBagIcon size={18} className="text-[#C5A880]" />
-          <span>{added ? 'Added to Bag ✓' : 'Add to Bag'}</span>
+          <span>{added ? 'Added to Bag ✓' : `Add to Bag (${Math.max(minQty, quantity)})`}</span>
         </Button>
 
         <button
           type="button"
-          onClick={() => toggleItem(product)}
+          onClick={() => toggleWishlist(product)}
           className="p-3.5 rounded-full border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-all flex items-center justify-center cursor-pointer"
           aria-label="Toggle Wishlist"
         >

@@ -34,6 +34,8 @@ export class ProductEntity implements Product {
   public isNew: boolean;
   public isBestSeller?: boolean;
   public isActive?: boolean;
+  public minOrderQuantity: number;
+  public quantityPrice?: number | null;
   public averageRating: number;
   public reviewCount: number;
   public createdAt: string;
@@ -64,6 +66,8 @@ export class ProductEntity implements Product {
     this.isNew = Boolean(props.isNew);
     this.isBestSeller = Boolean(props.isBestSeller);
     this.isActive = props.isActive !== undefined ? Boolean(props.isActive) : true;
+    this.minOrderQuantity = props.minOrderQuantity ? Math.max(1, Number(props.minOrderQuantity)) : 1;
+    this.quantityPrice = props.quantityPrice !== undefined ? (props.quantityPrice ? Number(props.quantityPrice) : null) : null;
     this.averageRating = props.averageRating || 5.0;
     this.reviewCount = props.reviewCount || 0;
     this.createdAt = props.createdAt || new Date().toISOString();
@@ -96,6 +100,8 @@ export class ProductEntity implements Product {
       isNew: this.isNew,
       isBestSeller: this.isBestSeller,
       isActive: this.isActive,
+      minOrderQuantity: this.minOrderQuantity,
+      quantityPrice: this.quantityPrice,
       averageRating: this.averageRating,
       reviewCount: this.reviewCount,
       createdAt: this.createdAt,

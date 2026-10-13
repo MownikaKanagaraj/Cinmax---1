@@ -8,6 +8,36 @@ export interface PlaylistPurchasesStoreState {
   isPlaylistUnlocked: (playlistId: string) => boolean;
 }
 
+const memoryStore = new Map<string, string>();
+
+const universalStorage = {
+  getItem: async (name: string): Promise<string | null> => {
+    if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.getItem === 'function') {
+      try {
+        const val = window.localStorage.getItem(name);
+        if (val !== null) return val;
+      } catch (e) {}
+    }
+    return memoryStore.get(name) ?? null;
+  },
+  setItem: async (name: string, value: string): Promise<void> => {
+    memoryStore.set(name, value);
+    if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.setItem === 'function') {
+      try {
+        window.localStorage.setItem(name, value);
+      } catch (e) {}
+    }
+  },
+  removeItem: async (name: string): Promise<void> => {
+    memoryStore.delete(name);
+    if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.removeItem === 'function') {
+      try {
+        window.localStorage.removeItem(name);
+      } catch (e) {}
+    }
+  },
+};
+
 export const usePlaylistPurchasesStore = create<PlaylistPurchasesStoreState>()(
   persist(
     (set, get) => ({
@@ -34,9 +64,7 @@ export const usePlaylistPurchasesStore = create<PlaylistPurchasesStoreState>()(
     }),
     {
       name: 'cinmax-purchased-playlists-storage',
-      storage: createJSONStorage(() =>
-        typeof window !== 'undefined' ? window.localStorage : { getItem: () => null, setItem: () => {}, removeItem: () => {} }
-      ),
+      storage: createJSONStorage(() => universalStorage),
     }
   )
 );

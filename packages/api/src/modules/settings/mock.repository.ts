@@ -8,13 +8,14 @@ export class MockSettingsRepository implements ISettingsRepository {
     this.settings =
       initialData ||
       new AppSettingsEntity({
-        appName: 'Cinmax Global Products',
-        currency: 'USD',
-        taxRate: 0.08,
-        freeShippingThreshold: 50,
-        standardShippingFee: 6.95,
-        contactEmail: 'support@cinmax.com',
-        supportPhone: '+1 (800) 555-CINMAX',
+        appName: 'CINMAX Global Products',
+        currency: 'INR',
+        taxRate: 0,
+        freeShippingThreshold: 499,
+        standardShippingFee: 60,
+        contactEmail: 'concierge@cinmaxglobal.com',
+        supportPhone: '+91 98765 43210',
+        dispatchTimeDays: 20,
       });
   }
 

@@ -154,6 +154,8 @@ export interface Product {
   isNew: boolean;
   isBestSeller?: boolean;
   isActive?: boolean;
+  minOrderQuantity?: number;
+  quantityPrice?: number | null;
   averageRating: number;
   reviewCount: number;
   ratingAverage?: number;
@@ -234,7 +236,10 @@ export interface CartItem {
   cartId: string;
   productId: string;
   variantId?: string;
-  product: Pick<Product, 'id' | 'title' | 'slug' | 'images' | 'processType'>;
+  product: Pick<Product, 'id' | 'title' | 'slug' | 'images' | 'processType'> & {
+    minOrderQuantity?: number;
+    quantityPrice?: number | null;
+  };
   variant: Pick<ProductVariant, 'id' | 'sku' | 'title' | 'price' | 'weightGrams' | 'volumeMl' | 'options'>;
   quantity: number;
   unitPrice: number;

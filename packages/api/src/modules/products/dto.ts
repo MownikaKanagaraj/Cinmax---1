@@ -56,6 +56,8 @@ export interface ProductDTO {
   is_featured?: boolean | null;
   is_new?: boolean | null;
   is_best_seller?: boolean | null;
+  min_order_quantity?: number | string | null;
+  quantity_price?: number | string | null;
   average_rating?: number | null;
   review_count?: number | null;
   created_at: string;

@@ -87,41 +87,75 @@ export const LOCAL_SOAP_GALLERY: Record<string, any[]> = {
 };
 
 /**
- * Returns a guaranteed ImageSource for React Native (local asset or remote URL).
+ * 0ms instant local offline assets for "Shop by Concern" chips.
+ */
+export const LOCAL_CONCERN_IMAGES: Record<string, any> = {
+  dry: LOCAL_SOAP_ASSETS['aloe-vera-soap'],
+  oily: LOCAL_SOAP_ASSETS['charcoal-soap'],
+  sensitive: LOCAL_SOAP_ASSETS['veppalai-soap'],
+  mature: LOCAL_SOAP_ASSETS['rose-soap'],
+  combination: LOCAL_SOAP_ASSETS['papaya-soap'],
+  all: LOCAL_SOAP_ASSETS['aroma-soap'],
+};
+
+/**
+ * 0ms instant local offline backgrounds for "Watch & Shop" video cards.
+ */
+export const LOCAL_WATCH_VIDEO_BGS: Record<string, any> = {
+  v1: LOCAL_SOAP_ASSETS['kasturi-manjal-soap'],
+  v2: LOCAL_SOAP_ASSETS['rose-soap'],
+  v3: LOCAL_SOAP_ASSETS['charcoal-soap'],
+  v4: LOCAL_SOAP_ASSETS['papaya-soap'],
+  v5: LOCAL_SOAP_ASSETS['neem-oil-soap'],
+  v6: LOCAL_SOAP_ASSETS['aloe-vera-soap'],
+  v7: LOCAL_SOAP_ASSETS['vettiver-soap'],
+  v8: LOCAL_SOAP_ASSETS['veppalai-soap'],
+};
+
+/**
+ * Returns a guaranteed ImageSource for React Native.
+ * ALWAYS prefers local bundled high-res assets for 0ms instantaneous loading in the APK.
  */
 export function getSoapImageSource(rawUrlOrSlug?: string, slugOrTitle?: string): any {
-  if (rawUrlOrSlug && typeof rawUrlOrSlug === 'string' && rawUrlOrSlug.startsWith('http') && !rawUrlOrSlug.includes('audit-test')) {
-    return { uri: rawUrlOrSlug.trim() };
-  }
-
+  // 1. First priority: Match against the canonical soap slugs
   const matched = matchSoapSlug(slugOrTitle || rawUrlOrSlug);
   if (LOCAL_SOAP_ASSETS[matched]) {
     return LOCAL_SOAP_ASSETS[matched];
   }
 
-  return { uri: getProductFallbackImage(matched, 1) };
+  // Also check if rawUrlOrSlug itself contains a soap name
+  if (rawUrlOrSlug && typeof rawUrlOrSlug === 'string') {
+    const rawMatched = matchSoapSlug(rawUrlOrSlug);
+    if (LOCAL_SOAP_ASSETS[rawMatched]) {
+      return LOCAL_SOAP_ASSETS[rawMatched];
+    }
+  }
+
+  // 2. If valid remote URL and not audit test
+  if (rawUrlOrSlug && typeof rawUrlOrSlug === 'string' && rawUrlOrSlug.startsWith('http') && !rawUrlOrSlug.includes('audit-test')) {
+    return { uri: rawUrlOrSlug.trim(), cache: 'force-cache' };
+  }
+
+  // 3. Fallback: Always return local neutral aroma soap (guaranteed never blank)
+  return LOCAL_SOAP_ASSETS['aroma-soap'];
 }
 
 /**
  * Returns gallery sources for a given soap.
+ * Prefers local bundled gallery assets for 0ms instantaneous loading.
  */
 export function getSoapGallerySources(slugOrTitle?: string, remoteUrls?: string[]): any[] {
-  if (remoteUrls && remoteUrls.length > 0) {
-    const valid = remoteUrls.filter((u) => u && typeof u === 'string' && u.startsWith('http') && !u.includes('audit-test'));
-    if (valid.length > 0) {
-      return valid.map((u) => ({ uri: u }));
-    }
-  }
-
   const matched = matchSoapSlug(slugOrTitle);
   if (LOCAL_SOAP_GALLERY[matched]) {
     return LOCAL_SOAP_GALLERY[matched];
   }
 
-  return [
-    { uri: getProductFallbackImage(matched, 1) },
-    { uri: getProductFallbackImage(matched, 2) },
-    { uri: getProductFallbackImage(matched, 3) },
-    { uri: getProductFallbackImage(matched, 4) },
-  ];
+  if (remoteUrls && remoteUrls.length > 0) {
+    const valid = remoteUrls.filter((u) => u && typeof u === 'string' && u.startsWith('http') && !u.includes('audit-test'));
+    if (valid.length > 0) {
+      return valid.map((u) => ({ uri: u, cache: 'force-cache' }));
+    }
+  }
+
+  return LOCAL_SOAP_GALLERY['aroma-soap'];
 }

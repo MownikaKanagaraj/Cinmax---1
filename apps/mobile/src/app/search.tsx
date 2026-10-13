@@ -87,6 +87,8 @@ export default function MobileSearchScreen() {
         originalPrice: p.compareAtPrice ? `₹${p.compareAtPrice}` : undefined,
         rating: `${p.averageRating || 4.9}`,
         image: validImage,
+        minOrderQuantity: p.minOrderQuantity,
+        quantityPrice: p.quantityPrice,
       });
     }
     return list;
@@ -164,6 +166,8 @@ export default function MobileSearchScreen() {
                 rating={item.rating}
                 badge="TRENDING"
                 badgeBg="#365E9B"
+                minOrderQuantity={item.minOrderQuantity}
+                quantityPrice={item.quantityPrice}
               />
             ))}
           </View>

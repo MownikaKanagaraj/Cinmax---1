@@ -15,7 +15,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { WebView } from 'react-native-webview';
 import { ProductCard } from '../../components/ProductCard';
-import { getSoapImageSource } from '../../constants/soapAssets';
+import {
+  getSoapImageSource,
+  LOCAL_SOAP_ASSETS,
+  LOCAL_CONCERN_IMAGES,
+  LOCAL_WATCH_VIDEO_BGS,
+} from '../../constants/soapAssets';
 import {
   useCartStore,
   useWishlistStore,
@@ -333,19 +338,20 @@ export default function MobileHomeScreen() {
   const SLIDE_WIDTH = SCREEN_WIDTH - (CONTAINER_PADDING * 2);
   const carouselRef = React.useRef<ScrollView>(null);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [isUserSwiping, setIsUserSwiping] = useState(false);
 
-  // Robust auto-slide timer
+  // Smooth, responsive auto-slide timer that pauses during user interaction
   React.useEffect(() => {
-    if (heroSlidesToDisplay.length <= 1) return;
+    if (heroSlidesToDisplay.length <= 1 || isUserSwiping) return;
     const interval = setInterval(() => {
       setCurrentSlideIndex((prev) => {
         const next = (prev + 1) % heroSlidesToDisplay.length;
         carouselRef.current?.scrollTo({ x: next * SLIDE_WIDTH, animated: true });
         return next;
       });
-    }, 4000);
+    }, 3500);
     return () => clearInterval(interval);
-  }, [heroSlidesToDisplay.length, SLIDE_WIDTH]);
+  }, [heroSlidesToDisplay.length, SLIDE_WIDTH, isUserSwiping]);
 
   const scrollToSlide = (index: number) => {
     const target = Math.max(0, Math.min(index, heroSlidesToDisplay.length - 1));
@@ -682,13 +688,14 @@ export default function MobileHomeScreen() {
               <ScrollView
                 ref={carouselRef}
                 horizontal
-                pagingEnabled
+                pagingEnabled={true}
                 showsHorizontalScrollIndicator={false}
-                decelerationRate="fast"
-                snapToInterval={SLIDE_WIDTH}
-                snapToAlignment="center"
+                decelerationRate="normal"
                 nestedScrollEnabled={true}
+                onScrollBeginDrag={() => setIsUserSwiping(true)}
+                onScrollEndDrag={() => setIsUserSwiping(false)}
                 onMomentumScrollEnd={(e) => {
+                  setIsUserSwiping(false);
                   const offset = e.nativeEvent.contentOffset.x;
                   const newIndex = Math.round(offset / SLIDE_WIDTH);
                   if (newIndex >= 0 && newIndex < heroSlidesToDisplay.length) {
@@ -700,12 +707,12 @@ export default function MobileHomeScreen() {
                 {heroSlidesToDisplay.map((slide, idx) => (
                   <View key={slide.id || idx} style={{ width: SLIDE_WIDTH, height: 380, position: 'relative', backgroundColor: '#002754' }}>
                     <Image
-                      source={{ uri: slide.imageUrl }}
+                      source={getSoapImageSource(slide.imageUrl, slide.title || slide.id)}
                       style={{ width: '100%', height: '100%' }}
                       resizeMode="cover"
                     />
                     {/* Soft Ambient Overlay */}
-                    <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0, 24, 52, 0.45)' }} />
+                    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 24, 52, 0.45)' }} />
 
                     {/* Card Content Overlay */}
                     <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingBottom: 28, paddingTop: 16, alignItems: 'center', backgroundColor: 'rgba(0, 18, 42, 0.65)' }}>
@@ -825,7 +832,7 @@ export default function MobileHomeScreen() {
                   }}
                 >
                   <View style={{ width: 28, height: 28, borderRadius: 14, overflow: 'hidden', backgroundColor: '#E6E8EA', flexShrink: 0 }}>
-                    <Image source={{ uri: c.image }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                    <Image source={LOCAL_CONCERN_IMAGES[c.id] || getSoapImageSource(c.title)} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
                   </View>
                   <Text
                     style={{
@@ -872,10 +879,14 @@ export default function MobileHomeScreen() {
                 activeOpacity={0.9}
                 style={{ width: 175, height: 310, borderRadius: 20, overflow: 'hidden', backgroundColor: '#002754', position: 'relative', borderWidth: 1, borderColor: 'rgba(197, 168, 128, 0.35)', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 12 }}
               >
-                <Image source={{ uri: vid.videoBg }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                <Image
+                  source={LOCAL_WATCH_VIDEO_BGS[vid.id] || getSoapImageSource(vid.slug || vid.title)}
+                  style={{ width: '100%', height: '100%' }}
+                  resizeMode="cover"
+                />
                 
                 {/* Soft Gradient Overlay */}
-                <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0, 24, 52, 0.3)' }} />
+                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 24, 52, 0.3)' }} />
 
                 {/* Top Badge */}
                 {vid.kicker ? (
@@ -887,7 +898,7 @@ export default function MobileHomeScreen() {
                 ) : null}
 
                 {/* Center Play Icon */}
-                <View style={{ position: 'absolute', inset: 0, justifyContent: 'center', alignItems: 'center' }}>
+                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center' }}>
                   <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(0, 39, 84, 0.85)', justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: '#C5A880', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8 }}>
                     <PlayCircle size={28} color="#C5A880" />
                   </View>
@@ -945,6 +956,8 @@ export default function MobileHomeScreen() {
                   image={prodImg}
                   rating={prod.averageRating?.toString() || '4.95'}
                   reviewCount={prod.reviewCount?.toString() || '128'}
+                  minOrderQuantity={prod.minOrderQuantity}
+                  quantityPrice={prod.quantityPrice}
                 />
               );
             })}
@@ -954,11 +967,11 @@ export default function MobileHomeScreen() {
         {/* 8. Promotional Banner */}
         <View style={{ marginHorizontal: CONTAINER_PADDING, marginTop: 28, borderRadius: 20, overflow: 'hidden', height: 160, backgroundColor: '#002754', borderWidth: 1, borderColor: 'rgba(197, 168, 128, 0.4)', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 12 }}>
           <Image
-            source={{ uri: 'https://nthyavlzdgucrldtgjeo.supabase.co/storage/v1/object/public/products/cinmax-products/aroma-soap/2.jpg' }}
+            source={LOCAL_SOAP_ASSETS['aroma-soap']}
             style={{ width: '100%', height: '100%', opacity: 0.45 }}
             resizeMode="cover"
           />
-          <View style={{ position: 'absolute', inset: 0, justifyContent: 'center', alignItems: 'center', padding: 14, backgroundColor: 'rgba(0, 39, 84, 0.4)' }}>
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', padding: 14, backgroundColor: 'rgba(0, 39, 84, 0.4)' }}>
             <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 11, fontWeight: '700', color: '#C5A880', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 }}>
               Cold-Process Purity
             </Text>
@@ -1001,7 +1014,7 @@ export default function MobileHomeScreen() {
                       blurRadius={Platform.OS === 'ios' ? 20 : 12}
                     />
                     {/* Layer 2: Soft Tint Overlay */}
-                    <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(255, 255, 255, 0.25)' }} />
+                    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(255, 255, 255, 0.25)' }} />
                     {/* Layer 3: Sharp Foreground Image */}
                     <Image
                       source={soapImageSource}
@@ -1139,8 +1152,8 @@ export default function MobileHomeScreen() {
         {bottomBanner.isActive !== false && (
           <View style={{ marginHorizontal: CONTAINER_PADDING, marginTop: 28, borderRadius: 20, overflow: 'hidden', minHeight: 230, backgroundColor: '#002754', position: 'relative' }}>
             <Image
-              source={{ uri: bottomBanner.imageUrl || 'https://nthyavlzdgucrldtgjeo.supabase.co/storage/v1/object/public/products/cinmax-products/neem-oil-soap/2.jpg' }}
-              style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}
+              source={getSoapImageSource(bottomBanner.imageUrl, 'neem-oil-soap')}
+              style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
               resizeMode="cover"
             />
             <View style={{ backgroundColor: 'rgba(0, 39, 84, 0.55)', justifyContent: 'center', alignItems: 'center', padding: 24, minHeight: 230 }}>

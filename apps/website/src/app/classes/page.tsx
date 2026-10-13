@@ -234,36 +234,8 @@ export default function ClassesPage() {
             subtitle="Guided step-by-step masterclasses linked directly to CINMAX luxury products. Purchase once to unlock permanent lifetime access to all video classes in the playlist."
           />
 
-          {/* Hero Banner */}
-          <div className="mt-8 relative overflow-hidden rounded-3xl bg-[#002754] text-white p-8 md:p-12 shadow-xl border border-[#C5A880]/30 space-y-6">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-[#C5A880]" />
-              <span className="text-xs uppercase font-extrabold tracking-widest text-[#C5A880]">
-                CINMAX Botanical Academy Engine
-              </span>
-            </div>
-
-            <div className="max-w-2xl space-y-3">
-              <h2 className="font-serif text-2xl md:text-4xl font-extrabold leading-tight">
-                Product-Specific Craftsmanship Courses
-              </h2>
-              <p className="text-sm md:text-base text-slate-200 leading-relaxed">
-                Every CINMAX product comes with its own dedicated playlist of formulation masterclasses. Unlock one complete course playlist with a single payment and enjoy unlimited lifetime streaming on web and mobile.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-6 pt-2">
-              <div className="flex items-center gap-2 text-xs font-semibold text-white">
-                <ShieldCheck className="w-4 h-4 text-[#C5A880]" /> Permanent Lifetime Access
-              </div>
-              <div className="flex items-center gap-2 text-xs font-semibold text-white">
-                <Award className="w-4 h-4 text-[#C5A880]" /> Verified Razorpay Payment
-              </div>
-            </div>
-          </div>
-
           {/* Tabs Filter */}
-          <div className="mt-10 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
+          <div className="mt-8 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setActiveTab('all')}

@@ -234,7 +234,12 @@ export function AdminSidebar() {
               <ShieldCheck className="w-5 h-5 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-white truncate">Store Administrator</p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold text-white truncate">Store Administrator</p>
+                <span className="text-[9px] font-mono bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded border border-blue-400/30">
+                  v1.0.5
+                </span>
+              </div>
               <p className="text-[10px] font-semibold text-emerald-400 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                 System Live &amp; Protected

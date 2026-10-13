@@ -11,6 +11,7 @@ export class AppSettingsMapper {
       standardShippingFee: Number(dto.standard_shipping_fee),
       contactEmail: dto.contact_email,
       supportPhone: dto.support_phone ?? undefined,
+      dispatchTimeDays: dto.dispatch_time_days !== undefined && dto.dispatch_time_days !== null ? Number(dto.dispatch_time_days) : 20,
     });
   }
 
@@ -23,6 +24,7 @@ export class AppSettingsMapper {
       standard_shipping_fee: entity.standardShippingFee,
       contact_email: entity.contactEmail,
       support_phone: entity.supportPhone ?? null,
+      dispatch_time_days: entity.dispatchTimeDays ?? 20,
     };
   }
 }

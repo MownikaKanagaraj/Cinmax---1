@@ -508,7 +508,7 @@ export default function MobileProfileScreen() {
               CINMAX Global Products
             </Text>
             <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 10, color: '#94A3B8', marginTop: 2 }}>
-              Handcrafted CINMAX Mobile • Version 1.0.4
+              CINMAX Mobile • v1.0.5 (Build 3) • Android 7 to 16+
             </Text>
           </View>
 

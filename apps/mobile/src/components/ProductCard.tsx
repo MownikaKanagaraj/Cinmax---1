@@ -36,6 +36,8 @@ export interface ProductCardProps {
   badge?: string;
   badgeBg?: string;
   width?: number | string;
+  minOrderQuantity?: number;
+  quantityPrice?: number | null;
 }
 
 export function ProductCard({
@@ -50,19 +52,22 @@ export function ProductCard({
   badge,
   badgeBg,
   width,
+  minOrderQuantity,
+  quantityPrice,
 }: ProductCardProps) {
   const router = useRouter();
   const { toggleItem, isWishlisted } = useWishlistStore();
   const { addItem } = useCartStore();
 
   const cardWidth = width || '48%';
-  const [imageError, setImageError] = React.useState(false);
+  const imageSource = getSoapImageSource(slug || title || image, slug || title);
 
-  const imageSource = imageError
-    ? getSoapImageSource(undefined, slug || title)
-    : getSoapImageSource(image, slug || title);
+  const minQty = Math.max(1, minOrderQuantity || 1);
+  const applicableUnitPrice = quantityPrice && quantityPrice > 0
+    ? quantityPrice
+    : (typeof price === 'number' ? price : parseInt(String(price).replace(/[^0-9]/g, '')) || 249);
 
-  const formattedPrice = typeof price === 'number' ? `₹${price}` : price.startsWith('₹') ? price : `₹${price}`;
+  const formattedPrice = `₹${applicableUnitPrice}`;
   const formattedOriginalPrice = originalPrice
     ? typeof originalPrice === 'number'
       ? `₹${originalPrice}`
@@ -73,16 +78,23 @@ export function ProductCard({
 
   const handleAddToCart = (e: any) => {
     e.stopPropagation();
-    const numPrice = typeof price === 'number' ? price : parseInt(String(price).replace(/[^0-9]/g, '')) || 249;
     addItem({
       id: `ci_${id}`,
       cartId: 'c1',
       productId: id,
-      unitPrice: numPrice,
-      totalPrice: numPrice,
-      quantity: 1,
-      product: { id, title, slug, images: [{ id: `img_${id}`, url: typeof image === 'string' ? image : '', altText: title, sortOrder: 0 }], processType: 'cold-process' },
-      variant: { id: `v_${id}`, sku: `SKU-${id}`, title: 'Standard', price: numPrice, weightGrams: 100, volumeMl: 0, options: {} },
+      unitPrice: applicableUnitPrice,
+      totalPrice: applicableUnitPrice * minQty,
+      quantity: minQty,
+      product: {
+        id,
+        title,
+        slug,
+        images: [{ id: `img_${id}`, url: typeof image === 'string' ? image : '', altText: title, sortOrder: 0 }],
+        processType: 'cold-process',
+        minOrderQuantity: minQty,
+        quantityPrice: quantityPrice || null,
+      },
+      variant: { id: `v_${id}`, sku: `SKU-${id}`, title: 'Standard', price: applicableUnitPrice, weightGrams: 100, volumeMl: 0, options: {} },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
@@ -107,28 +119,25 @@ export function ProductCard({
         marginBottom: 14,
       }}
     >
-      {/* Luxury Blurred Background + Crisp Product Frame */}
-      <View style={{ width: '100%', height: 156, position: 'relative', overflow: 'hidden', backgroundColor: '#FAF5EE', justifyContent: 'center', alignItems: 'center' }}>
-        {/* 1. Ambient Blurred Layer */}
-        <Image
-          source={imageSource}
-          style={{ position: 'absolute', width: '125%', height: '125%', opacity: 0.38 }}
-          blurRadius={Platform.OS === 'ios' ? 20 : 12}
-          resizeMode="cover"
-        />
+      {/* Luxury Product Frame */}
+      <View style={{ width: '100%', height: 160, position: 'relative', overflow: 'hidden', backgroundColor: '#FAF5EE' }}>
+        {/* Soft Ambient Tint */}
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(197, 168, 128, 0.08)' }} />
 
-        {/* 2. Soft Ambient Tint */}
-        <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(250, 245, 238, 0.35)' }} />
-
-        {/* 3. Sharp Foreground Product Image */}
+        {/* Sharp Foreground Product Image */}
         <Image
           source={imageSource}
           style={{ width: '100%', height: '100%' }}
           resizeMode="cover"
-          onError={() => setImageError(true)}
         />
 
-        {badge ? (
+        {minQty > 1 ? (
+          <View style={{ position: 'absolute', top: 8, left: 8, backgroundColor: '#D97706', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 3 }}>
+            <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#FFFFFF', fontSize: 9, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+              Min {minQty} Units
+            </Text>
+          </View>
+        ) : badge ? (
           <View style={{ position: 'absolute', top: 8, left: 8, backgroundColor: badgeBg || '#002754', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 3 }}>
             <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#FAF7F2', fontSize: 9, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 }}>
               {badge}
@@ -142,7 +151,9 @@ export function ProductCard({
               id,
               title,
               slug: slug || id,
-              basePrice: typeof price === 'number' ? price : parseInt(String(price).replace(/[^0-9]/g, '')) || 249,
+              basePrice: applicableUnitPrice,
+              minOrderQuantity: minQty,
+              quantityPrice: quantityPrice || null,
               images: [{ id: `img_${id}`, url: typeof image === 'string' ? image : '', altText: title, sortOrder: 0 }],
               processType: 'cold-process',
             });
@@ -165,7 +176,7 @@ export function ProductCard({
           </View>
 
           {/* Title */}
-          <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 13, fontWeight: '700', color: '#191C1E', lineHeight: 17 }} numberOfLines={2}>
+          <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 13, fontWeight: '700', color: '#191C1E', lineHeight: 18, minHeight: 36 }} numberOfLines={2}>
             {title}
           </Text>
         </View>
@@ -180,13 +191,18 @@ export function ProductCard({
               </Text>
             )}
           </Text>
+          {minQty > 1 && (
+            <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 10, color: '#B45309', marginTop: 2, lineHeight: 14 }}>
+              Min {minQty} units to order (₹{applicableUnitPrice}/unit)
+            </Text>
+          )}
 
           <TouchableOpacity
             onPress={handleAddToCart}
             style={{ marginTop: 8, borderWidth: 1.5, borderColor: '#002754', borderRadius: 10, paddingVertical: 7, alignItems: 'center', backgroundColor: '#002754' }}
           >
             <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, color: '#FFFFFF', fontWeight: '600', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.3 }}>
-              + Add to Cart
+              + Add {minQty > 1 ? `(${minQty})` : 'to Cart'}
             </Text>
           </TouchableOpacity>
         </View>

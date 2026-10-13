@@ -3,11 +3,11 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCartStore, useUser, useValidateCouponMutation } from '@cinmax/hooks';
+import { useCartStore, useUser, useValidateCouponMutation, useDispatchTimeQuery } from '@cinmax/hooks';
 import { Button, PriceTag, QuantitySelector, EmptyState } from '@cinmax/ui';
 import { formatCurrency } from '@cinmax/utils';
 import { LoginRequiredModal } from './login-required-modal';
-import { Check } from 'lucide-react';
+import { Check, Truck } from 'lucide-react';
 import {
   LuxuryBagIcon,
   LuxuryCloseIcon,
@@ -25,6 +25,7 @@ export function CartDrawer() {
   const [couponSuccess, setCouponSuccess] = React.useState('');
 
   const validateCoupon = useValidateCouponMutation();
+  const { dispatchTimeDays } = useDispatchTimeQuery();
 
   const {
     items,
@@ -39,6 +40,17 @@ export function CartDrawer() {
   } = useCartStore();
 
   const handleCheckout = () => {
+    const invalidItem = items.find((item) => {
+      const minQty = Math.max(1, item.product?.minOrderQuantity || 1);
+      return item.quantity < minQty;
+    });
+
+    if (invalidItem) {
+      const minQty = Math.max(1, invalidItem.product?.minOrderQuantity || 1);
+      alert(`"${invalidItem.product.title}" requires a minimum order quantity of ${minQty} units.`);
+      return;
+    }
+
     if (!isAuthenticated && !user) {
       setShowLoginModal(true);
     } else {
@@ -173,13 +185,18 @@ export function CartDrawer() {
                         <p className="font-serif font-bold text-sm text-[#002754] dark:text-[#C5A880] mt-0.5">
                           {formatCurrency(item.unitPrice)}
                         </p>
+                        {item.product?.minOrderQuantity && item.product.minOrderQuantity > 1 && (
+                          <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 block mt-0.5">
+                            Min. {item.product.minOrderQuantity} units required
+                          </span>
+                        )}
                       </div>
 
                       <div className="pt-2 flex items-center justify-between">
                         <QuantitySelector
                           quantity={item.quantity}
-                          min={1}
-                          max={10}
+                          min={Math.max(1, item.product?.minOrderQuantity || 1)}
+                          max={50}
                           onChange={(qty) => updateQuantity(item.id, qty)}
                         />
                         <span className="font-mono text-xs font-bold text-slate-700 dark:text-slate-300">
@@ -267,6 +284,12 @@ export function CartDrawer() {
                     {formatCurrency(totals.total)}
                   </span>
                 </div>
+              </div>
+
+              {/* Dispatch Time Notice */}
+              <div className="flex items-center gap-2 p-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/40 text-xs text-blue-950 dark:text-blue-200">
+                <Truck className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                <span>Standard Dispatch: <b>within {dispatchTimeDays} days</b> of artisanal curing.</span>
               </div>
 
               {/* Action Buttons */}

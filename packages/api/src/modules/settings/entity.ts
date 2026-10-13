@@ -6,6 +6,7 @@ export interface AppSettingsProps {
   standardShippingFee: number;
   contactEmail: string;
   supportPhone?: string;
+  dispatchTimeDays?: number;
 }
 
 export class AppSettingsEntity implements AppSettingsProps {
@@ -16,6 +17,7 @@ export class AppSettingsEntity implements AppSettingsProps {
   public standardShippingFee: number;
   public contactEmail: string;
   public supportPhone?: string;
+  public dispatchTimeDays: number;
 
   constructor(props: AppSettingsProps) {
     this.appName = props.appName || 'Cinmax';
@@ -25,5 +27,6 @@ export class AppSettingsEntity implements AppSettingsProps {
     this.standardShippingFee = props.standardShippingFee || 6.95;
     this.contactEmail = props.contactEmail || 'support@cinmax.com';
     this.supportPhone = props.supportPhone || '+1 (800) 555-CINMAX';
+    this.dispatchTimeDays = props.dispatchTimeDays !== undefined && props.dispatchTimeDays !== null ? Number(props.dispatchTimeDays) : 20;
   }
 }

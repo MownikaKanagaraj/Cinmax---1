@@ -84,6 +84,7 @@ export interface HomeMarketingSettings {
   realResults: TransformationStoryItem[];
   trustBadges: TrustBadgeItem[];
   bottomBanner: PromoBannerConfig;
+  dispatchTimeDays?: number;
   updatedAt: string;
 }
 

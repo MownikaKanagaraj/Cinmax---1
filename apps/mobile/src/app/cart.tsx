@@ -20,6 +20,7 @@ import {
   useValidateCouponMutation,
   useAddressesQuery,
   useAddCustomerAddressMutation,
+  useDispatchTimeQuery,
 } from '@cinmax/hooks';
 import { calculateDeliveryCharge, ALL_INDIAN_STATES, getProductFallbackImage } from '@cinmax/utils';
 import { getSoapImageSource } from '../constants/soapAssets';
@@ -79,6 +80,7 @@ interface CartItemCardProps {
     badgeText: string;
     image: string;
     maxStock: number;
+    minOrderQuantity?: number;
   };
   onUpdateQuantity: (id: string, qty: number) => void;
   onRemove: (id: string) => void;
@@ -93,13 +95,18 @@ function CartItemCard({ item, onUpdateQuantity, onRemove, onPressItem }: CartIte
     setLocalText(String(item.quantity));
   }, [item.quantity]);
 
+  const minQty = Math.max(1, item.minOrderQuantity || 1);
+
   const commitQuantity = (raw: string) => {
     const parsed = parseInt(raw, 10);
-    if (isNaN(parsed) || parsed < 1) {
-      setLocalText(String(item.quantity));
+    if (isNaN(parsed) || parsed < minQty) {
+      setLocalText(String(Math.max(minQty, item.quantity)));
+      if (item.quantity < minQty) {
+        onUpdateQuantity(item.id, minQty);
+      }
       return;
     }
-    const clamped = Math.max(1, Math.min(item.maxStock, parsed));
+    const clamped = Math.max(minQty, Math.min(item.maxStock, parsed));
     setLocalText(String(clamped));
     if (clamped !== item.quantity) {
       onUpdateQuantity(item.id, clamped);
@@ -135,7 +142,7 @@ function CartItemCard({ item, onUpdateQuantity, onRemove, onPressItem }: CartIte
           blurRadius={Platform.OS === 'ios' ? 16 : 10}
         />
         {/* Layer 2: Soft Tint Overlay */}
-        <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
         {/* Layer 3: Sharp Foreground Image */}
         <Image
           source={imageSource}
@@ -160,20 +167,25 @@ function CartItemCard({ item, onUpdateQuantity, onRemove, onPressItem }: CartIte
               </Text>
             )}
           </View>
+          {minQty > 1 && (
+            <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 10, color: '#D97706', marginTop: 2 }}>
+              Min {minQty} units required
+            </Text>
+          )}
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F7F9FB', borderRadius: 20, borderWidth: 1, borderColor: '#C3C6D1', height: 34, paddingHorizontal: 4 }}>
             <TouchableOpacity
               onPress={() => {
-                const next = Math.max(1, item.quantity - 1);
+                const next = Math.max(minQty, item.quantity - 1);
                 onUpdateQuantity(item.id, next);
                 setLocalText(String(next));
               }}
-              disabled={item.quantity <= 1}
+              disabled={item.quantity <= minQty}
               style={{ width: 26, height: 26, borderRadius: 13, justifyContent: 'center', alignItems: 'center' }}
             >
-              <Minus size={13} color={item.quantity <= 1 ? '#B0B4BA' : '#002754'} />
+              <Minus size={13} color={item.quantity <= minQty ? '#B0B4BA' : '#002754'} />
             </TouchableOpacity>
 
             <TextInput
@@ -240,8 +252,20 @@ export default function MobileCartScreen() {
     savedLocalAddress,
     setSavedLocalAddress,
   } = useCartStore();
+  const { dispatchTimeDays } = useDispatchTimeQuery();
 
   const handleProceedToCheckout = () => {
+    const invalidItem = storeItems.find((item) => {
+      const minQty = Math.max(1, item.product?.minOrderQuantity || 1);
+      return item.quantity < minQty;
+    });
+
+    if (invalidItem) {
+      const minQty = Math.max(1, invalidItem.product?.minOrderQuantity || 1);
+      alert(`"${invalidItem.product.title}" requires a minimum order quantity of ${minQty} units.`);
+      return;
+    }
+
     if (!user && !isAuthenticated) {
       setIsLoginModalOpen(true);
     } else {
@@ -359,6 +383,7 @@ export default function MobileCartScreen() {
     badgeBg: '#EBF3FF',
     badgeText: '#002754',
     maxStock: Math.max(1, (item.variant as any)?.inventoryQuantity ?? (item.product as any)?.inventoryQuantity ?? 99),
+    minOrderQuantity: Math.max(1, item.product?.minOrderQuantity || 1),
     image: (() => {
       const img = item.product?.images?.[0];
       const rawUrl = typeof img === 'string' ? img : (img as any)?.url;
@@ -718,6 +743,11 @@ export default function MobileCartScreen() {
                 <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 14, color: deliveryInfo.isFreeDelivery ? '#059669' : '#002754' }}>
                   {deliveryInfo.isFreeDelivery ? 'FREE' : `₹${shipping}`}
                 </Text>
+              </View>
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <Text style={{ fontFamily: FONT_SANS_REGULAR, fontSize: 13, color: '#434750' }}>Dispatch Time</Text>
+                <Text style={{ fontFamily: FONT_SANS_BOLD, fontSize: 13, color: '#002754' }}>Within {dispatchTimeDays} days</Text>
               </View>
 
               <View style={{ borderTopWidth: 1, borderTopColor: '#E0E3E5', paddingTop: 12, marginTop: 4, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>

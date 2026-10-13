@@ -33,10 +33,13 @@ export function ProductCard({ product }: ProductCardProps) {
     product.images?.[0]?.url ||
     'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=600&auto=format&fit=crop&q=80';
 
+  const minQty = product.minOrderQuantity && product.minOrderQuantity > 1 ? product.minOrderQuantity : 1;
+  const effectivePrice = product.quantityPrice && product.quantityPrice > 0 ? product.quantityPrice : (defaultVariant?.price ?? 18.0);
+
   const handleQuickAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    addItem(product, defaultVariant, 1);
+    addItem(product, defaultVariant, minQty);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
@@ -62,6 +65,11 @@ export function ProductCard({ product }: ProductCardProps) {
 
         {/* Badges Overlay */}
         <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
+          {minQty > 1 && (
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500 text-white shadow-sm uppercase tracking-wide">
+              Min Qty: {minQty}
+            </span>
+          )}
           {product.isFeatured && <Badge variant="primary">Signature</Badge>}
           {product.isBestSeller && <Badge variant="gold">Best Seller</Badge>}
           {product.isNew && <Badge variant="secondary">New Batch</Badge>}
@@ -94,12 +102,19 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
 
         <div className="pt-2 border-t border-[#0A3D78]/10 flex items-center justify-between">
-          <PriceTag
-            price={defaultVariant?.price ?? 18.0}
-            compareAtPrice={defaultVariant?.compareAtPrice}
-            currency="INR"
-            size="md"
-          />
+          <div>
+            <PriceTag
+              price={effectivePrice}
+              compareAtPrice={defaultVariant?.compareAtPrice}
+              currency="INR"
+              size="md"
+            />
+            {minQty > 1 && (
+              <p className="text-[10px] font-bold text-amber-700 dark:text-amber-400 mt-0.5">
+                Min. {minQty} units (₹{effectivePrice}/unit)
+              </p>
+            )}
+          </div>
           <Button
             variant="primary"
             size="sm"
@@ -109,7 +124,7 @@ export function ProductCard({ product }: ProductCardProps) {
             }`}
           >
             <LuxuryBagIcon size={14} className="text-[#C5A880]" />
-            <span>{added ? 'Added ✓' : 'Add to Bag'}</span>
+            <span>{added ? 'Added ✓' : minQty > 1 ? `Add (${minQty})` : 'Add to Bag'}</span>
           </Button>
         </div>
       </div>

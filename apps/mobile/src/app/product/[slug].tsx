@@ -14,7 +14,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ProductCard } from '../../components/ProductCard';
-import { useProductsQuery, useProductBySlugQuery, useWishlistStore, useCartStore, usePlaylistsQuery, useUser } from '@cinmax/hooks';
+import { getSoapGallerySources, getSoapImageSource } from '../../constants/soapAssets';
+import { useProductsQuery, useProductBySlugQuery, useWishlistStore, useCartStore, usePlaylistsQuery, useUser, useDispatchTimeQuery } from '@cinmax/hooks';
 import { getProductFallbackGallery, getProductFallbackImage } from '@cinmax/utils';
 import {
   ArrowLeft,
@@ -83,14 +84,19 @@ export default function MobileProductDetailsScreen() {
   const { data: productPlaylists = [] } = usePlaylistsQuery(true, productData?.id);
   const { isWishlisted, toggleItem } = useWishlistStore();
   const { addItem } = useCartStore();
+  const { dispatchTimeDays } = useDispatchTimeQuery();
+
+  const minOrderQty = Math.max(1, productData?.minOrderQuantity || 1);
+  const quantityPrice = productData?.quantityPrice && Number(productData.quantityPrice) > 0 ? Number(productData.quantityPrice) : null;
 
   const scrollViewRef = React.useRef<ScrollView>(null);
 
   React.useEffect(() => {
     scrollViewRef.current?.scrollTo({ y: 0, animated: false });
-    setQuantity(1);
-    setQuantityInput('1');
-  }, [slug]);
+    const initialQty = Math.max(1, productData?.minOrderQuantity || 1);
+    setQuantity(initialQty);
+    setQuantityInput(String(initialQty));
+  }, [slug, productData?.minOrderQuantity]);
 
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isZoomModalOpen, setIsZoomModalOpen] = useState(false);
@@ -116,7 +122,7 @@ export default function MobileProductDetailsScreen() {
   const rawImgs = productData?.images && productData.images.length > 0
     ? productData.images.map((i: any) => (typeof i === 'string' ? i : i.url)).filter((u: string) => Boolean(u && !u.includes('lh3.googleusercontent')))
     : [];
-  const productImages = rawImgs.length > 0 ? rawImgs : defaultImages;
+  const productImages = getSoapGallerySources(slug as string, rawImgs);
   const productTitle = productData?.title || 'Botanical Product';
   const productDesc = productData?.description || 'Artisanal formulation with pure botanical extracts.';
   
@@ -132,9 +138,9 @@ export default function MobileProductDetailsScreen() {
     '200g': Math.round(baseProductPrice * 1.8),
   };
   const dynamicWeightPrice = weightPrices[selectedWeight] || baseProductPrice;
-
-  const productPrice = activeVariant ? Number(activeVariant.price) : dynamicWeightPrice;
-  const originalPrice = activeVariant?.compareAtPrice ? Number(activeVariant.compareAtPrice) : Math.round(productPrice * 1.25);
+  const baseUnitPrice = activeVariant ? Number(activeVariant.price) : dynamicWeightPrice;
+  const productPrice = quantityPrice || baseUnitPrice;
+  const originalPrice = activeVariant?.compareAtPrice ? Number(activeVariant.compareAtPrice) : Math.round(baseUnitPrice * 1.25);
   const discountPercent = originalPrice && originalPrice > productPrice ? Math.round(((originalPrice - productPrice) / originalPrice) * 100) : 0;
   const savings = originalPrice && originalPrice > productPrice ? originalPrice - productPrice : 0;
 
@@ -149,6 +155,8 @@ export default function MobileProductDetailsScreen() {
       slug: p.slug,
       price: `₹${p.basePrice}`,
       image: typeof p.images?.[0] === 'string' ? p.images[0] : p.images?.[0]?.url || 'https://nthyavlzdgucrldtgjeo.supabase.co/storage/v1/object/public/products/cinmax-products/aroma-soap/1.jpg',
+      minOrderQuantity: p.minOrderQuantity,
+      quantityPrice: p.quantityPrice,
     }));
 
   const handleShare = async () => {
@@ -179,7 +187,7 @@ export default function MobileProductDetailsScreen() {
 
   const handleAddToCart = () => {
     const rawParsed = parseInt(quantityInput, 10);
-    const validQty = !isNaN(rawParsed) && rawParsed >= 1 ? Math.min(maxStock, rawParsed) : Math.max(1, Math.min(maxStock, quantity));
+    const validQty = !isNaN(rawParsed) && rawParsed >= minOrderQty ? Math.min(maxStock, rawParsed) : Math.max(minOrderQty, Math.min(maxStock, quantity));
     if (validQty !== quantity) {
       setQuantity(validQty);
       setQuantityInput(String(validQty));
@@ -208,6 +216,8 @@ export default function MobileProductDetailsScreen() {
         slug: slug || 'product',
         images: productImages.map((u: string, idx: number) => ({ id: `img_${idx}`, url: u, altText: productTitle, sortOrder: idx })),
         processType: 'cold-process',
+        minOrderQuantity: minOrderQty,
+        quantityPrice: quantityPrice,
       },
       variant: variantToUse,
       createdAt: new Date().toISOString(),
@@ -218,7 +228,7 @@ export default function MobileProductDetailsScreen() {
 
   const handleBuyNow = () => {
     const rawParsed = parseInt(quantityInput, 10);
-    const validQty = !isNaN(rawParsed) && rawParsed >= 1 ? Math.min(maxStock, rawParsed) : Math.max(1, Math.min(maxStock, quantity));
+    const validQty = !isNaN(rawParsed) && rawParsed >= minOrderQty ? Math.min(maxStock, rawParsed) : Math.max(minOrderQty, Math.min(maxStock, quantity));
     if (validQty !== quantity) {
       setQuantity(validQty);
       setQuantityInput(String(validQty));
@@ -245,8 +255,10 @@ export default function MobileProductDetailsScreen() {
         id: productData?.id || 'p_prod',
         title: productTitle,
         slug: slug || 'product',
-        images: productImages.map((u: string, idx: number) => ({ id: `img_${idx}`, url: u, altText: productTitle, sortOrder: idx })),
+        images: productImages.map((u: any, idx: number) => ({ id: `img_${idx}`, url: typeof u === 'string' ? u : ((u && typeof u === 'object' && 'uri' in u) ? u.uri : `local_${idx}`), altText: productTitle, sortOrder: idx })),
         processType: 'cold-process',
+        minOrderQuantity: minOrderQty,
+        quantityPrice: quantityPrice,
       },
       variant: variantToUse,
       createdAt: new Date().toISOString(),
@@ -331,7 +343,7 @@ export default function MobileProductDetailsScreen() {
               }}
               style={{ width: '100%', height: '100%' }}
             >
-              {productImages.map((img: string, idx: number) => (
+              {productImages.map((img: any, idx: number) => (
                 <TouchableOpacity
                   key={idx}
                   activeOpacity={0.95}
@@ -341,7 +353,11 @@ export default function MobileProductDetailsScreen() {
                   }}
                   style={{ width: GALLERY_WIDTH, height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: '#FAF5EE' }}
                 >
-                  <Image source={{ uri: img }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                  <Image
+                    source={img}
+                    style={{ width: '100%', height: '100%' }}
+                    resizeMode="cover"
+                  />
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -398,7 +414,7 @@ export default function MobileProductDetailsScreen() {
 
           {/* Horizontal Thumbnails */}
           <ScrollView horizontal nestedScrollEnabled={true} showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, marginTop: 12, paddingBottom: 4 }}>
-            {productImages.map((img: string, idx: number) => (
+            {productImages.map((img: any, idx: number) => (
               <TouchableOpacity
                 key={idx}
                 onPress={() => handleSelectImage(idx)}
@@ -416,7 +432,11 @@ export default function MobileProductDetailsScreen() {
                   shadowRadius: 6,
                 }}
               >
-                <Image source={{ uri: img }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                <Image
+                  source={img}
+                  style={{ width: '100%', height: '100%' }}
+                  resizeMode="cover"
+                />
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -463,6 +483,18 @@ export default function MobileProductDetailsScreen() {
               Save ₹100
             </Text>
           </View>
+
+          {/* Minimum Order Quantity & Quantity-Based Pricing Notice */}
+          {minOrderQty > 1 && (
+            <View style={{ backgroundColor: '#FEF3C7', borderWidth: 1, borderColor: '#F59E0B', borderRadius: 12, padding: 12, marginTop: 10 }}>
+              <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#92400E', fontSize: 13 }}>
+                Minimum Order Quantity: {minOrderQty} units
+              </Text>
+              <Text style={{ fontFamily: FONT_SANS_REGULAR, color: '#78350F', fontSize: 11, marginTop: 2 }}>
+                Unit price: ₹{productPrice}. Customers must purchase at least {minOrderQty} units to place an order.
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* 4. Promotion Offer Card */}
@@ -553,14 +585,14 @@ export default function MobileProductDetailsScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#C3C6D1', borderRadius: 12, width: 140, height: 44, overflow: 'hidden' }}>
               <TouchableOpacity
                 onPress={() => {
-                  const newQty = Math.max(1, quantity - 1);
+                  const newQty = Math.max(minOrderQty, quantity - 1);
                   setQuantity(newQty);
                   setQuantityInput(String(newQty));
                 }}
-                disabled={quantity <= 1}
-                style={{ width: 42, height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: quantity <= 1 ? '#F8F9FA' : '#F2F4F6' }}
+                disabled={quantity <= minOrderQty}
+                style={{ width: 42, height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: quantity <= minOrderQty ? '#F8F9FA' : '#F2F4F6' }}
               >
-                <Minus size={16} color={quantity <= 1 ? '#B0B4BA' : '#434750'} />
+                <Minus size={16} color={quantity <= minOrderQty ? '#B0B4BA' : '#434750'} />
               </TouchableOpacity>
               <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
                 <TextInput
@@ -571,16 +603,16 @@ export default function MobileProductDetailsScreen() {
                     if (cleanText !== '') {
                       const num = parseInt(cleanText, 10);
                       if (!isNaN(num)) {
-                        const clamped = Math.max(1, Math.min(maxStock, num));
+                        const clamped = Math.max(minOrderQty, Math.min(maxStock, num));
                         setQuantity(clamped);
                       }
                     }
                   }}
                   onBlur={() => {
                     const num = parseInt(quantityInput, 10);
-                    if (isNaN(num) || num < 1) {
-                      setQuantity(1);
-                      setQuantityInput('1');
+                    if (isNaN(num) || num < minOrderQty) {
+                      setQuantity(minOrderQty);
+                      setQuantityInput(String(minOrderQty));
                     } else if (num > maxStock) {
                       setQuantity(maxStock);
                       setQuantityInput(String(maxStock));
@@ -640,10 +672,17 @@ export default function MobileProductDetailsScreen() {
             </TouchableOpacity>
           </View>
 
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+            <CheckCircle size={14} color="#002754" />
+            <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 12, color: '#002754' }}>
+              Dispatch Time: Handcrafted &amp; dispatched within {dispatchTimeDays} days
+            </Text>
+          </View>
+
           {isPincodeChecked && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
               <CheckCircle size={14} color="#4CAF50" />
-              <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 12, color: '#4CAF50' }}>Estimated delivery in 2-3 days</Text>
+              <Text style={{ fontFamily: FONT_SANS_SEMIBOLD, fontSize: 12, color: '#4CAF50' }}>Dispatches within {dispatchTimeDays} days • Courier transit 2-3 days</Text>
             </View>
           )}
         </View>
@@ -882,6 +921,8 @@ export default function MobileProductDetailsScreen() {
                 rating="4.8"
                 badge="RECOMMENDED"
                 badgeBg="#365E9B"
+                minOrderQuantity={rel.minOrderQuantity}
+                quantityPrice={rel.quantityPrice}
               />
             ))}
           </ScrollView>
@@ -1001,7 +1042,7 @@ export default function MobileProductDetailsScreen() {
               centerContent
             >
               <Image
-                source={{ uri: productImages[selectedImageIndex] }}
+                source={productImages[selectedImageIndex]}
                 style={{
                   width: SCREEN_WIDTH * 0.94,
                   height: SCREEN_WIDTH * 1.15,
@@ -1045,7 +1086,7 @@ export default function MobileProductDetailsScreen() {
               Tap thumbnail or zoom controls to inspect ingredients & packaging
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, justifyContent: 'center' }}>
-              {productImages.map((img: string, idx: number) => (
+              {productImages.map((img: any, idx: number) => (
                 <TouchableOpacity
                   key={idx}
                   onPress={() => {
@@ -1061,7 +1102,7 @@ export default function MobileProductDetailsScreen() {
                     borderColor: selectedImageIndex === idx ? '#C5A880' : 'rgba(255,255,255,0.3)',
                   }}
                 >
-                  <Image source={{ uri: img }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                  <Image source={img} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
                 </TouchableOpacity>
               ))}
             </ScrollView>

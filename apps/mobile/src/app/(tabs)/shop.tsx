@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ProductCard } from '../../components/ProductCard';
+import { LOCAL_SOAP_ASSETS } from '../../constants/soapAssets';
 import { getProductFallbackImage } from '@cinmax/utils';
 import {
   useCartStore,
@@ -143,6 +144,8 @@ export default function MobileShopScreen() {
         rating: `${p.averageRating || 4.9}`,
         reviewCount: `${p.reviewCount || 128}`,
         image: validImage,
+        minOrderQuantity: p.minOrderQuantity,
+        quantityPrice: p.quantityPrice,
       });
     }
     return list;
@@ -250,13 +253,13 @@ export default function MobileShopScreen() {
         {/* 2. GRAND CATALOG HERO BANNER */}
         <View style={{ marginHorizontal: CONTAINER_PADDING, marginTop: 16, borderRadius: 24, overflow: 'hidden', height: 180, backgroundColor: '#002754', position: 'relative', borderWidth: 1, borderColor: 'rgba(197, 168, 128, 0.35)', shadowColor: '#0A3D78', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 14 }}>
           <Image
-            source={{ uri: 'https://nthyavlzdgucrldtgjeo.supabase.co/storage/v1/object/public/products/cinmax-products/aroma-soap/1.jpg' }}
+            source={LOCAL_SOAP_ASSETS['aroma-soap']}
             style={{ width: '100%', height: '100%' }}
             resizeMode="cover"
           />
-          <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0, 31, 68, 0.48)' }} />
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 31, 68, 0.48)' }} />
 
-          <View style={{ position: 'absolute', inset: 0, padding: 20, justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, padding: 20, justifyContent: 'center', alignItems: 'center' }}>
             <View style={{ backgroundColor: 'rgba(197, 168, 128, 0.25)', borderWidth: 1, borderColor: '#C5A880', paddingHorizontal: 12, paddingVertical: 3, borderRadius: 16, marginBottom: 6 }}>
               <Text style={{ fontFamily: FONT_SANS_BOLD, color: '#F3E5D8', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1.2 }}>
                 CINMAX COSMETICS CATALOG
@@ -451,6 +454,8 @@ export default function MobileShopScreen() {
                 reviewCount={prod.reviewCount}
                 badge={prod.badge}
                 badgeBg={prod.badgeBg}
+                minOrderQuantity={prod.minOrderQuantity}
+                quantityPrice={prod.quantityPrice}
               />
             ))}
           </View>

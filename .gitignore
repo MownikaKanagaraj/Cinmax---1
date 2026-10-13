@@ -70,3 +70,6 @@ Thumbs.db
 
 # TypeScript Cache
 *.tsbuildinfo
+
+# Scratch & temporary workspace files
+/scratch/
